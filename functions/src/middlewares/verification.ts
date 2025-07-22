@@ -31,7 +31,7 @@ const verifyUserToken =
         return;
       }
       // Attach user info to request
-      req.user = {...user.user, ...user.details};
+      req.user = user
       next();
     } catch (error) {
       devLog(error);
@@ -66,7 +66,7 @@ const verifyUserCookie =
         return;
       }
       // Attach user info to request
-      req.user = {...user.user, ...user.details};
+      req.user = user;
       next();
       return;
     } catch (error) {

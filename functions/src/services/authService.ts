@@ -1,10 +1,9 @@
 import { getAuth, UpdateRequest } from "firebase-admin/auth";
 import { verifyToken, generateCookie } from "../lib/auth";
-import { addUser } from "../repositories/userRepository";
+import { addUser, deleteUser } from "../repositories/userRepository";
 import { Role } from "../types/enums";
 import { ApiResponse, User, UserDetails } from "../types/types";
 import { devLog } from "../utils/dev";
-import { deleteDocument } from "../lib/firestore";
 
 export const registerUser = async (
   email: string,
@@ -16,9 +15,9 @@ export const registerUser = async (
       await getAuth().getUserByEmail(email);
       userExists = true;
     } catch (err: any) {
-      if (err.code !== 'auth/user-not-found') throw err;
+      if (err.code !== "auth/user-not-found") throw err;
     }
-    if (userExists) return {success: false, error: "Email already used!"};
+    if (userExists) return { success: false, error: "Email already used!" };
 
     const userRecord = await getAuth().createUser({
       email: email,
@@ -35,10 +34,10 @@ export const registerUser = async (
 
     const details = await addUser(user, userId);
     if (!details) throw new Error("Could not register user!");
-    return {success: true, data: "Successfully created user!"};
+    return { success: true, data: "Successfully created user!" };
   } catch (error) {
     devLog(error);
-    return {success: false, error: "Registration failed"};
+    return { success: false, error: "Registration failed" };
   }
 };
 
@@ -77,7 +76,7 @@ export const updateUser = async (
 export const removeUser = async (id: string): Promise<void> => {
   try {
     await getAuth().deleteUser(id);
-    const process = await deleteDocument("users", id);
+    const process = await deleteUser(id);
     if (!process) throw new Error("Error deleting user.");
   } catch (error) {
     devLog(error);

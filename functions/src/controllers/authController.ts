@@ -37,7 +37,7 @@ export const createUser = async (req: Request, res: Response) => {
    *         description: Server error
    */
   try {
-    const { email, password } = req.body;
+    const { email, password }: {email: string, password: string} = req.body;
     const process: ApiResponse<string> = await registerUser(email, password);
     if (!process.success) return sendError(res, process.error);
     return sendSuccess(res, process.data);
@@ -77,8 +77,8 @@ export const loginUser = async (req: Request, res: Response) => {
    *         description: Server error
    */
   try {
-    const { token } = req.body;
-    const cookie = await authenticateUser(token);
+    const token: string = req.body.token;
+    const cookie: string | null = await authenticateUser(token);
     if (!cookie) return sendError(res, "Incorrect credentials");
 
     res.cookie("session", cookie, {

@@ -7,6 +7,7 @@ import {
   retrieveUserByEmail,
   retrieveUserById,
 } from "../services/userService";
+import { APIUser, User, UserDetails } from "../types/types";
 
 export const getUserById = async (req: Request, res: Response) => {
   /**
@@ -102,11 +103,11 @@ export const getAllUsers = async (req: Request, res: Response) => {
    *         description: Server error
    */
   //TODO: pagination
-  const page = parseInt(req.query.page as string) || 1;
-  const limit = parseInt(req.query.limit as string) || 10;
-  const offset = (page - 1) * limit;
+  const page: number = parseInt(req.query.page as string) || 1;
+  const limit: number = parseInt(req.query.limit as string) || 10;
+  const offset: number = (page - 1) * limit;
   try {
-    const users = await retrieveAllUsers(limit, offset);
+    const users: APIUser[] | null = await retrieveAllUsers(limit, offset);
     return sendSuccess(res, users);
   } catch (error) {
     devLog(error);
@@ -153,8 +154,8 @@ export const patchUser = async (req: Request, res: Response) => {
    *         description: Server error
    */
   try {
-    const id = req.params.id;
-    const details = req.body.details;
+    const id: string = req.params.id;
+    const details: UserDetails = req.body.details;
     const updated = await updateUser(id, details);
     if (!updated)
       return sendError(res, "Failed to update user. Try again later");
@@ -192,7 +193,7 @@ export const deleteUser = async (req: Request, res: Response) => {
    *         description: Server error
    */
   try {
-    const id = req.params.id;
+    const id: string = req.params.id;
     await removeUser(id);
     return sendSuccess(res, "Successfully deleted user.");
   } catch (error) {

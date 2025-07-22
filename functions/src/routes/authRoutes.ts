@@ -14,6 +14,7 @@ router.post(
     createUser(req, res);
   }
 );
+
 router.post(
   "/login",
   sanitizeBody,
@@ -22,5 +23,12 @@ router.post(
     loginUser(req, res);
   }
 );
+
+//TODO: endpoints
+router.post('/change-password', async (req: Request, res: Response) => {})
+
+router.post('/reset-password', async (req: Request, res: Response) => {})
+
+router.post('/verify-email', async (req: Request, res: Response) => {})
 
 export default router;
