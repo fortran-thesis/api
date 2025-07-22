@@ -1,11 +1,12 @@
-import { getAuth } from "firebase-admin/auth";
+import { getAuth, UserRecord } from "firebase-admin/auth";
 import { firebase } from "../configs/firebase";
-import { User } from "../types/types";
+import { WithId } from "../types/types";
 import { getDocumentById } from "./firestore";
 import { Role } from "../types/enums";
 import { concurrent } from "../utils/concurrent";
 import { devLog } from "../utils/dev";
 import { envOptions } from "../configs/environment";
+import { APIUser } from "../types/types";
 
 const auth = getAuth(firebase);
 
@@ -14,20 +15,50 @@ const auth = getAuth(firebase);
  * @param uid - The user's UID
  * @returns The user's public info (uid, email, displayName, photoURL)
  */
-export const getUser = async (uid: string): Promise<User | null> => {
+export const getAuthUserById = async (uid: string): Promise<WithId<APIUser> | null> => {
   try {
-    const [user, userRole] = await concurrent(auth.getUser(uid), getRole(uid));
+    const result = await concurrent(auth.getUser(uid), getRole(uid));
+    const user = result[0] as UserRecord;
+    const userRole = result[1] as Role | null;
     if (!user || !userRole)
       throw new Error("User does not exist in Firebase Authentication.");
     return {
       id: user.uid,
-      role: userRole,
+      user: {
+        role: userRole
+      },
+      details: {
+        email: user.email,
+        displayName: user.displayName
+      }
     };
   } catch (error) {
     devLog(error);
     return null;
   }
 };
+
+export const getAuthUserByEmail = async (email: string): Promise<WithId<APIUser> | null> => {
+  try {
+    const user = await auth.getUserByEmail(email);
+    const role = await getRole(user.uid);
+    if (!user || !role)
+      throw new Error("User does not exist in Firebase Authentication.");
+    return {
+      id: user.uid,
+      user: {
+        role: role
+      },
+      details: {
+        email: user.email,
+        displayName: user.displayName
+      }
+    };
+  } catch (error) {
+    devLog(error);
+    return null;
+  }
+}
 
 /**
  * Retrieves the user's role from the Firestore users collection.
@@ -36,10 +67,11 @@ export const getUser = async (uid: string): Promise<User | null> => {
  */
 const getRole = async (uid: string): Promise<Role | null> => {
   try {
-    const docSnap = await getDocumentById("users", uid);
-    if (!docSnap || !docSnap.exists)
-      throw new Error("User does not exist in Firestore.");
-    return docSnap.data()?.role;
+    const snap = await getDocumentById("users", uid);
+    if (snap && Array.isArray(snap.docs)) {
+      return snap.docs[0]?.data()?.role || null;
+    }
+    return null;
   } catch (error) {
     devLog(error);
     return null;
@@ -52,11 +84,12 @@ const getRole = async (uid: string): Promise<Role | null> => {
  * @param requiredRole - (Optional) The required user role
  * @returns True if valid and (if specified) role matches, else false
  */
-export const verifyToken = async (token: string): Promise<Role | null> => {
+export const verifyToken = async (token: string): Promise<WithId<APIUser> | null> => {
   try {
     const { uid } = await auth.verifyIdToken(token);
-    if (uid !== (await getUser(uid))?.id) throw new Error("User UID mismatch.");
-    return await getRole(uid);
+    const user = await getAuthUserById(uid);
+    if (uid !== user?.id) throw new Error("User UID mismatch.");
+    return user
   } catch (error) {
     devLog(error);
     return null;
@@ -71,11 +104,12 @@ export const verifyToken = async (token: string): Promise<Role | null> => {
  */
 export const verifyCookie = async (
   sessionCookie: string
-): Promise<Role | null> => {
+): Promise<WithId<APIUser>  | null> => {
   try {
     const { uid } = await auth.verifySessionCookie(sessionCookie, true);
-    if (uid !== (await getUser(uid))?.id) throw new Error("User UID mismatch.");
-    return await getRole(uid);
+    const user = await getAuthUserById(uid);
+    if (uid !== user?.id) throw new Error("User UID mismatch.");
+    return user
   } catch (error) {
     devLog(error);
     return null;

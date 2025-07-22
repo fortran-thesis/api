@@ -35,7 +35,7 @@ export const getUserById = async (req: Request, res: Response) => {
    *         description: Server error
    */
   try {
-    const id = req.body.id;
+    const id = req.params.id;
     const user = await retrieveUserById(id);
     if (!user) return sendError(res, "Failed to retrieve user", 404);
     return sendSuccess(res, user);
@@ -72,7 +72,7 @@ export const getUserByEmail = async (req: Request, res: Response) => {
    *         description: Server error
    */
   try {
-    const email = req.body.email;
+    const email = req.params.email;
     const user = await retrieveUserByEmail(email);
     if (!user) return sendError(res, "Failed to retrieve user", 404);
     return sendSuccess(res, user);
@@ -102,8 +102,11 @@ export const getAllUsers = async (req: Request, res: Response) => {
    *         description: Server error
    */
   //TODO: pagination
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 10;
+  const offset = (page - 1) * limit;
   try {
-    const users = await retrieveAllUsers();
+    const users = await retrieveAllUsers(limit, offset);
     return sendSuccess(res, users);
   } catch (error) {
     devLog(error);

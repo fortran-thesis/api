@@ -1,9 +1,10 @@
 import { Timestamp } from "firebase-admin/firestore";
 import { Role } from "./enums";
 
+export type WithId<T> = T & { id: string };
+
 // USERS
 export interface User {
-  id: string;
   role: Role;
 }
 
@@ -12,9 +13,13 @@ export interface UserDetails {
   email?: string;
 }
 
+export interface APIUser {
+  user: User,
+  details: UserDetails
+}
+
 // MOLDS
 export interface Mold {
-  id: string;
   name: string;
   description: string;
   growth_stage: string;
@@ -23,7 +28,6 @@ export interface Mold {
 
 // SCANNED MOLDS
 export interface ScannedMold {
-  id: string;
   user_id: string;
   image_url: string;
   uploaded_at: Timestamp;
@@ -39,7 +43,6 @@ export interface ScannedResult {
 
 // FEEDBACKS
 export interface Feedback {
-  id: string;
   user_id: string;
   description: string;
   submitted_at: Date;

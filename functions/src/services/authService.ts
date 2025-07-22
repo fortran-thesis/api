@@ -30,11 +30,10 @@ export const registerUser = async (
     if (!userId) throw new Error("ID does not exist!");
 
     const user: User = {
-      id: userId,
       role: Role.USER,
     };
 
-    const details = await addUser(user);
+    const details = await addUser(user, userId);
     if (!details) throw new Error("Could not register user!");
     return {success: true, data: "Successfully created user!"};
   } catch (error) {

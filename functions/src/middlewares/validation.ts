@@ -45,3 +45,39 @@ export const validateBody =
       return;
     }
   };
+
+export const validateParams =
+  (schema: ZodSchema) =>
+  (req: Request, res: Response, next: NextFunction): void => {
+    try {
+      const result = schema.safeParse(req.params);
+      if (!result.success) {
+        const messages = result.error.errors.map(e => e.message).join(", ");
+        sendError(res, messages);
+        return;
+      }
+      req.params = result.data;
+      next();
+    } catch (error) {
+      devLog(error);
+      sendError(res, "Error", 500);
+    }
+  };
+
+export const validateQuery =
+  (schema: ZodSchema) =>
+  (req: Request, res: Response, next: NextFunction): void => {
+    try {
+      const result = schema.safeParse(req.query);
+      if (!result.success) {
+        const messages = result.error.errors.map(e => e.message).join(", ");
+        sendError(res, messages);
+        return;
+      }
+      req.query = result.data;
+      next();
+    } catch (error) {
+      devLog(error);
+      sendError(res, "Error", 500);
+    }
+  };

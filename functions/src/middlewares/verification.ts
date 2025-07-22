@@ -21,15 +21,17 @@ const verifyUserToken =
       }
 
       const idToken = authHeader.split(" ")[1];
-      const role = await verifyToken(idToken);
+      const user = await verifyToken(idToken);
       if (
-        !role ||
-        (requiredRole && role !== requiredRole && role !== Role.ADMIN)
+        !user?.user.role ||
+        (requiredRole && user.user.role !== requiredRole && user.user.role !== Role.ADMIN)
       ) {
+        devLog("User role:" + user?.user.role + "\nRequired role:" + requiredRole);
         sendError(res, "Forbidden", 403);
         return;
       }
-
+      // Attach user info to request
+      req.user = {...user.user, ...user.details};
       next();
     } catch (error) {
       devLog(error);
@@ -54,15 +56,17 @@ const verifyUserCookie =
         return;
       }
 
-      const role = await verifyCookie(sessionCookie);
+      const user = await verifyCookie(sessionCookie);
       if (
-        !role ||
-        (requiredRole && role !== requiredRole && role !== Role.ADMIN)
+        !user?.user.role ||
+        (requiredRole && user.user.role !== requiredRole && user.user.role !== Role.ADMIN)
       ) {
+        devLog("User role:" + user?.user.role + "\nRequired role:" + requiredRole);
         sendError(res, "Forbidden", 403);
         return;
       }
-
+      // Attach user info to request
+      req.user = {...user.user, ...user.details};
       next();
       return;
     } catch (error) {

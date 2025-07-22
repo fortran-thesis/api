@@ -2,6 +2,7 @@ import { envOptions } from "../configs/environment";
 import { firebase } from "../configs/firebase";
 import { getFirestore, Timestamp } from "firebase-admin/firestore";
 import { devLog } from "../utils/dev";
+import { WithId } from "../types/types";
 
 const db = getFirestore(firebase);
 
@@ -36,10 +37,17 @@ const getUpdateTime = async (
  */
 export const addDocument = async <T extends object>(
   collection: string,
-  document: T
+  document: T,
+  uid?: string
 ): Promise<FirebaseFirestore.DocumentReference | null> => {
   try {
-    return await callFirebase(collection).add(document);
+    if(uid){
+      const ref = callFirebase(collection).doc(uid);
+      await ref.set(document)
+      return ref
+    }
+
+    return await callFirebase(collection).add(document)
   } catch (error) {
     if (!envOptions.isProd) console.error("Error: ", error);
     return null;
@@ -123,12 +131,11 @@ export const getDocumentByField = async (
 export const getDocumentById = async (
   collection: string,
   documentUid: string
-): Promise<FirebaseFirestore.DocumentSnapshot | null> => {
+): Promise<FirebaseFirestore.QuerySnapshot | null> => {
   try {
-    const docSnap = await callFirebase(collection).doc(documentUid).get();
-    if (!docSnap.exists) throw new Error("Document does not exist");
-
-    return docSnap;
+    const querySnap = await getDocumentByField(collection, 'id', documentUid)
+    if (!querySnap || querySnap.empty) throw new Error("Document does not exist");
+    return querySnap;
   } catch (error) {
     devLog(error);
     return null;
@@ -153,14 +160,44 @@ export const getAllDocuments = async (
   }
 };
 
+export const getPaginatedDocuments = async (
+  collection: string,
+  limit: number,
+  offset: number
+): Promise<FirebaseFirestore.QuerySnapshot | null> => {
+  try{
+    let query = await callFirebase(collection).orderBy(FirebaseFirestore.FieldPath.documentId())
+    if (offset && offset > 0) {
+    query = query.offset(offset);
+    }
+    if (limit && limit > 0) {
+      query = query.limit(limit);
+    }
+    const querySnap = await query.get()
+    if(querySnap.empty) throw new Error('No documents found')
+    return querySnap
+  } catch (error) {
+    devLog(error);
+    return null;
+  }
+}
+
 export const queryToJson = <T>(
   querySnap: FirebaseFirestore.QuerySnapshot
-): T[] => {
-  return querySnap.docs.map((doc) => doc.data() as T);
+): WithId<T>[] => {
+  return querySnap.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+  }) as T & { id: string });
 };
 
 export const documentToJson = <T>(
   docSnap: FirebaseFirestore.DocumentSnapshot
-): T => {
-  return docSnap.data() as T;
+): WithId<T> => {
+  return {
+    id: docSnap.id,
+    ...docSnap.data()
+  } as T & { id: string };
 };
+
+export { getFirestore };

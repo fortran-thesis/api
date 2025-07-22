@@ -1,6 +1,6 @@
-import { DocumentSnapshot, QuerySnapshot } from "firebase-admin/firestore";
-import { User } from "../types/types";
-import { documentToJson, queryToJson } from "../lib/firestore";
+import { QuerySnapshot } from "firebase-admin/firestore";
+import { APIUser, User } from "../types/types";
+import { queryToJson } from "../lib/firestore";
 import {
   findAllUsers,
   findUserByEmail,
@@ -8,9 +8,9 @@ import {
 } from "../repositories/userRepository";
 import { devLog } from "../utils/dev";
 
-export const retrieveAllUsers = async (): Promise<User[] | null> => {
+export const retrieveAllUsers = async (limit: number, offset: number): Promise<User[] | null> => {
   try {
-    const users: QuerySnapshot | null = await findAllUsers();
+    const users: QuerySnapshot | null = await findAllUsers(limit, offset);
     if (!users) throw new Error("No users found.");
     return queryToJson<User>(users);
   } catch (error) {
@@ -19,11 +19,11 @@ export const retrieveAllUsers = async (): Promise<User[] | null> => {
   }
 };
 
-export const retrieveUserById = async (id: string): Promise<User | null> => {
+export const retrieveUserById = async (id: string): Promise<APIUser | null> => {
   try {
-    const user: DocumentSnapshot | null = await findUserById(id);
+    const user: APIUser | null = await findUserById(id);
     if (!user) throw new Error("No user found.");
-    return documentToJson<User>(user);
+    return user
   } catch (error) {
     devLog(error);
     return null;
@@ -32,11 +32,11 @@ export const retrieveUserById = async (id: string): Promise<User | null> => {
 
 export const retrieveUserByEmail = async (
   email: string
-): Promise<User | null> => {
+): Promise<APIUser | null> => {
   try {
-    const user: QuerySnapshot | null = await findUserByEmail(email);
+    const user: APIUser | null = await findUserByEmail(email);
     if (!user) throw new Error("No user found.");
-    return queryToJson<User>(user)[0];
+    return user;
   } catch (error) {
     devLog(error);
     return null;

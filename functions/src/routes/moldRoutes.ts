@@ -1,34 +1,32 @@
 import { Request, Response, Router } from "express";
 import { verifyUser } from "../middlewares/verification";
-import { Role } from "../types/enums";
-import {
-  deleteUser,
-  getAllUsers,
-  getUserByEmail,
-  getUserById,
-  patchUser,
-} from "../controllers/userController";
-import { EmailSchema, UserDetailsSchema, UserIdSchema } from "../dto/dto";
-import { validateBody, validateParams } from "../middlewares/validation";
+import { createMold, deleteMold, getAllMolds, getMoldById, getMoldByName, patchMold } from "../controllers/moldController";
 import { sanitizeBody, sanitizeParams } from "../middlewares/sanitation";
+import { validateBody, validateParams } from "../middlewares/validation";
 
 const router = Router();
 
-router.get("/", verifyUser(Role.ADMIN), 
+router.post("/", verifyUser(), 
   async (req: Request, res: Response) => {
-    getAllUsers(req, res);
+    createMold(req, res);
+  }
+);
+
+router.get("/", verifyUser(), 
+  async (req: Request, res: Response) => {
+    getAllMolds(req, res);
   }
 );
 
 router.get("/:id", sanitizeParams, validateParams(UserIdSchema), verifyUser(), 
   async (req: Request, res: Response) => {
-    getUserById(req, res);
+    getMoldById(req, res);
   }
 );
 
-router.get("/email/:email", sanitizeParams, validateParams(EmailSchema), verifyUser(), 
+router.get("/name/:name", sanitizeParams, validateParams(EmailSchema), verifyUser(), 
   async (req: Request, res: Response) => {
-    getUserByEmail(req, res);
+    getMoldByName(req, res);
   }
 );
 
@@ -36,14 +34,12 @@ router.patch("/:id",
   sanitizeParams, validateParams(UserIdSchema), 
   sanitizeBody, validateBody(UserDetailsSchema), verifyUser(), 
   async (req: Request, res: Response) => {
-    patchUser(req, res);
+    patchMold(req, res);
   }
 );
 
 router.delete("/:id", sanitizeParams, validateParams(UserIdSchema), verifyUser(Role.ADMIN), 
   async (req: Request, res: Response) => {
-    deleteUser(req, res);
+    deleteMold(req, res);
   }
 );
-
-export default router;
