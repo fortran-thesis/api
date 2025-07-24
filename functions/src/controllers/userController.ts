@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { removeUser, updateUser } from "../services/authService";
+import { removeUser, softRemoveUser, updateUser } from "../services/authService";
 import { devLog } from "../utils/dev";
 import { defaultError, sendError, sendSuccess } from "../utils/response";
 import {
@@ -7,7 +7,7 @@ import {
   retrieveUserByEmail,
   retrieveUserById,
 } from "../services/userService";
-import { APIUser, User, UserDetails } from "../types/types";
+import { APIUser, UserDetails } from "../types/types";
 
 export const getUserById = async (req: Request, res: Response) => {
   /**
@@ -26,7 +26,8 @@ export const getUserById = async (req: Request, res: Response) => {
    *     security:
    *       - bearerAuth: []
    *       - cookieAuth: []
-   *     description: Requires authentication (Bearer token or session cookie)
+   *     description: 
+   *       - Requires authentication (Bearer token or session cookie)
    *     responses:
    *       200:
    *         description: User found
@@ -63,7 +64,8 @@ export const getUserByEmail = async (req: Request, res: Response) => {
    *    security:
    *       - bearerAuth: []
    *       - cookieAuth: []
-   *     description: Requires authentication (Bearer token or session cookie)
+   *     description: 
+   *       - Requires authentication (Bearer token or session cookie)
    *     responses:
    *       200:
    *         description: User found
@@ -93,7 +95,8 @@ export const getAllUsers = async (req: Request, res: Response) => {
    *     security:
    *       - bearerAuth: []
    *       - cookieAuth: []
-   *     description: Requires authentication (Bearer token or session cookie) and admin role.
+   *     description: 
+   *       - Requires authentication (Bearer token or session cookie) and admin role.
    *     responses:
    *       200:
    *         description: List of users
@@ -125,7 +128,8 @@ export const patchUser = async (req: Request, res: Response) => {
    *     security:
    *       - bearerAuth: []
    *       - cookieAuth: []
-   *     description: Requires authentication (Bearer token or session cookie)
+   *     description: 
+   *       - Requires authentication (Bearer token or session cookie)
    *     parameters:
    *       - in: path
    *         name: id
@@ -183,7 +187,8 @@ export const deleteUser = async (req: Request, res: Response) => {
    *     security:
    *       - bearerAuth: []
    *       - cookieAuth: []
-   *     description: Requires authentication (Bearer token or session cookie) and admin role.
+   *     description: 
+   *       - Requires authentication (Bearer token or session cookie) and admin role.
    *     responses:
    *       200:
    *         description: Successfully deleted user
@@ -201,3 +206,14 @@ export const deleteUser = async (req: Request, res: Response) => {
     return defaultError(res);
   }
 };
+
+export const softDeleteUser = async (req: Request, res: Response) => {
+  try {
+    const id: string = req.params.id;
+    await softRemoveUser(id);
+    return sendSuccess(res, "Successfully soft deleted user.")
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+}

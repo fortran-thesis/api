@@ -1,6 +1,7 @@
 import {
   DocumentSnapshot,
   QuerySnapshot,
+  Timestamp,
   WriteResult,
 } from "firebase-admin/firestore";
 import { documentToJson, queryToJson } from "../lib/firestore";
@@ -11,15 +12,24 @@ import {
   findAllMolds,
   findMoldById,
   findMoldByName,
+  softDeleteMold,
   updateMold,
 } from "../repositories/moldRepository";
-import { Mold } from "../types/types";
+import { Mold, WithMetadata } from "../types/types";
 
 export const addMoldToFirestore = async (
   details: Mold
 ): Promise<Mold | null> => {
   try {
-    const mold: DocumentSnapshot | null = await addMold(details);
+    const detailsWithMetadata: WithMetadata<Mold> = {
+      ...details,
+      metadata: {
+        created_at: Timestamp.now(),
+        updated_at: null,
+        deleted_at: null
+      }
+    }
+    const mold: DocumentSnapshot | null = await addMold(detailsWithMetadata);
     if (!mold) throw new Error("Cannot add mold.");
     return documentToJson<Mold>(mold);
   } catch (error) {
@@ -80,6 +90,15 @@ export const updateMoldInFirestore = async (
   } catch (error) {
     devLog(error);
     return null;
+  }
+};
+
+export const softRemoveMold = async (id: string): Promise<void> => {
+  try {
+    const result: WriteResult | null = await softDeleteMold(id);
+    if (!result) throw new Error("Failed to delete mold");
+  } catch (error) {
+    devLog(error);
   }
 };
 

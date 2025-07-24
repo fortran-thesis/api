@@ -1,9 +1,10 @@
 import { getAuth, UpdateRequest } from "firebase-admin/auth";
 import { verifyToken, generateCookie } from "../lib/auth";
-import { addUser, deleteUser } from "../repositories/userRepository";
+import { addUser, deleteFirestoreUser, softDeleteFirestoreUser, updateFirestoreUser } from "../repositories/userRepository";
 import { Role } from "../types/enums";
-import { ApiResponse, User, UserDetails } from "../types/types";
+import { ApiResponse, User, UserDetails, WithMetadata } from "../types/types";
 import { devLog } from "../utils/dev";
+import { Timestamp } from "firebase-admin/firestore";
 
 export const registerUser = async (
   email: string,
@@ -28,8 +29,13 @@ export const registerUser = async (
     const userId = userRecord.uid;
     if (!userId) throw new Error("ID does not exist!");
 
-    const user: User = {
+    const user: WithMetadata<User> = {
       role: Role.USER,
+      metadata: {
+        created_at: Timestamp.now(),
+        updated_at: null,
+        deleted_at: null
+      }
     };
 
     const details = await addUser(user, userId);
@@ -65,7 +71,10 @@ export const updateUser = async (
       update.displayName = newDetails.displayName;
 
     const details = await getAuth().updateUser(id, newDetails);
-    if (!details) throw new Error("Error updating user.");
+    const updateMetadata = await updateFirestoreUser(id, {})
+
+    if (!details) throw new Error("Error updating user in Firebase Auth.");
+    if (!updateMetadata) throw new Error("Error updating user metadata in Firestore.");
     return true;
   } catch (error) {
     devLog(error);
@@ -73,12 +82,34 @@ export const updateUser = async (
   }
 };
 
+export const softRemoveUser = async (id: string): Promise<void> => {
+  try {
+    await getAuth().updateUser(id, {disabled: true})
+    const process = await softDeleteFirestoreUser(id);
+    if (!process) throw new Error("Error deleting user.");
+  } catch (error) {
+    devLog(error);
+  }
+}
+
 export const removeUser = async (id: string): Promise<void> => {
   try {
     await getAuth().deleteUser(id);
-    const process = await deleteUser(id);
+    const process = await deleteFirestoreUser(id);
     if (!process) throw new Error("Error deleting user.");
   } catch (error) {
     devLog(error);
   }
 };
+
+export const changePassword = async (email: string) => {
+  const link = await getAuth().generatePasswordResetLink(email)
+}
+
+export const verifyEmail = async (email: string) => {
+  const link = await getAuth().generateEmailVerificationLink(email)
+}
+
+export const changeEmail = async (oldEmail: string, newEmail: string) => {
+  const link = await getAuth().generateVerifyAndChangeEmailLink(oldEmail, newEmail)
+}

@@ -19,7 +19,6 @@ export const MoldSchema = z.object({
   growth_stage: z
     .string({ required_error: "Growth stage is required. " })
     .nonempty({ message: "Growth stage is required " }),
-  photo_url: z.array(z.string().url("Invalid photo URL")).optional(),
 });
 
 export const NameParamSchema = z.object({

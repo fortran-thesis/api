@@ -1,8 +1,7 @@
-import { envOptions } from "../configs/environment";
 import { firebase } from "../configs/firebase";
 import { getFirestore, Timestamp } from "firebase-admin/firestore";
 import { devLog } from "../utils/dev";
-import { WithId } from "../types/types";
+import { WithId, WithMetadata } from "../types/types";
 
 const db = getFirestore(firebase);
 
@@ -41,15 +40,21 @@ export const addDocument = async <T extends object>(
   uid?: string
 ): Promise<FirebaseFirestore.DocumentSnapshot | null> => {
   try {
+    const withMetadata: WithMetadata<T> = {
+      ...document,
+      metadata: {
+        created_at: Timestamp.now(),
+      },
+    };
     if (uid) {
       const ref = callFirebase(collection).doc(uid);
-      await ref.set(document);
+      await ref.set(withMetadata);
       return ref.get();
     }
 
     return (await callFirebase(collection).add(document)).get();
   } catch (error) {
-    if (!envOptions.isProd) console.error("Error: ", error);
+    devLog(error);
     return null;
   }
 };
@@ -69,14 +74,20 @@ export const updateDocument = async <T extends object>(
   updateData: Partial<T>
 ): Promise<FirebaseFirestore.WriteResult | null> => {
   try {
+    const withMetadata: WithMetadata<Partial<T>> = {
+      ...updateData,
+      metadata: {
+        updated_at: Timestamp.now(),
+      },
+    };
     return await callFirebase(collection)
       .doc(documentUid)
-      .update(updateData, {
+      .update(withMetadata, {
         exists: true,
         lastUpdateTime: await getUpdateTime(collection, documentUid),
       });
   } catch (error) {
-    if (!envOptions.isProd) console.error("Error: ", error);
+    devLog(error);
     return null;
   }
 };
@@ -99,6 +110,20 @@ export const deleteDocument = async (
         exists: true,
         lastUpdateTime: await getUpdateTime(collection, documentUid),
       });
+  } catch (error) {
+    devLog(error);
+    return null;
+  }
+};
+
+export const softDeleteDocument = async (
+  collection: string,
+  documentUid: string
+): Promise<FirebaseFirestore.WriteResult | null> => {
+  try {
+    return await updateDocument(collection, documentUid, {
+      metadata: { deleted_at: Timestamp.now() },
+    });
   } catch (error) {
     devLog(error);
     return null;

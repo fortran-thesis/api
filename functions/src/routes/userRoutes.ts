@@ -7,6 +7,7 @@ import {
   getUserByEmail,
   getUserById,
   patchUser,
+  softDeleteUser
 } from "../controllers/userController";
 import { EmailSchema, UserDetailsUpdateSchema, UserIdSchema } from "../dto/dto";
 import { validateBody, validateParams } from "../middlewares/validation";
@@ -59,5 +60,15 @@ router.delete(
     deleteUser(req, res);
   }
 );
+
+router.delete(
+  "/soft/:id",
+  sanitizeParams,
+  validateParams(UserIdSchema),
+  verifyUser(),
+  async (req: Request, res: Response) => {
+    softDeleteUser(req, res)
+  }
+)
 
 export default router;

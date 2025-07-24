@@ -37,7 +37,7 @@ export const createUser = async (req: Request, res: Response) => {
    *         description: Server error
    */
   try {
-    const { email, password }: {email: string, password: string} = req.body;
+    const { email, password }: { email: string; password: string } = req.body;
     const process: ApiResponse<string> = await registerUser(email, password);
     if (!process.success) return sendError(res, process.error);
     return sendSuccess(res, process.data);

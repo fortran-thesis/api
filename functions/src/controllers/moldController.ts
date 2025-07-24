@@ -7,15 +7,19 @@ import {
   retrieveAllMolds,
   retrieveMoldById,
   retrieveMoldByName,
+  softRemoveMold,
   updateMoldInFirestore,
 } from "../services/moldService";
 import { Mold } from "../types/types";
+import { uploadFiles } from "../lib/storage";
 
 export const createMold = async (req: Request, res: Response) => {
   try {
-    const details: Mold = req.body.details;
-    const mold: Mold | null = await addMoldToFirestore(details);
-    if (!mold) return sendError(res, "Failed to retrieve user", 404);
+    const details: Omit<Mold, 'photo_url'> = req.body.details;
+    const photos: Express.Multer.File[] = req.files as Express.Multer.File[]
+    const urls = await uploadFiles(photos, details.name)
+    const mold: Mold | null = await addMoldToFirestore({...details, photo_url: urls});
+    if (!mold) return sendError(res, "Failed to retrieve mold", 404);
     return sendSuccess(res, mold);
   } catch (error) {
     devLog(error);
@@ -84,3 +88,14 @@ export const deleteMold = async (req: Request, res: Response) => {
     return defaultError(res);
   }
 };
+
+export const softDeleteMold = async (req: Request, res: Response) => {
+  try {
+    const id: string = req.params.id;
+    await softRemoveMold(id);
+    return sendSuccess(res, "Successfully soft deleted mold.")
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+}

@@ -25,10 +25,10 @@ router.post(
 );
 
 //TODO: endpoints
-router.post('/change-password', async (req: Request, res: Response) => {})
-
 router.post('/reset-password', async (req: Request, res: Response) => {})
 
 router.post('/verify-email', async (req: Request, res: Response) => {})
+
+router.post('/change-email', async (req: Request, res: Response) => {})
 
 export default router;

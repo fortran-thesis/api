@@ -7,17 +7,31 @@ import {
   getMoldById,
   getMoldByName,
   patchMold,
+  softDeleteMold,
 } from "../controllers/moldController";
 import { sanitizeBody, sanitizeParams } from "../middlewares/sanitation";
 import { validateBody, validateParams } from "../middlewares/validation";
-import { MoldIdSchema, MoldSchema, NameParamSchema } from "../dto/moldDTO";
+import {
+  MoldIdSchema,
+  MoldSchema,
+  MoldUpdateSchema,
+  NameParamSchema,
+} from "../dto/moldDTO";
 import { Role } from "../types/enums";
+import { upload } from "../middlewares/upload";
 
 const router = Router();
 
-router.post("/", verifyUser(), async (req: Request, res: Response) => {
-  createMold(req, res);
-});
+router.post(
+  "/",
+  sanitizeBody,
+  validateBody(MoldSchema),
+  verifyUser(),
+  upload.array("photos", 5),
+  async (req: Request, res: Response) => {
+    createMold(req, res);
+  }
+);
 
 router.get("/", verifyUser(), async (req: Request, res: Response) => {
   getAllMolds(req, res);
@@ -48,7 +62,7 @@ router.patch(
   sanitizeParams,
   validateParams(MoldIdSchema),
   sanitizeBody,
-  validateBody(MoldSchema),
+  validateBody(MoldUpdateSchema),
   verifyUser(),
   async (req: Request, res: Response) => {
     patchMold(req, res);
@@ -62,5 +76,15 @@ router.delete(
   verifyUser(Role.ADMIN),
   async (req: Request, res: Response) => {
     deleteMold(req, res);
+  }
+);
+
+router.delete(
+  "/soft/:id",
+  sanitizeParams,
+  validateParams(MoldIdSchema),
+  verifyUser(),
+  async (req: Request, res: Response) => {
+    softDeleteMold(req, res);
   }
 );
