@@ -3,6 +3,7 @@ import {
   deleteDocument,
   getDocumentByField,
   getPaginatedDocuments,
+  softDeleteDocument,
   updateDocument,
 } from "../lib/firestore";
 import { Mold } from "../types/types";
@@ -17,4 +18,6 @@ export const updateMold = async (uid: string, updatedData: Partial<Mold>) =>
   updateDocument(collection, uid, updatedData);
 export const deleteMold = async (uid: string) =>
   deleteDocument(collection, uid);
+export const softDeleteMold = async (uid: string) => 
+  softDeleteDocument(collection, uid)
 

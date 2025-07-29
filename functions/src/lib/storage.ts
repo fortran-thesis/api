@@ -40,6 +40,27 @@ export const uploadFile = async (
   }
 };
 
+export const uploadFiles = async (
+  files: Express.Multer.File[],
+  bucketName: string,
+): Promise<string[]> => {
+  let urls: string[] = []
+  for (const file of files) {
+    const filePath = `molds/${Date.now()}_${file.originalname}`;
+    const success = await uploadFile(
+      bucketName,
+      filePath,
+      file.buffer,
+      file.mimetype
+    );
+      if (success) {
+      const url = await getSignedUrl(bucketName, filePath);
+      if (url) urls.push(url);
+    }
+  } 
+  return urls
+}
+
 /**
  * Downloads a file from the bucket as a buffer.
  * @param filePath - The path to the file in the bucket

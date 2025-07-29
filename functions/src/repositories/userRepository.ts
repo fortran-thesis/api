@@ -4,6 +4,7 @@ import {
   deleteDocument,
 
   getPaginatedDocuments,
+  softDeleteDocument,
   updateDocument,
 } from "../lib/firestore";
 import { User } from "../types/types";
@@ -14,8 +15,10 @@ export const addUser = async (data: User, uid: string) => addDocument(collection
 export const findUserById = async (id: string) => getAuthUserById(id);
 export const findUserByEmail = async (email: string) => getAuthUserByEmail(email);
 export const findAllUsers = async (limit: number, offset: number) => getPaginatedDocuments(collection, limit, offset);
-export const updateUser = async (uid: string, updatedData: Partial<User>) =>
+export const updateFirestoreUser = async (uid: string, updatedData: Partial<User>) =>
   updateDocument(collection, uid, updatedData);
-export const deleteUser = async (uid: string) =>
+export const deleteFirestoreUser = async (uid: string) =>
   deleteDocument(collection, uid);
+export const softDeleteFirestoreUser = async (uid: string) => 
+  softDeleteDocument(collection, uid)
 

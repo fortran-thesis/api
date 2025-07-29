@@ -24,24 +24,24 @@ export const RegisterSchema = z.object({
 export const LoginSchema = z.object({
   token: z
     .string({ required_error: "ID token is required" })
-    .nonempty({ message: "ID token is required" })
+    .nonempty({ message: "ID token is required" }),
 });
 
 export const UserIdSchema = z.object({
   id: z
-    .string({ required_error: "UID is required "})
-    .nonempty({ message: "UID is required"})
+    .string({ required_error: "UID is required " })
+    .nonempty({ message: "UID is required" })
     .min(28, { message: "ID token must be exactly 28 characters" })
     .max(28, { message: "ID token must be exactly 28 characters" })
     .regex(/^[A-Za-z0-9-_]+$/, { message: "ID token format is invalid" }),
-})
+});
 
 export const EmailSchema = z.object({
   email: z
     .string({ required_error: "Email is required" })
     .nonempty({ message: "Email is required" })
     .email({ message: "Invalid email address" }),
-})
+});
 
 export const UserDetailsSchema = z.object({
   email: z
@@ -49,6 +49,8 @@ export const UserDetailsSchema = z.object({
     .nonempty({ message: "Email is required" })
     .email({ message: "Invalid email address" }),
   displayName: z
-    .string({ required_error: "Name is required"})
-    .nonempty({ message: "Name is required"})
+    .string({ required_error: "Name is required" })
+    .nonempty({ message: "Name is required" }),
 });
+
+export const UserDetailsUpdateSchema = UserDetailsSchema.partial();

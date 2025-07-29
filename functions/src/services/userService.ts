@@ -1,18 +1,37 @@
 import { QuerySnapshot } from "firebase-admin/firestore";
-import { APIUser, User } from "../types/types";
-import { queryToJson } from "../lib/firestore";
+import { APIUser, User, WithId } from "../types/types";
 import {
   findAllUsers,
   findUserByEmail,
   findUserById,
 } from "../repositories/userRepository";
 import { devLog } from "../utils/dev";
+import { getAuth } from "firebase-admin/auth";
+import { queryToJson } from "../lib/firestore";
 
-export const retrieveAllUsers = async (limit: number, offset: number): Promise<User[] | null> => {
+export const retrieveAllUsers = async (limit: number, offset: number): Promise<APIUser[] | null> => {
   try {
     const users: QuerySnapshot | null = await findAllUsers(limit, offset);
     if (!users) throw new Error("No users found.");
-    return queryToJson<User>(users);
+    const firestoreList: WithId<User>[] = queryToJson<User>(users);
+    const identifiers = firestoreList.map(user => ({ uid: user.id }));
+    const authUsers = await getAuth().getUsers(identifiers);
+
+    const userList: APIUser[] = firestoreList.map(firestoreUser => {
+      const authUser = authUsers.users.find(u => u.uid === firestoreUser.id);
+      return {
+        id: firestoreUser.id,
+        user: {
+          role: firestoreUser.role
+        },
+        details: {
+          email: authUser?.email,
+          displayName: authUser?.displayName
+        }
+      };
+    });
+
+    return userList;
   } catch (error) {
     devLog(error);
     return null;
