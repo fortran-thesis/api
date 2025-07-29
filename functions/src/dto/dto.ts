@@ -43,6 +43,17 @@ export const EmailSchema = z.object({
     .email({ message: "Invalid email address" }),
 });
 
+export const ChangeEmailSchema = z.object({
+  oldEmail: z
+    .string({ required_error: "Email is required" })
+    .nonempty({ message: "Email is required" })
+    .email({ message: "Invalid email address" }),
+  newEmail: z
+    .string({ required_error: "Email is required" })
+    .nonempty({ message: "Email is required" })
+    .email({ message: "Invalid email address" }),
+});
+
 export const UserDetailsSchema = z.object({
   email: z
     .string({ required_error: "Email is required" })

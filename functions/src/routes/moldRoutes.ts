@@ -88,3 +88,5 @@ router.delete(
     softDeleteMold(req, res);
   }
 );
+
+export default router

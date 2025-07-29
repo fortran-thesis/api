@@ -1,6 +1,12 @@
 import { Request, Response } from "express";
 import { envOptions } from "../configs/environment";
-import { registerUser, authenticateUser } from "../services/authService";
+import {
+  registerUser,
+  authenticateUser,
+  changePassword,
+  verifyEmail,
+  changeEmail,
+} from "../services/authService";
 import { devLog } from "../utils/dev";
 import { sendError, sendSuccess, defaultError } from "../utils/response";
 import { ApiResponse } from "../types/types";
@@ -88,6 +94,41 @@ export const loginUser = async (req: Request, res: Response) => {
       maxAge: envOptions.maxSessionAge,
     });
     return sendSuccess(res, "Successfully logged in!");
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
+export const changeUserPassword = (req: Request, res: Response) => {
+  try {
+    const email: string = req.body.email;
+    const process = changePassword(email);
+    return sendSuccess(res, process);
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
+export const verifyUserEmail = (req: Request, res: Response) => {
+  try {
+    const email: string = req.body.email;
+    const process = verifyEmail(email);
+    return sendSuccess(res, process);
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
+export const changeUserEmail = (req: Request, res: Response) => {
+  try {
+    const oldEmail: string = req.body.oldEmail;
+    const newEmail: string = req.body.newEmail;
+
+    const process = changeEmail(oldEmail, newEmail);
+    return sendSuccess(res, process);
   } catch (error) {
     devLog(error);
     return defaultError(res);

@@ -21,7 +21,11 @@ router.patch('/:id', async (req: Request, res: Response) => {
 
 })
 
-router.delete('/:id', async (req: Request, res: Response) => {
+router.delete('/hard/:id', async (req: Request, res: Response) => {
+
+})
+
+router.delete('/soft/:id', async (req: Request, res: Response) => {
 
 })
 

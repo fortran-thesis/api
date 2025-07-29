@@ -51,6 +51,14 @@ export interface ScannedResult {
   flagged: boolean;
 }
 
+export interface MonitoredMold {
+  user_id: string;
+  image_url: string;
+  uploaded_at: Timestamp;
+  image_format: string;
+  surface_area: number
+}
+
 // FEEDBACKS
 export interface Feedback {
   user_id: string;
