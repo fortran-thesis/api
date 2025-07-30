@@ -147,6 +147,24 @@ export const getDocumentByField = async (
   }
 };
 
+
+export const getDocumentIdByField = async (
+  collection: string,
+  documentField: string,
+  documentContent: string
+): Promise<string | null> => {
+  try {
+    const querySnap = await getDocumentByField(collection, documentField, documentContent);
+    if (querySnap && !querySnap.empty) {
+      return querySnap.docs[0].id;
+    }
+    return null;
+  } catch (error) {
+    devLog(error);
+    return null;
+  }
+};
+
 /**
  * Retrieves a single Firestore document by ID.
  * @param collection - The name of the Firestore collection

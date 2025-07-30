@@ -5,7 +5,7 @@ import { sanitizeBody } from "../middlewares/sanitation";
 
 const router = Router()
 
-router.post('/', sanitizeBody, validateBody(), verifyUser(), upload.single('photo'), async (req: Request, res: Response) => {
+router.post('/', sanitizeBody, verifyUser(), upload.single('photo'), async (req: Request, res: Response) => {
 
 })
 

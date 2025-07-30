@@ -15,6 +15,7 @@ export interface Metadata {
 
 // USERS
 export interface User {
+  username: string;
   role: Role;
 }
 
@@ -72,3 +73,10 @@ export type ApiResponse<T> = {
   data?: T;
   error?: string | T;
 };
+
+export interface AuditLogEntry {
+  action: string;
+  userId: string;
+  details: string; // Could be a summary, JSON string, or object
+  timestamp: Timestamp;
+}

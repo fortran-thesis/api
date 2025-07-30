@@ -2,8 +2,8 @@ import { QuerySnapshot } from "firebase-admin/firestore";
 import { APIUser, User, WithId } from "../types/types";
 import {
   findAllUsers,
-  findUserByEmail,
-  findUserById,
+  findAuthUserByEmail,
+  findAuthUserById,
 } from "../repositories/userRepository";
 import { devLog } from "../utils/dev";
 import { getAuth } from "firebase-admin/auth";
@@ -22,6 +22,7 @@ export const retrieveAllUsers = async (limit: number, offset: number): Promise<A
       return {
         id: firestoreUser.id,
         user: {
+          username: firestoreUser.username,
           role: firestoreUser.role
         },
         details: {
@@ -40,7 +41,7 @@ export const retrieveAllUsers = async (limit: number, offset: number): Promise<A
 
 export const retrieveUserById = async (id: string): Promise<APIUser | null> => {
   try {
-    const user: APIUser | null = await findUserById(id);
+    const user: APIUser | null = await findAuthUserById(id);
     if (!user) throw new Error("No user found.");
     return user
   } catch (error) {
@@ -53,7 +54,7 @@ export const retrieveUserByEmail = async (
   email: string
 ): Promise<APIUser | null> => {
   try {
-    const user: APIUser | null = await findUserByEmail(email);
+    const user: APIUser | null = await findAuthUserByEmail(email);
     if (!user) throw new Error("No user found.");
     return user;
   } catch (error) {

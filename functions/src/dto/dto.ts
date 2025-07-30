@@ -22,10 +22,30 @@ export const RegisterSchema = z.object({
 });
 
 export const LoginSchema = z.object({
+  username: z
+    .string({ required_error: "Username is required" })
+    .nonempty({ message: "Username is required" }),
+  password: z
+    .string({ required_error: "Password is required" })
+    .nonempty({ message: "Password is required" })
+    .min(8, { message: "Password must be at least 8 characters long" })
+    .regex(/[a-z]/, {
+      message: "Password must contain at least one lowercase letter",
+    })
+    .regex(/[A-Z]/, {
+      message: "Password must contain at least one uppercase letter",
+    })
+    .regex(/[0-9]/, { message: "Password must contain at least one number" })
+    .regex(/[^A-Za-z0-9]/, {
+      message: "Password must contain at least one special character",
+    }),
+});
+
+export const TokenSchema = z.object({
   token: z
     .string({ required_error: "ID token is required" })
     .nonempty({ message: "ID token is required" }),
-});
+})
 
 export const UserIdSchema = z.object({
   id: z
@@ -42,6 +62,37 @@ export const EmailSchema = z.object({
     .nonempty({ message: "Email is required" })
     .email({ message: "Invalid email address" }),
 });
+
+export const ChangePasswordSchema = z.object({
+    oldPassword: z
+    .string({ required_error: "Password is required" })
+    .nonempty({ message: "Password is required" })
+    .min(8, { message: "Password must be at least 8 characters long" })
+    .regex(/[a-z]/, {
+      message: "Password must contain at least one lowercase letter",
+    })
+    .regex(/[A-Z]/, {
+      message: "Password must contain at least one uppercase letter",
+    })
+    .regex(/[0-9]/, { message: "Password must contain at least one number" })
+    .regex(/[^A-Za-z0-9]/, {
+      message: "Password must contain at least one special character",
+    }),
+    newPassword: z
+    .string({ required_error: "Password is required" })
+    .nonempty({ message: "Password is required" })
+    .min(8, { message: "Password must be at least 8 characters long" })
+    .regex(/[a-z]/, {
+      message: "Password must contain at least one lowercase letter",
+    })
+    .regex(/[A-Z]/, {
+      message: "Password must contain at least one uppercase letter",
+    })
+    .regex(/[0-9]/, { message: "Password must contain at least one number" })
+    .regex(/[^A-Za-z0-9]/, {
+      message: "Password must contain at least one special character",
+    }),
+})
 
 export const ChangeEmailSchema = z.object({
   oldEmail: z
