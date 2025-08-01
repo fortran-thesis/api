@@ -1,9 +1,11 @@
 import { Timestamp } from "firebase-admin/firestore";
-import { Role } from "./enums";
+import { AuditAction, Role } from "./enums";
 
 export type WithMetadataAndId<T> = WithId<T> & { metadata: Metadata }
 
 export type WithMetadata<T> = T & { metadata: Metadata }
+
+export type IsCurator<T> = T & { is_verified: boolean }
 
 export type WithId<T> = T & { id: string };
 
@@ -17,11 +19,13 @@ export interface Metadata {
 export interface User {
   username: string;
   role: Role;
+  is_banned: boolean;
 }
 
 export interface UserDetails {
   displayName?: string;
   email?: string;
+  disabled: boolean;
 }
 
 export interface APIUser {
@@ -35,6 +39,13 @@ export interface Mold {
   description: string;
   growth_stage: string;
   photo_url: string[];
+}
+
+export interface MoldFolder {
+  user_id: string;
+  name: string;
+  identified_mold: string | null;
+  molds: MonitoredMold[];
 }
 
 // SCANNED MOLDS
@@ -75,8 +86,10 @@ export type ApiResponse<T> = {
 };
 
 export interface AuditLogEntry {
-  action: string;
-  userId: string;
-  details: string; // Could be a summary, JSON string, or object
+  actor_id: string;
+  actor_role: Role;
+  action: AuditAction;
+  description: string;
   timestamp: Timestamp;
+  target_id?: string;
 }

@@ -57,6 +57,7 @@ export const registerUser = async (
     const user: WithMetadata<User> = {
       username: username,
       role: Role.USER,
+      is_banned: false,
       metadata: {
         created_at: Timestamp.now(),
         updated_at: null,
@@ -89,6 +90,7 @@ export const registerOAuthUser = async (
     const user: WithMetadata<User> = {
       username: "",
       role: Role.USER,
+      is_banned: false,
       metadata: {
         created_at: Timestamp.now(),
         updated_at: null,

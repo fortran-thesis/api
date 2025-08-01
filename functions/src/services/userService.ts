@@ -23,11 +23,13 @@ export const retrieveAllUsers = async (limit: number, offset: number): Promise<A
         id: firestoreUser.id,
         user: {
           username: firestoreUser.username,
-          role: firestoreUser.role
+          role: firestoreUser.role,
+          is_banned: firestoreUser.is_banned,
         },
         details: {
           email: authUser?.email,
-          displayName: authUser?.displayName
+          displayName: authUser?.displayName,
+          disabled: !!authUser?.disabled,
         }
       };
     });

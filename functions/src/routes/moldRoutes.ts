@@ -33,7 +33,7 @@ router.post(
   }
 );
 
-router.get("/", verifyUser(), async (req: Request, res: Response) => {
+router.get("/", verifyUser(Role.CURATOR), async (req: Request, res: Response) => {
   getAllMolds(req, res);
 });
 
@@ -41,7 +41,7 @@ router.get(
   "/:id",
   sanitizeParams,
   validateParams(MoldIdSchema),
-  verifyUser(),
+  verifyUser(Role.CURATOR),
   async (req: Request, res: Response) => {
     getMoldById(req, res);
   }

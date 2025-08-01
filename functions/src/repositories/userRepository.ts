@@ -9,7 +9,7 @@ import {
   softDeleteDocument,
   updateDocument,
 } from "../lib/firestore";
-import { User } from "../types/types";
+import { IsCurator, User } from "../types/types";
 
 const collection: string = "users";
 
@@ -18,10 +18,9 @@ export const findFirestoreUserById = async (id: string) => getDocumentById(colle
 export const findAuthUserById = async (id: string) => getAuthUserById(id);
 export const findAuthUserByEmail = async (email: string) => getAuthUserByEmail(email);
 export const findAllUsers = async (limit: number, offset: number) => getPaginatedDocuments(collection, limit, offset);
-export const updateFirestoreUser = async (uid: string, updatedData: Partial<User>) =>
+export const updateFirestoreUser = async (uid: string, updatedData: Partial<User> | Partial<IsCurator<User>>) =>
   updateDocument(collection, uid, updatedData);
 export const deleteFirestoreUser = async (uid: string) =>
   deleteDocument(collection, uid);
 export const softDeleteFirestoreUser = async (uid: string) => 
   softDeleteDocument(collection, uid)
-

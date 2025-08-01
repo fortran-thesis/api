@@ -25,11 +25,13 @@ export const getAuthUserById = async (uid: string): Promise<WithId<APIUser> | nu
       id: user.uid,
       user: {
         username: firestoreUser.username,
-        role: firestoreUser.role
+        role: firestoreUser.role,
+        is_banned: firestoreUser.is_banned
       },
       details: {
         email: user.email,
-        displayName: user.displayName
+        displayName: user.displayName,
+        disabled: user.disabled
       }
     };
   } catch (error) {
@@ -48,11 +50,13 @@ export const getAuthUserByEmail = async (email: string): Promise<WithId<APIUser>
       id: user.uid,
       user: {
         username: firestoreUser.username,
-        role: firestoreUser.role
+        role: firestoreUser.role,
+        is_banned: firestoreUser.is_banned
       },
       details: {
         email: user.email,
-        displayName: user.displayName
+        displayName: user.displayName,
+        disabled: user.disabled
       }
     };
   } catch (error) {

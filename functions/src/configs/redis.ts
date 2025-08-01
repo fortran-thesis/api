@@ -18,7 +18,7 @@ const redisReady = redis.connect();
 
 export const disconnectRedis = async () => {
   if (redis.isOpen) {
-    await redis.quit();
+    await redis.destroy();
   }
 };
 export { redis, redisReady };
