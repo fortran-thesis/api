@@ -52,7 +52,7 @@ router.patch(
 );
 
 router.delete(
-  "hard/:id",
+  "/hard/:id",
   sanitizeParams,
   validateParams(UserIdSchema),
   verifyUser(Role.ADMIN),

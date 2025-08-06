@@ -10,7 +10,7 @@ import userRoutes from "./routes/userRoutes";
 import { limitingOptions } from "./configs/limit";
 import helmet from "helmet";
 import scanRoutes from './routes/scanRoutes';
-import monitorRoutes from './routes/monitorRoutes';
+import monitorRoutes from './routes/monitoredMoldRoutes';
 import moldRoutes from './routes/moldRoutes';
 import feedbackRoutes from './routes/feedbackRoutes'
 

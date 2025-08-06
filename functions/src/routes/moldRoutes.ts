@@ -70,7 +70,7 @@ router.patch(
 );
 
 router.delete(
-  "/:id",
+  "/hard/:id",
   sanitizeParams,
   validateParams(MoldIdSchema),
   verifyUser(Role.ADMIN),

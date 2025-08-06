@@ -21,7 +21,7 @@ router.patch('/:id', verifyUser(), async(req: Request, res: Response) => {
     
 })
 
-router.delete('hard/:id', verifyUser(), async(req: Request, res: Response) => {
+router.delete('/hard/:id', verifyUser(), async(req: Request, res: Response) => {
     
 })
 

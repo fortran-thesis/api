@@ -1,5 +1,5 @@
 import { firebase } from "../configs/firebase";
-import { getFirestore, Timestamp } from "firebase-admin/firestore";
+import { FieldPath, getFirestore, Timestamp } from "firebase-admin/firestore";
 import { devLog } from "../utils/dev";
 import { WithId, WithMetadata } from "../types/types";
 
@@ -130,7 +130,7 @@ export const softDeleteDocument = async (
   }
 };
 
-export const getDocumentByField = async (
+export const getDocumentsByField = async (
   collection: string,
   documentField: string,
   documentContent: string
@@ -147,14 +147,17 @@ export const getDocumentByField = async (
   }
 };
 
-
 export const getDocumentIdByField = async (
   collection: string,
   documentField: string,
   documentContent: string
 ): Promise<string | null> => {
   try {
-    const querySnap = await getDocumentByField(collection, documentField, documentContent);
+    const querySnap = await getDocumentsByField(
+      collection,
+      documentField,
+      documentContent
+    );
     if (querySnap && !querySnap.empty) {
       return querySnap.docs[0].id;
     }
@@ -176,7 +179,7 @@ export const getDocumentById = async (
   documentUid: string
 ): Promise<FirebaseFirestore.QuerySnapshot | null> => {
   try {
-    const querySnap = await getDocumentByField(collection, "id", documentUid);
+    const querySnap = await getDocumentsByField(collection, "id", documentUid);
     if (!querySnap || querySnap.empty)
       throw new Error("Document does not exist");
     return querySnap;
@@ -207,12 +210,21 @@ export const getAllDocuments = async (
 export const getPaginatedDocuments = async (
   collection: string,
   limit: number,
-  offset: number
+  offset: number,
+  field?: string | FieldPath,
+  content?: string
 ): Promise<FirebaseFirestore.QuerySnapshot | null> => {
   try {
-    let query = await callFirebase(collection).orderBy(
-      FirebaseFirestore.FieldPath.documentId()
-    );
+    let query;
+    if (field && content) {
+      query = await callFirebase(collection)
+        .where(field, "==", content)
+        .orderBy(FirebaseFirestore.FieldPath.documentId());
+    } else {
+      query = await callFirebase(collection).orderBy(
+        FirebaseFirestore.FieldPath.documentId()
+      );
+    }
     if (offset && offset > 0) {
       query = query.offset(offset);
     }
@@ -236,7 +248,7 @@ export const queryToJson = <T>(
       ({
         id: doc.id,
         ...doc.data(),
-      } as T & { id: string })
+      }) as T & { id: string }
   );
 };
 

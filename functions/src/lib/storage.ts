@@ -27,38 +27,35 @@ export const uploadFile = async (
   filePath: string,
   data: Buffer | Readable,
   contentType?: string
-): Promise<boolean> => {
+): Promise<string | null> => {
   try {
     const file = getFileRef(bucketName, filePath);
     const options: any = {};
     if (contentType) options.metadata = { contentType };
     await file.save(data, options);
-    return true;
+    return filePath;
   } catch (error) {
     devLog(error);
-    return false;
+    return null;
   }
 };
 
 export const uploadFiles = async (
   files: Express.Multer.File[],
-  bucketName: string,
+  bucketName: string
 ): Promise<string[]> => {
-  let urls: string[] = []
+  let filePaths: string[] = [];
   for (const file of files) {
     const filePath = `molds/${Date.now()}_${file.originalname}`;
-    const success = await uploadFile(
+    const uploadedPath = await uploadFile(
       bucketName,
       filePath,
       file.buffer,
       file.mimetype
     );
-      if (success) {
-      const url = await getSignedUrl(bucketName, filePath);
-      if (url) urls.push(url);
-    }
-  } 
-  return urls
+    if (uploadedPath) filePaths.push(uploadedPath);
+  }
+  return filePaths;
 }
 
 /**

@@ -44,8 +44,9 @@ export interface Mold {
 export interface MoldFolder {
   user_id: string;
   name: string;
+  photo_url: string;
   identified_mold: string | null;
-  molds: MonitoredMold[];
+  is_archived: boolean;
 }
 
 // SCANNED MOLDS
@@ -65,6 +66,7 @@ export interface ScannedResult {
 
 export interface MonitoredMold {
   user_id: string;
+  mold_folder_id: string;
   image_url: string;
   uploaded_at: Timestamp;
   image_format: string;
