@@ -39,10 +39,11 @@ export const addMonitoredMoldToFirestore = async (
 
 export const retrieveAllMonitoredMolds = async (
   limit: number,
-  offset: number
+  offset: number,
+  id: string,
 ): Promise<MonitoredMold[] | null> => {
   try {
-    const molds: QuerySnapshot | null = await findAllMonitoredMolds(limit, offset);
+    const molds: QuerySnapshot | null = await findAllMonitoredMolds(id, limit, offset);
     if (!molds) throw new Error("No monitored molds found.");
     return queryToJson<MonitoredMold>(molds);
   } catch (error) {

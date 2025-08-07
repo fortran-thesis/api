@@ -2,8 +2,10 @@ import { Request, Response, Router } from "express";
 import { upload } from "../middlewares/upload";
 import { verifyUser } from "../middlewares/verification";
 import { sanitizeBody } from "../middlewares/sanitation";
-import { validateBody, validateParams } from "../middlewares/validation";
+import { validateBody, validateParams, validateQuery } from "../middlewares/validation";
 import { MoldFolderCreateSchema, MoldFolderUpdateSchema } from "../dto/moldFolderDTO";
+import { PaginationQuerySchema } from "../dto/paginationDTO";
+import { MoldIdSchema } from "../dto/moldDTO";
 import {
   createMoldFolder,
   getAllMoldFolders,
@@ -26,17 +28,18 @@ router.post(
   }
 );
 
-router.get('/', verifyUser(), async(req: Request, res: Response) => {
+router.get('/', verifyUser(), validateQuery(PaginationQuerySchema), async(req: Request, res: Response) => {
   await getAllMoldFolders(req, res);
 })
 
-router.get('/archive', verifyUser(), async(req: Request, res: Response) => {
+router.get('/archive', verifyUser(), validateQuery(PaginationQuerySchema), async(req: Request, res: Response) => {
   await getAllArchivedMoldFolders(req, res);
 })
 
 router.patch(
   '/:id',
   verifyUser(),
+  validateParams(MoldIdSchema),
   sanitizeBody,
   validateBody(MoldFolderUpdateSchema),
   async (req: Request, res: Response) => {
@@ -44,11 +47,11 @@ router.patch(
   }
 );
 
-router.delete('/hard/:id', verifyUser(), async(req: Request, res: Response) => {
+router.delete('/hard/:id', verifyUser(), validateParams(MoldIdSchema), async(req: Request, res: Response) => {
   await deleteMoldFolder(req, res);
 })
 
-router.delete('/soft/:id', verifyUser(), async(req: Request, res: Response) => {
+router.delete('/soft/:id', verifyUser(), validateParams(MoldIdSchema), async(req: Request, res: Response) => {
   await softDeleteMoldFolder(req, res);
 })
 

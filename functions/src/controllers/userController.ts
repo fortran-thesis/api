@@ -9,6 +9,15 @@ import {
 } from "../services/userService";
 import { APIUser, UserDetails } from "../types/types";
 
+/**
+ * Get user by ID
+ *
+ * @route GET /api/v1/users/{id}
+ * @param req - Express request object
+ * @param res - Express response object
+ * @returns 200: User found, 404: User not found, 500: Server error
+ * @access Authenticated users
+ */
 export const getUserById = async (req: Request, res: Response) => {
   /**
    * @swagger
@@ -26,7 +35,7 @@ export const getUserById = async (req: Request, res: Response) => {
    *     security:
    *       - bearerAuth: []
    *       - cookieAuth: []
-   *     description: 
+   *     description:
    *       - Requires authentication (Bearer token or session cookie)
    *     responses:
    *       200:
@@ -47,6 +56,15 @@ export const getUserById = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * Get user by email
+ *
+ * @route GET /api/v1/users/email/{email}
+ * @param req - Express request object
+ * @param res - Express response object
+ * @returns 200: User found, 404: User not found, 500: Server error
+ * @access Authenticated users
+ */
 export const getUserByEmail = async (req: Request, res: Response) => {
   /**
    * @swagger
@@ -61,10 +79,10 @@ export const getUserByEmail = async (req: Request, res: Response) => {
    *         schema:
    *           type: string
    *         description: User email
-   *    security:
+   *     security:
    *       - bearerAuth: []
    *       - cookieAuth: []
-   *     description: 
+   *     description:
    *       - Requires authentication (Bearer token or session cookie)
    *     responses:
    *       200:
@@ -85,6 +103,16 @@ export const getUserByEmail = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * Get all users (admin only)
+ *
+ * @route GET /api/v1/users
+ * @param req - Express request object
+ * @param res - Express response object
+ * @returns 200: List of users, 403: Forbidden, 500: Server error
+ * @access Admin only
+ * @remarks Supports pagination via query params (?page, ?limit)
+ */
 export const getAllUsers = async (req: Request, res: Response) => {
   /**
    * @swagger
@@ -95,7 +123,7 @@ export const getAllUsers = async (req: Request, res: Response) => {
    *     security:
    *       - bearerAuth: []
    *       - cookieAuth: []
-   *     description: 
+   *     description:
    *       - Requires authentication (Bearer token or session cookie) and admin role.
    *     responses:
    *       200:
@@ -118,6 +146,15 @@ export const getAllUsers = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * Update user details
+ *
+ * @route PATCH /api/v1/users/{id}
+ * @param req - Express request object
+ * @param res - Express response object
+ * @returns 200: Success, 400: Validation error, 403: Forbidden, 500: Server error
+ * @access Authenticated users
+ */
 export const patchUser = async (req: Request, res: Response) => {
   /**
    * @swagger
@@ -128,7 +165,7 @@ export const patchUser = async (req: Request, res: Response) => {
    *     security:
    *       - bearerAuth: []
    *       - cookieAuth: []
-   *     description: 
+   *     description:
    *       - Requires authentication (Bearer token or session cookie)
    *     parameters:
    *       - in: path
@@ -170,6 +207,15 @@ export const patchUser = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * Delete user (admin only)
+ *
+ * @route DELETE /api/v1/users/{id}
+ * @param req - Express request object
+ * @param res - Express response object
+ * @returns 200: Success, 403: Forbidden, 500: Server error
+ * @access Admin only
+ */
 export const deleteUser = async (req: Request, res: Response) => {
   /**
    * @swagger
@@ -187,7 +233,7 @@ export const deleteUser = async (req: Request, res: Response) => {
    *     security:
    *       - bearerAuth: []
    *       - cookieAuth: []
-   *     description: 
+   *     description:
    *       - Requires authentication (Bearer token or session cookie) and admin role.
    *     responses:
    *       200:
@@ -207,7 +253,40 @@ export const deleteUser = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * Soft delete user
+ *
+ * @route DELETE /api/v1/users/soft/{id}
+ * @param req - Express request object
+ * @param res - Express response object
+ * @returns 200: Success, 500: Server error
+ * @access Authenticated users
+ */
 export const softDeleteUser = async (req: Request, res: Response) => {
+  /**
+   * @swagger
+   * /api/v1/users/soft/{id}:
+   *   delete:
+   *     summary: Soft delete user
+   *     tags: [Users]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: User ID
+   *     security:
+   *       - bearerAuth: []
+   *       - cookieAuth: []
+   *     description:
+   *       - Requires authentication (Bearer token or session cookie)
+   *     responses:
+   *       200:
+   *         description: Successfully soft deleted user
+   *       500:
+   *         description: Server error
+   */
   try {
     const id: string = req.params.id;
     await softRemoveUser(id);

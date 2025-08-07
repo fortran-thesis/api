@@ -10,14 +10,20 @@ import {
   softDeleteUser
 } from "../controllers/userController";
 import { EmailSchema, UserDetailsUpdateSchema, UserIdSchema } from "../dto/dto";
-import { validateBody, validateParams } from "../middlewares/validation";
+import { validateBody, validateParams, validateQuery } from "../middlewares/validation";
+import { PaginationQuerySchema } from "../dto/paginationDTO";
 import { sanitizeBody, sanitizeParams } from "../middlewares/sanitation";
 
 const router = Router();
 
-router.get("/", verifyUser(Role.ADMIN), async (req: Request, res: Response) => {
-  getAllUsers(req, res);
-});
+router.get(
+  "/",
+  verifyUser(Role.ADMIN),
+  validateQuery(PaginationQuerySchema),
+  async (req: Request, res: Response) => {
+    getAllUsers(req, res);
+  }
+);
 
 router.get(
   "/:id",
