@@ -83,7 +83,7 @@ export const enableUser = async (req: Request, res: Response) => {
    */
   try {
     const id = req.body.id;
-    const email = req.body.id;
+    const email = req.body.email;
     const process = await toggleUser(id, email, false);
     if (!process.success) return sendError(res, "Failed to enable user.");
     return sendSuccess(res, "Successfully enabled user.");
