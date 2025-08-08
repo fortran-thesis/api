@@ -1,3 +1,12 @@
+import { ReportReason } from "./enums";
+// REPORTS
+export interface Report {
+  reporter_id: string;
+  reported_user_id: string;
+  reason: ReportReason;
+  details?: string;
+  created_at: Timestamp;
+}
 import { Timestamp } from "firebase-admin/firestore";
 import { AuditAction, Role } from "./enums";
 

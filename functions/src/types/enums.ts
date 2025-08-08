@@ -1,3 +1,12 @@
+export enum ReportReason {
+  MISLEADING_DESCRIPTION = "misleading_description",
+  OFFENSIVE_LANGUAGE = "offensive_language",
+  INTELLECTUAL_PROPERTY = "intellectual_property",
+  GRAPHIC_CONTENT = "graphic_content",
+  SEXUAL_CONTENT = "sexual_content",
+  RESTRICTED_CONTENT = "restricted_content",
+  SOMETHING_ELSE = "something_else",
+}
 export enum Role {
   USER = "user",
   ADMIN = "admin",
