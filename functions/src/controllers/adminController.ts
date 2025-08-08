@@ -128,7 +128,7 @@ export const banUserController = async (req: Request, res: Response) => {
    */
   try {
     const id = req.body.id;
-    const email = req.body.id;
+    const email = req.body.email;
     const process = await banUser(id, email);
     if (!process.success) return sendError(res, "Failed to ban user.");
     return sendSuccess(res, "Successfully banned user.");
