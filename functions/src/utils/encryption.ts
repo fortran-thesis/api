@@ -3,8 +3,16 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const algorithm = "aes-256-cbc";
-const key = Buffer.from(process.env.ENCRYPTION_KEY!, "hex"); // 32 bytes
 
+// Validate ENCRYPTION_KEY existence and length
+const encryptionKey = process.env.ENCRYPTION_KEY;
+if (!encryptionKey) {
+  throw new Error("ENCRYPTION_KEY environment variable is not set.");
+}
+if (encryptionKey.length !== 64 || !/^[0-9a-fA-F]+$/.test(encryptionKey)) {
+  throw new Error("ENCRYPTION_KEY must be a 64-character hexadecimal string (32 bytes).");
+}
+const key = Buffer.from(encryptionKey, "hex"); // 32 bytes
 export const encrypt = (data: Buffer): { iv: string; encrypted: string } => {
   const iv = randomBytes(16);
   const cipher = createCipheriv(algorithm, key, iv);
