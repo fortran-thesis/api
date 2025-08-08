@@ -28,7 +28,7 @@ export const findAllMoldFolders = async (
       .collection(collection)
       .where("user_id", "==", uid)
       .where("is_archived", "==", isArchived)
-      .orderBy(FirebaseFirestore.FieldPath.documentId());
+      .orderBy(FieldPath.documentId());
     if (offset && offset > 0) {
       query = query.offset(offset);
     }
