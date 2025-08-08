@@ -1,0 +1,270 @@
+import { Request, Response } from "express";
+import { devLog } from "../utils/dev";
+import { defaultError, sendError, sendSuccess } from "../utils/response";
+import { Moldipedia } from "../types/types";
+import { uploadFile } from "../lib/storage";
+import {
+  addMoldipediaToFirestore,
+  retrieveAllMoldipedia,
+  retrieveMoldipediaById,
+  updateMoldipediaInFirestore,
+  removeMoldipedia,
+  softRemoveMoldipedia,
+} from "../services/moldipediaService";
+
+export const createMoldipedia = async (req: Request, res: Response) => {
+  /**
+   * @swagger
+   * /api/v1/moldipedia:
+   *   post:
+   *     summary: Create a new moldipedia article
+   *     tags: [Moldipedia]
+   *     security:
+   *       - bearerAuth: []
+   *       - cookieAuth: []
+   *     description:
+   *       - Requires authentication (Bearer token or session cookie)
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         multipart/form-data:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               details:
+   *                 type: object
+   *                 description: Moldipedia DTO. See Moldipedia interface for properties.
+   *                 properties:
+   *                   title:
+   *                     type: string
+   *                   body:
+   *                     type: string
+   *                   author_id:
+   *                     type: string
+   *               cover_photo:
+   *                 type: string
+   *                 format: binary
+   *     responses:
+   *       200:
+   *         description: Successfully created moldipedia article
+   *       400:
+   *         description: Validation error
+   *       500:
+   *         description: Server error
+   */
+  try {
+    const details: Omit<Moldipedia, "cover_photo"> = req.body.details;
+    const photo: Express.Multer.File = req.file as Express.Multer.File;
+    const url = await uploadFile("moldipedia", photo.originalname, photo.buffer, photo.mimetype);
+    if (!url) return sendError(res, "Invalid cover photo, please upload a different image.", 400);
+    const article: Moldipedia | null = await addMoldipediaToFirestore({ ...details, cover_photo: url });
+    if (!article) return sendError(res, "Failed to create moldipedia article", 400);
+    return sendSuccess(res, article);
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
+export const getAllMoldipedia = async (req: Request, res: Response) => {
+  /**
+   * @swagger
+   * /api/v1/moldipedia:
+   *   get:
+   *     summary: Get all moldipedia articles
+   *     tags: [Moldipedia]
+   *     security:
+   *       - bearerAuth: []
+   *       - cookieAuth: []
+   *     description:
+   *       - Requires authentication (Bearer token or session cookie)
+   *     parameters:
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: string
+   *         description: Page number
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: string
+   *         description: Page size
+   *     responses:
+   *       200:
+   *         description: List of moldipedia articles
+   *       404:
+   *         description: Not found
+   *       500:
+   *         description: Server error
+   */
+  const page: number = parseInt(req.query.page as string) || 1;
+  const limit: number = parseInt(req.query.limit as string) || 10;
+  const offset: number = (page - 1) * limit;
+  try {
+    const articles: Moldipedia[] | null = await retrieveAllMoldipedia(limit, offset);
+    if (!articles) return sendError(res, "Failed to retrieve moldipedia articles", 404);
+    return sendSuccess(res, articles);
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
+export const getMoldipediaById = async (req: Request, res: Response) => {
+  /**
+   * @swagger
+   * /api/v1/moldipedia/{id}:
+   *   get:
+   *     summary: Get moldipedia article by ID
+   *     tags: [Moldipedia]
+   *     security:
+   *       - bearerAuth: []
+   *       - cookieAuth: []
+   *     description:
+   *       - Requires authentication (Bearer token or session cookie)
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Moldipedia article ID
+   *     responses:
+   *       200:
+   *         description: Moldipedia article
+   *       404:
+   *         description: Not found
+   *       500:
+   *         description: Server error
+   */
+  try {
+    const id = req.params.id;
+    const article: Moldipedia | null = await retrieveMoldipediaById(id);
+    if (!article) return sendError(res, "Failed to retrieve moldipedia article", 404);
+    return sendSuccess(res, article);
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
+export const patchMoldipedia = async (req: Request, res: Response) => {
+  /**
+   * @swagger
+   * /api/v1/moldipedia/{id}:
+   *   patch:
+   *     summary: Update moldipedia article
+   *     tags: [Moldipedia]
+   *     security:
+   *       - bearerAuth: []
+   *       - cookieAuth: []
+   *     description:
+   *       - Requires authentication (Bearer token or session cookie)
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Moldipedia article ID
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               details:
+   *                 type: object
+   *                 description: Moldipedia details to update
+   *     responses:
+   *       200:
+   *         description: Successfully updated moldipedia article
+   *       400:
+   *         description: Validation error
+   *       404:
+   *         description: Not found
+   *       500:
+   *         description: Server error
+   */
+  try {
+    const id: string = req.params.id;
+    const details: Partial<Moldipedia> = req.body.details;
+    const updated = await updateMoldipediaInFirestore(id, details);
+    if (!updated) return sendError(res, "Failed to update moldipedia article", 404);
+    return sendSuccess(res, updated);
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
+export const deleteMoldipedia = async (req: Request, res: Response) => {
+  /**
+   * @swagger
+   * /api/v1/moldipedia/{id}:
+   *   delete:
+   *     summary: Delete moldipedia article
+   *     tags: [Moldipedia]
+   *     security:
+   *       - bearerAuth: []
+   *       - cookieAuth: []
+   *     description:
+   *       - Requires authentication (Bearer token or session cookie)
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Moldipedia article ID
+   *     responses:
+   *       200:
+   *         description: Successfully deleted moldipedia article
+   *       500:
+   *         description: Server error
+   */
+  try {
+    const id: string = req.params.id;
+    await removeMoldipedia(id);
+    return sendSuccess(res, "Successfully deleted moldipedia article");
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
+export const softDeleteMoldipedia = async (req: Request, res: Response) => {
+  /**
+   * @swagger
+   * /api/v1/moldipedia/soft/{id}:
+   *   delete:
+   *     summary: Soft delete moldipedia article
+   *     tags: [Moldipedia]
+   *     security:
+   *       - bearerAuth: []
+   *       - cookieAuth: []
+   *     description:
+   *       - Requires authentication (Bearer token or session cookie)
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Moldipedia article ID
+   *     responses:
+   *       200:
+   *         description: Successfully soft deleted moldipedia article
+   *       500:
+   *         description: Server error
+   */
+  try {
+    const id: string = req.params.id;
+    await softRemoveMoldipedia(id);
+    return sendSuccess(res, "Successfully soft deleted moldipedia article.");
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};

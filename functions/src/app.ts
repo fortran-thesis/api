@@ -9,6 +9,10 @@ import { Router } from "express";
 import userRoutes from "./routes/userRoutes";
 import { limitingOptions } from "./configs/limit";
 import helmet from "helmet";
+import scanRoutes from "./routes/scannedMoldRoutes";
+import monitorRoutes from "./routes/monitoredMoldRoutes";
+import moldRoutes from "./routes/moldRoutes";
+import feedbackRoutes from "./routes/feedbackRoutes";
 
 const app = express();
 app.use(helmet());
@@ -21,6 +25,10 @@ setupSwagger(app);
 const router = Router();
 router.use("/v1/auth", authRoutes);
 router.use("/v1/user", userRoutes);
+router.use("/v1/mold", moldRoutes);
+router.use("/v1/scan", scanRoutes);
+router.use("/v1/monitor", monitorRoutes);
+router.use("/v1/feedback", feedbackRoutes);
 
 app.use("/api", router);
 

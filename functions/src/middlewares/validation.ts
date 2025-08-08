@@ -32,7 +32,7 @@ export const validateBody =
     try {
       const result = schema.safeParse(req.body);
       if (!result.success) {
-         const messages = result.error.errors.map(e => e.message).join(", ");
+        const messages = result.error.errors.map((e) => e.message).join(", ");
         sendError(res, messages);
         return;
       }
@@ -52,7 +52,7 @@ export const validateParams =
     try {
       const result = schema.safeParse(req.params);
       if (!result.success) {
-        const messages = result.error.errors.map(e => e.message).join(", ");
+        const messages = result.error.errors.map((e) => e.message).join(", ");
         sendError(res, messages);
         return;
       }
@@ -70,7 +70,7 @@ export const validateQuery =
     try {
       const result = schema.safeParse(req.query);
       if (!result.success) {
-        const messages = result.error.errors.map(e => e.message).join(", ");
+        const messages = result.error.errors.map((e) => e.message).join(", ");
         sendError(res, messages);
         return;
       }

@@ -33,15 +33,19 @@ router.post(
   }
 );
 
-router.get("/", verifyUser(), async (req: Request, res: Response) => {
-  getAllMolds(req, res);
-});
+router.get(
+  "/",
+  verifyUser(Role.CURATOR),
+  async (req: Request, res: Response) => {
+    getAllMolds(req, res);
+  }
+);
 
 router.get(
   "/:id",
   sanitizeParams,
   validateParams(MoldIdSchema),
-  verifyUser(),
+  verifyUser(Role.CURATOR),
   async (req: Request, res: Response) => {
     getMoldById(req, res);
   }
@@ -70,7 +74,7 @@ router.patch(
 );
 
 router.delete(
-  "/:id",
+  "/hard/:id",
   sanitizeParams,
   validateParams(MoldIdSchema),
   verifyUser(Role.ADMIN),
@@ -88,3 +92,5 @@ router.delete(
     softDeleteMold(req, res);
   }
 );
+
+export default router;
