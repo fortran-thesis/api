@@ -18,7 +18,11 @@ import {
   ChangePasswordSchema,
 } from "../dto/dto";
 import { sanitizeBody } from "../middlewares/sanitation";
-import { finalActionLimiter, sendCodeLimiter, verifyCodeLimiter } from "../configs/limit";
+import {
+  finalActionLimiter,
+  sendCodeLimiter,
+  verifyCodeLimiter,
+} from "../configs/limit";
 import rateLimit from "express-rate-limit";
 import { verifyUser } from "../middlewares/verification";
 

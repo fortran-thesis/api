@@ -1,18 +1,18 @@
 import { Timestamp } from "firebase-admin/firestore";
 import { AuditAction, Role } from "./enums";
 
-export type WithMetadataAndId<T> = WithId<T> & { metadata: Metadata }
+export type WithMetadataAndId<T> = WithId<T> & { metadata: Metadata };
 
-export type WithMetadata<T> = T & { metadata: Metadata }
+export type WithMetadata<T> = T & { metadata: Metadata };
 
-export type IsCurator<T> = T & { is_verified: boolean }
+export type IsCurator<T> = T & { is_verified: boolean };
 
 export type WithId<T> = T & { id: string };
 
 export interface Metadata {
-  created_at?: Timestamp,
-  updated_at?: Timestamp | null,
-  deleted_at?: Timestamp | null
+  created_at?: Timestamp;
+  updated_at?: Timestamp | null;
+  deleted_at?: Timestamp | null;
 }
 
 // USERS
@@ -29,8 +29,8 @@ export interface UserDetails {
 }
 
 export interface APIUser {
-  user: User,
-  details: UserDetails
+  user: User;
+  details: UserDetails;
 }
 
 // MOLDS
@@ -70,7 +70,7 @@ export interface MonitoredMold {
   image_url: string;
   uploaded_at: Timestamp;
   image_format: string;
-  surface_area: number
+  surface_area: number;
 }
 
 // FEEDBACKS
@@ -94,4 +94,12 @@ export interface AuditLogEntry {
   description: string;
   timestamp: Timestamp;
   target_id?: string;
+}
+
+export interface Moldipedia {
+  title: string;
+  body: string;
+  author_id: string;
+  cover_photo: string;
+  tags: string[];
 }

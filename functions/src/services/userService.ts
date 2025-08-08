@@ -9,16 +9,19 @@ import { devLog } from "../utils/dev";
 import { getAuth } from "firebase-admin/auth";
 import { queryToJson } from "../lib/firestore";
 
-export const retrieveAllUsers = async (limit: number, offset: number): Promise<APIUser[] | null> => {
+export const retrieveAllUsers = async (
+  limit: number,
+  offset: number
+): Promise<APIUser[] | null> => {
   try {
     const users: QuerySnapshot | null = await findAllUsers(limit, offset);
     if (!users) throw new Error("No users found.");
     const firestoreList: WithId<User>[] = queryToJson<User>(users);
-    const identifiers = firestoreList.map(user => ({ uid: user.id }));
+    const identifiers = firestoreList.map((user) => ({ uid: user.id }));
     const authUsers = await getAuth().getUsers(identifiers);
 
-    const userList: APIUser[] = firestoreList.map(firestoreUser => {
-      const authUser = authUsers.users.find(u => u.uid === firestoreUser.id);
+    const userList: APIUser[] = firestoreList.map((firestoreUser) => {
+      const authUser = authUsers.users.find((u) => u.uid === firestoreUser.id);
       return {
         id: firestoreUser.id,
         user: {
@@ -30,7 +33,7 @@ export const retrieveAllUsers = async (limit: number, offset: number): Promise<A
           email: authUser?.email,
           displayName: authUser?.displayName,
           disabled: !!authUser?.disabled,
-        }
+        },
       };
     });
 
@@ -45,7 +48,7 @@ export const retrieveUserById = async (id: string): Promise<APIUser | null> => {
   try {
     const user: APIUser | null = await findAuthUserById(id);
     if (!user) throw new Error("No user found.");
-    return user
+    return user;
   } catch (error) {
     devLog(error);
     return null;

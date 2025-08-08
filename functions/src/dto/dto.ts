@@ -45,7 +45,7 @@ export const TokenSchema = z.object({
   token: z
     .string({ required_error: "ID token is required" })
     .nonempty({ message: "ID token is required" }),
-})
+});
 
 export const UserIdSchema = z.object({
   id: z
@@ -64,7 +64,7 @@ export const EmailSchema = z.object({
 });
 
 export const ChangePasswordSchema = z.object({
-    oldPassword: z
+  oldPassword: z
     .string({ required_error: "Password is required" })
     .nonempty({ message: "Password is required" })
     .min(8, { message: "Password must be at least 8 characters long" })
@@ -78,7 +78,7 @@ export const ChangePasswordSchema = z.object({
     .regex(/[^A-Za-z0-9]/, {
       message: "Password must contain at least one special character",
     }),
-    newPassword: z
+  newPassword: z
     .string({ required_error: "Password is required" })
     .nonempty({ message: "Password is required" })
     .min(8, { message: "Password must be at least 8 characters long" })
@@ -92,7 +92,7 @@ export const ChangePasswordSchema = z.object({
     .regex(/[^A-Za-z0-9]/, {
       message: "Password must contain at least one special character",
     }),
-})
+});
 
 export const ChangeEmailSchema = z.object({
   oldEmail: z

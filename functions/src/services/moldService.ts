@@ -26,9 +26,9 @@ export const addMoldToFirestore = async (
       metadata: {
         created_at: Timestamp.now(),
         updated_at: null,
-        deleted_at: null
-      }
-    }
+        deleted_at: null,
+      },
+    };
     const mold: DocumentSnapshot | null = await addMold(detailsWithMetadata);
     if (!mold) throw new Error("Cannot add mold.");
     return documentToJson<Mold>(mold);

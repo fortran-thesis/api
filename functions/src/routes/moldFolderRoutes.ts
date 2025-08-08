@@ -2,8 +2,15 @@ import { Request, Response, Router } from "express";
 import { upload } from "../middlewares/upload";
 import { verifyUser } from "../middlewares/verification";
 import { sanitizeBody } from "../middlewares/sanitation";
-import { validateBody, validateParams, validateQuery } from "../middlewares/validation";
-import { MoldFolderCreateSchema, MoldFolderUpdateSchema } from "../dto/moldFolderDTO";
+import {
+  validateBody,
+  validateParams,
+  validateQuery,
+} from "../middlewares/validation";
+import {
+  MoldFolderCreateSchema,
+  MoldFolderUpdateSchema,
+} from "../dto/moldFolderDTO";
 import { PaginationQuerySchema } from "../dto/paginationDTO";
 import { MoldIdSchema } from "../dto/moldDTO";
 import {
@@ -12,15 +19,15 @@ import {
   getAllArchivedMoldFolders,
   patchMoldFolder,
   deleteMoldFolder,
-  softDeleteMoldFolder
+  softDeleteMoldFolder,
 } from "../controllers/moldFolderController";
 
-const router = Router()
+const router = Router();
 
 router.post(
-  '/',
+  "/",
   verifyUser(),
-  upload.single('photo'),
+  upload.single("photo"),
   sanitizeBody,
   validateBody(MoldFolderCreateSchema),
   async (req: Request, res: Response) => {
@@ -28,16 +35,26 @@ router.post(
   }
 );
 
-router.get('/', verifyUser(), validateQuery(PaginationQuerySchema), async(req: Request, res: Response) => {
-  await getAllMoldFolders(req, res);
-})
+router.get(
+  "/",
+  verifyUser(),
+  validateQuery(PaginationQuerySchema),
+  async (req: Request, res: Response) => {
+    await getAllMoldFolders(req, res);
+  }
+);
 
-router.get('/archive', verifyUser(), validateQuery(PaginationQuerySchema), async(req: Request, res: Response) => {
-  await getAllArchivedMoldFolders(req, res);
-})
+router.get(
+  "/archive",
+  verifyUser(),
+  validateQuery(PaginationQuerySchema),
+  async (req: Request, res: Response) => {
+    await getAllArchivedMoldFolders(req, res);
+  }
+);
 
 router.patch(
-  '/:id',
+  "/:id",
   verifyUser(),
   validateParams(MoldIdSchema),
   sanitizeBody,
@@ -47,12 +64,22 @@ router.patch(
   }
 );
 
-router.delete('/hard/:id', verifyUser(), validateParams(MoldIdSchema), async(req: Request, res: Response) => {
-  await deleteMoldFolder(req, res);
-})
+router.delete(
+  "/hard/:id",
+  verifyUser(),
+  validateParams(MoldIdSchema),
+  async (req: Request, res: Response) => {
+    await deleteMoldFolder(req, res);
+  }
+);
 
-router.delete('/soft/:id', verifyUser(), validateParams(MoldIdSchema), async(req: Request, res: Response) => {
-  await softDeleteMoldFolder(req, res);
-})
+router.delete(
+  "/soft/:id",
+  verifyUser(),
+  validateParams(MoldIdSchema),
+  async (req: Request, res: Response) => {
+    await softDeleteMoldFolder(req, res);
+  }
+);
 
-export default router
+export default router;

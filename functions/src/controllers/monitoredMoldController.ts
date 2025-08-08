@@ -8,7 +8,7 @@ import {
   retrieveMonitoredMoldById,
   updateMonitoredMoldInFirestore,
   removeMonitoredMold,
-  softRemoveMonitoredMold
+  softRemoveMonitoredMold,
 } from "../services/monitoredMoldService";
 import { uploadFile } from "../lib/storage";
 
@@ -62,9 +62,22 @@ export const createMonitoredMold = async (req: Request, res: Response) => {
   try {
     const details: MonitoredMold = req.body.details;
     const photo: Express.Multer.File = req.file as Express.Multer.File;
-    const url = await uploadFile('monitored_molds', photo.originalname, photo.buffer, photo.mimetype);
-    if (!url) return sendError(res, 'Invalid photo, please upload a different image.', 400);
-    const mold: MonitoredMold | null = await addMonitoredMoldToFirestore({ ...details, image_url: url });
+    const url = await uploadFile(
+      "monitored_molds",
+      photo.originalname,
+      photo.buffer,
+      photo.mimetype
+    );
+    if (!url)
+      return sendError(
+        res,
+        "Invalid photo, please upload a different image.",
+        400
+      );
+    const mold: MonitoredMold | null = await addMonitoredMoldToFirestore({
+      ...details,
+      image_url: url,
+    });
     if (!mold) return sendError(res, "Failed to create monitored mold", 400);
     return sendSuccess(res, mold);
   } catch (error) {
@@ -73,7 +86,10 @@ export const createMonitoredMold = async (req: Request, res: Response) => {
   }
 };
 
-export const getAllMonitoredMoldsByFolderId = async (req: Request, res: Response) => {
+export const getAllMonitoredMoldsByFolderId = async (
+  req: Request,
+  res: Response
+) => {
   /**
    * @swagger
    * /api/v1/monitored-molds/{id}:
@@ -113,10 +129,15 @@ export const getAllMonitoredMoldsByFolderId = async (req: Request, res: Response
   const page: number = parseInt(req.query.page as string) || 1;
   const limit: number = parseInt(req.query.limit as string) || 10;
   const offset: number = (page - 1) * limit;
-  const id: string = req.params.id
+  const id: string = req.params.id;
   try {
-    const molds: MonitoredMold[] | null = await retrieveAllMonitoredMolds(limit, offset, id);
-    if (!molds) return sendError(res, "Failed to retrieve monitored molds", 404);
+    const molds: MonitoredMold[] | null = await retrieveAllMonitoredMolds(
+      limit,
+      offset,
+      id
+    );
+    if (!molds)
+      return sendError(res, "Failed to retrieve monitored molds", 404);
     return sendSuccess(res, molds);
   } catch (error) {
     devLog(error);

@@ -1,25 +1,24 @@
 import { Request, Response } from "express";
 import { devLog } from "../utils/dev";
 import { defaultError, sendError, sendSuccess } from "../utils/response";
+import { Moldipedia } from "../types/types";
+import { uploadFile } from "../lib/storage";
 import {
-  addMoldToFirestore,
-  removeMold,
-  retrieveAllMolds,
-  retrieveMoldById,
-  retrieveMoldByName,
-  softRemoveMold,
-  updateMoldInFirestore,
-} from "../services/moldService";
-import { Mold } from "../types/types";
-import { uploadFiles } from "../lib/storage";
+  addMoldipediaToFirestore,
+  retrieveAllMoldipedia,
+  retrieveMoldipediaById,
+  updateMoldipediaInFirestore,
+  removeMoldipedia,
+  softRemoveMoldipedia,
+} from "../services/moldipediaService";
 
-export const createMold = async (req: Request, res: Response) => {
+export const createMoldipedia = async (req: Request, res: Response) => {
   /**
    * @swagger
-   * /api/v1/molds:
+   * /api/v1/moldipedia:
    *   post:
-   *     summary: Create a new mold
-   *     tags: [Molds]
+   *     summary: Create a new moldipedia article
+   *     tags: [Moldipedia]
    *     security:
    *       - bearerAuth: []
    *       - cookieAuth: []
@@ -34,50 +33,46 @@ export const createMold = async (req: Request, res: Response) => {
    *             properties:
    *               details:
    *                 type: object
-   *                 description: Mold DTO. See Mold interface for properties.
+   *                 description: Moldipedia DTO. See Moldipedia interface for properties.
    *                 properties:
-   *                   name:
+   *                   title:
    *                     type: string
-   *                   description:
+   *                   body:
    *                     type: string
-   *                   growth_stage:
+   *                   author_id:
    *                     type: string
-   *               photos:
-   *                 type: array
-   *                 items:
-   *                   type: string
-   *                   format: binary
+   *               cover_photo:
+   *                 type: string
+   *                 format: binary
    *     responses:
    *       200:
-   *         description: Successfully created mold
+   *         description: Successfully created moldipedia article
    *       400:
    *         description: Validation error
    *       500:
    *         description: Server error
    */
   try {
-    const details: Omit<Mold, "photo_url"> = req.body.details;
-    const photos: Express.Multer.File[] = req.files as Express.Multer.File[];
-    const urls = await uploadFiles(photos, details.name);
-    const mold: Mold | null = await addMoldToFirestore({
-      ...details,
-      photo_url: urls,
-    });
-    if (!mold) return sendError(res, "Failed to retrieve mold", 404);
-    return sendSuccess(res, mold);
+    const details: Omit<Moldipedia, "cover_photo"> = req.body.details;
+    const photo: Express.Multer.File = req.file as Express.Multer.File;
+    const url = await uploadFile("moldipedia", photo.originalname, photo.buffer, photo.mimetype);
+    if (!url) return sendError(res, "Invalid cover photo, please upload a different image.", 400);
+    const article: Moldipedia | null = await addMoldipediaToFirestore({ ...details, cover_photo: url });
+    if (!article) return sendError(res, "Failed to create moldipedia article", 400);
+    return sendSuccess(res, article);
   } catch (error) {
     devLog(error);
     return defaultError(res);
   }
 };
 
-export const getAllMolds = async (req: Request, res: Response) => {
+export const getAllMoldipedia = async (req: Request, res: Response) => {
   /**
    * @swagger
-   * /api/v1/molds:
+   * /api/v1/moldipedia:
    *   get:
-   *     summary: Get all molds
-   *     tags: [Molds]
+   *     summary: Get all moldipedia articles
+   *     tags: [Moldipedia]
    *     security:
    *       - bearerAuth: []
    *       - cookieAuth: []
@@ -96,7 +91,7 @@ export const getAllMolds = async (req: Request, res: Response) => {
    *         description: Page size
    *     responses:
    *       200:
-   *         description: List of molds
+   *         description: List of moldipedia articles
    *       404:
    *         description: Not found
    *       500:
@@ -106,22 +101,22 @@ export const getAllMolds = async (req: Request, res: Response) => {
   const limit: number = parseInt(req.query.limit as string) || 10;
   const offset: number = (page - 1) * limit;
   try {
-    const molds: Mold[] | null = await retrieveAllMolds(limit, offset);
-    if (!molds) return sendError(res, "Failed to retrieve molds", 404);
-    return sendSuccess(res, molds);
+    const articles: Moldipedia[] | null = await retrieveAllMoldipedia(limit, offset);
+    if (!articles) return sendError(res, "Failed to retrieve moldipedia articles", 404);
+    return sendSuccess(res, articles);
   } catch (error) {
     devLog(error);
     return defaultError(res);
   }
 };
 
-export const getMoldById = async (req: Request, res: Response) => {
+export const getMoldipediaById = async (req: Request, res: Response) => {
   /**
    * @swagger
-   * /api/v1/molds/{id}:
+   * /api/v1/moldipedia/{id}:
    *   get:
-   *     summary: Get mold by ID
-   *     tags: [Molds]
+   *     summary: Get moldipedia article by ID
+   *     tags: [Moldipedia]
    *     security:
    *       - bearerAuth: []
    *       - cookieAuth: []
@@ -133,10 +128,10 @@ export const getMoldById = async (req: Request, res: Response) => {
    *         required: true
    *         schema:
    *           type: string
-   *         description: Mold ID
+   *         description: Moldipedia article ID
    *     responses:
    *       200:
-   *         description: Mold
+   *         description: Moldipedia article
    *       404:
    *         description: Not found
    *       500:
@@ -144,60 +139,22 @@ export const getMoldById = async (req: Request, res: Response) => {
    */
   try {
     const id = req.params.id;
-    const mold: Mold | null = await retrieveMoldById(id);
-    if (!mold) return sendError(res, "Failed to retrieve mold", 404);
-    return sendSuccess(res, mold);
+    const article: Moldipedia | null = await retrieveMoldipediaById(id);
+    if (!article) return sendError(res, "Failed to retrieve moldipedia article", 404);
+    return sendSuccess(res, article);
   } catch (error) {
     devLog(error);
     return defaultError(res);
   }
 };
 
-export const getMoldByName = async (req: Request, res: Response) => {
+export const patchMoldipedia = async (req: Request, res: Response) => {
   /**
    * @swagger
-   * /api/v1/molds/name/{name}:
-   *   get:
-   *     summary: Get mold by name
-   *     tags: [Molds]
-   *     security:
-   *       - bearerAuth: []
-   *       - cookieAuth: []
-   *     description:
-   *       - Requires authentication (Bearer token or session cookie)
-   *     parameters:
-   *       - in: path
-   *         name: name
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: Mold name
-   *     responses:
-   *       200:
-   *         description: Mold
-   *       404:
-   *         description: Not found
-   *       500:
-   *         description: Server error
-   */
-  try {
-    const name: string = req.params.name;
-    const mold: Mold | null = await retrieveMoldByName(name);
-    if (!mold) return sendError(res, "Failed to retrieve mold", 404);
-    return sendSuccess(res, mold);
-  } catch (error) {
-    devLog(error);
-    return defaultError(res);
-  }
-};
-
-export const patchMold = async (req: Request, res: Response) => {
-  /**
-   * @swagger
-   * /api/v1/molds/{id}:
+   * /api/v1/moldipedia/{id}:
    *   patch:
-   *     summary: Update mold
-   *     tags: [Molds]
+   *     summary: Update moldipedia article
+   *     tags: [Moldipedia]
    *     security:
    *       - bearerAuth: []
    *       - cookieAuth: []
@@ -209,7 +166,7 @@ export const patchMold = async (req: Request, res: Response) => {
    *         required: true
    *         schema:
    *           type: string
-   *         description: Mold ID
+   *         description: Moldipedia article ID
    *     requestBody:
    *       required: true
    *       content:
@@ -219,10 +176,10 @@ export const patchMold = async (req: Request, res: Response) => {
    *             properties:
    *               details:
    *                 type: object
-   *                 description: Mold details to update
+   *                 description: Moldipedia details to update
    *     responses:
    *       200:
-   *         description: Successfully updated mold
+   *         description: Successfully updated moldipedia article
    *       400:
    *         description: Validation error
    *       404:
@@ -232,23 +189,23 @@ export const patchMold = async (req: Request, res: Response) => {
    */
   try {
     const id: string = req.params.id;
-    const details: Mold = req.body.details;
-    const mold = await updateMoldInFirestore(id, details);
-    if (!mold) return sendError(res, "Failed to update mold", 404);
-    return sendSuccess(res, "Successfully updated mold.");
+    const details: Partial<Moldipedia> = req.body.details;
+    const updated = await updateMoldipediaInFirestore(id, details);
+    if (!updated) return sendError(res, "Failed to update moldipedia article", 404);
+    return sendSuccess(res, updated);
   } catch (error) {
     devLog(error);
     return defaultError(res);
   }
 };
 
-export const deleteMold = async (req: Request, res: Response) => {
+export const deleteMoldipedia = async (req: Request, res: Response) => {
   /**
    * @swagger
-   * /api/v1/molds/{id}:
+   * /api/v1/moldipedia/{id}:
    *   delete:
-   *     summary: Delete mold
-   *     tags: [Molds]
+   *     summary: Delete moldipedia article
+   *     tags: [Moldipedia]
    *     security:
    *       - bearerAuth: []
    *       - cookieAuth: []
@@ -260,30 +217,30 @@ export const deleteMold = async (req: Request, res: Response) => {
    *         required: true
    *         schema:
    *           type: string
-   *         description: Mold ID
+   *         description: Moldipedia article ID
    *     responses:
    *       200:
-   *         description: Successfully deleted mold
+   *         description: Successfully deleted moldipedia article
    *       500:
    *         description: Server error
    */
   try {
     const id: string = req.params.id;
-    await removeMold(id);
-    return sendSuccess(res, "Successfully deleted mold");
+    await removeMoldipedia(id);
+    return sendSuccess(res, "Successfully deleted moldipedia article");
   } catch (error) {
     devLog(error);
     return defaultError(res);
   }
 };
 
-export const softDeleteMold = async (req: Request, res: Response) => {
+export const softDeleteMoldipedia = async (req: Request, res: Response) => {
   /**
    * @swagger
-   * /api/v1/molds/soft/{id}:
+   * /api/v1/moldipedia/soft/{id}:
    *   delete:
-   *     summary: Soft delete mold
-   *     tags: [Molds]
+   *     summary: Soft delete moldipedia article
+   *     tags: [Moldipedia]
    *     security:
    *       - bearerAuth: []
    *       - cookieAuth: []
@@ -295,17 +252,17 @@ export const softDeleteMold = async (req: Request, res: Response) => {
    *         required: true
    *         schema:
    *           type: string
-   *         description: Mold ID
+   *         description: Moldipedia article ID
    *     responses:
    *       200:
-   *         description: Successfully soft deleted mold
+   *         description: Successfully soft deleted moldipedia article
    *       500:
    *         description: Server error
    */
   try {
     const id: string = req.params.id;
-    await softRemoveMold(id);
-    return sendSuccess(res, "Successfully soft deleted mold.");
+    await softRemoveMoldipedia(id);
+    return sendSuccess(res, "Successfully soft deleted moldipedia article.");
   } catch (error) {
     devLog(error);
     return defaultError(res);

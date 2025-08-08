@@ -11,33 +11,65 @@ import {
   getMonitoredMoldById,
   patchMonitoredMold,
   deleteMonitoredMold,
-  softDeleteMonitoredMold
+  softDeleteMonitoredMold,
 } from "../controllers/monitoredMoldController";
 
-const router = Router()
+const router = Router();
 
-router.post('/', verifyUser(), upload.single('photo'), sanitizeBody, async(req: Request, res: Response) => {
-  await createMonitoredMold(req, res);
-})
+router.post(
+  "/",
+  verifyUser(),
+  upload.single("photo"),
+  sanitizeBody,
+  async (req: Request, res: Response) => {
+    await createMonitoredMold(req, res);
+  }
+);
 
-router.get('/', verifyUser(), validateQuery(PaginationQuerySchema), async(req: Request, res: Response) => {
-  await getAllMonitoredMoldsByFolderId(req, res);
-})
+router.get(
+  "/",
+  verifyUser(),
+  validateQuery(PaginationQuerySchema),
+  async (req: Request, res: Response) => {
+    await getAllMonitoredMoldsByFolderId(req, res);
+  }
+);
 
-router.get('/:id', verifyUser(), validateParams(MoldIdSchema), async(req: Request, res: Response) => {
-  await getMonitoredMoldById(req, res);
-})
+router.get(
+  "/:id",
+  verifyUser(),
+  validateParams(MoldIdSchema),
+  async (req: Request, res: Response) => {
+    await getMonitoredMoldById(req, res);
+  }
+);
 
-router.patch('/:id', verifyUser(), validateParams(MoldIdSchema), sanitizeBody, async(req: Request, res: Response) => {
-  await patchMonitoredMold(req, res);
-})
+router.patch(
+  "/:id",
+  verifyUser(),
+  validateParams(MoldIdSchema),
+  sanitizeBody,
+  async (req: Request, res: Response) => {
+    await patchMonitoredMold(req, res);
+  }
+);
 
-router.delete('/hard/:id', verifyUser(), validateParams(MoldIdSchema), async(req: Request, res: Response) => {
-  await deleteMonitoredMold(req, res);
-})
+router.delete(
+  "/hard/:id",
+  verifyUser(),
+  validateParams(MoldIdSchema),
+  async (req: Request, res: Response) => {
+    await deleteMonitoredMold(req, res);
+  }
+);
 
-router.delete('/soft/:id', verifyUser(), validateParams(MoldIdSchema), async(req: Request, res: Response) => {
-  await softDeleteMonitoredMold(req, res);
-})
+router.delete(
+  "/soft/:id",
+  verifyUser(),
+  validateParams(MoldIdSchema),
+  async (req: Request, res: Response) => {
+    await softDeleteMonitoredMold(req, res);
+  }
+);
 
-export default router
+export default router;

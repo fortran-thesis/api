@@ -1,5 +1,9 @@
 import { Request, Response } from "express";
-import { removeUser, softRemoveUser, updateUser } from "../services/authService";
+import {
+  removeUser,
+  softRemoveUser,
+  updateUser,
+} from "../services/authService";
 import { devLog } from "../utils/dev";
 import { defaultError, sendError, sendSuccess } from "../utils/response";
 import {
@@ -290,9 +294,9 @@ export const softDeleteUser = async (req: Request, res: Response) => {
   try {
     const id: string = req.params.id;
     await softRemoveUser(id);
-    return sendSuccess(res, "Successfully soft deleted user.")
+    return sendSuccess(res, "Successfully soft deleted user.");
   } catch (error) {
     devLog(error);
     return defaultError(res);
   }
-}
+};

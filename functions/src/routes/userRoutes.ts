@@ -7,10 +7,14 @@ import {
   getUserByEmail,
   getUserById,
   patchUser,
-  softDeleteUser
+  softDeleteUser,
 } from "../controllers/userController";
 import { EmailSchema, UserDetailsUpdateSchema, UserIdSchema } from "../dto/dto";
-import { validateBody, validateParams, validateQuery } from "../middlewares/validation";
+import {
+  validateBody,
+  validateParams,
+  validateQuery,
+} from "../middlewares/validation";
 import { PaginationQuerySchema } from "../dto/paginationDTO";
 import { sanitizeBody, sanitizeParams } from "../middlewares/sanitation";
 
@@ -73,8 +77,8 @@ router.delete(
   validateParams(UserIdSchema),
   verifyUser(),
   async (req: Request, res: Response) => {
-    softDeleteUser(req, res)
+    softDeleteUser(req, res);
   }
-)
+);
 
 export default router;

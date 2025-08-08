@@ -1,4 +1,3 @@
-
 import {
   DocumentSnapshot,
   QuerySnapshot,
@@ -27,10 +26,11 @@ export const addMoldFolderToFirestore = async (
       metadata: {
         created_at: Timestamp.now(),
         updated_at: null,
-        deleted_at: null
-      }
+        deleted_at: null,
+      },
     };
-    const folder: DocumentSnapshot | null = await addMoldFolder(detailsWithMetadata);
+    const folder: DocumentSnapshot | null =
+      await addMoldFolder(detailsWithMetadata);
     if (!folder) throw new Error("Cannot add mold folder.");
     return documentToJson<MoldFolder>(folder);
   } catch (error) {
@@ -40,13 +40,18 @@ export const addMoldFolderToFirestore = async (
 };
 
 export const retrieveAllMoldFoldersByUser = async (
-    uid: string,
+  uid: string,
   limit: number,
   offset: number,
-  isArchived: boolean,
+  isArchived: boolean
 ): Promise<MoldFolder[] | null> => {
   try {
-    const folders: QuerySnapshot | null = await findAllMoldFolders(uid, limit, offset, isArchived);
+    const folders: QuerySnapshot | null = await findAllMoldFolders(
+      uid,
+      limit,
+      offset,
+      isArchived
+    );
     if (!folders) throw new Error("No folders found.");
     return queryToJson<MoldFolder>(folders);
   } catch (error) {
@@ -55,7 +60,9 @@ export const retrieveAllMoldFoldersByUser = async (
   }
 };
 
-export const retrieveMoldFolderById = async (id: string): Promise<MoldFolder | null> => {
+export const retrieveMoldFolderById = async (
+  id: string
+): Promise<MoldFolder | null> => {
   try {
     const folder: QuerySnapshot | null = await findMoldFolderById(id);
     if (!folder) throw new Error("No folder found.");

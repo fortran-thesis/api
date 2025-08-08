@@ -33,9 +33,13 @@ router.post(
   }
 );
 
-router.get("/", verifyUser(Role.CURATOR), async (req: Request, res: Response) => {
-  getAllMolds(req, res);
-});
+router.get(
+  "/",
+  verifyUser(Role.CURATOR),
+  async (req: Request, res: Response) => {
+    getAllMolds(req, res);
+  }
+);
 
 router.get(
   "/:id",
@@ -89,4 +93,4 @@ router.delete(
   }
 );
 
-export default router
+export default router;

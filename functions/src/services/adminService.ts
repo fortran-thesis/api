@@ -10,7 +10,7 @@ import { sendEmail } from "../utils/email";
 export const toggleUser = async (
   id: string,
   email: string,
-  bool: boolean,
+  bool: boolean
 ): Promise<ApiResponse<string>> => {
   try {
     let message: string = "";
@@ -40,11 +40,16 @@ export const toggleUser = async (
   }
 };
 
-export const banUser = async (id: string, email: string): Promise<ApiResponse<string>> => {
+export const banUser = async (
+  id: string,
+  email: string
+): Promise<ApiResponse<string>> => {
   try {
     const user = await findFirestoreUserById(id);
     if (!user) throw new Error("User not found");
-    const process = await updateFirestoreUser(id, { is_banned: true } as Partial<User>);
+    const process = await updateFirestoreUser(id, {
+      is_banned: true,
+    } as Partial<User>);
     if (!process) throw new Error("Failed to ban user.");
     const html = `
       <h2>Account Banned</h2>
@@ -52,7 +57,7 @@ export const banUser = async (id: string, email: string): Promise<ApiResponse<st
       <p>Your account has been <strong>banned</strong> due to violation of our terms or community guidelines.</p>
       <p>Thanks,<br/>The Moldify Team</p>
     `;
-    await sendEmail(email, 'Your account has been banned', html);
+    await sendEmail(email, "Your account has been banned", html);
     return { success: true, data: "Successfully banned user." };
   } catch (error) {
     devLog(error);
@@ -60,13 +65,18 @@ export const banUser = async (id: string, email: string): Promise<ApiResponse<st
   }
 };
 
-export const approveCurator = async (id: string, isApproved: boolean): Promise<ApiResponse<string>> => {
+export const approveCurator = async (
+  id: string,
+  isApproved: boolean
+): Promise<ApiResponse<string>> => {
   try {
     const userSnap = await findFirestoreUserById(id);
     if (!userSnap || userSnap.empty) throw new Error("User not found");
     const user = userSnap.docs[0].data();
-    const process = await updateFirestoreUser(id, { is_verified: true } as Partial<IsCurator<User>>);
-    if(!process) throw new Error("Failed to update user.");
+    const process = await updateFirestoreUser(id, {
+      is_verified: true,
+    } as Partial<IsCurator<User>>);
+    if (!process) throw new Error("Failed to update user.");
     const html = `
       <h2>Curator Application Approved</h2>
       <p>Hello,</p>
@@ -75,20 +85,25 @@ export const approveCurator = async (id: string, isApproved: boolean): Promise<A
       <p>Thanks,<br/>The Moldify Team</p>
     `;
     await sendEmail(user.email, "Curator Application Approved", html);
-    return { success: true, data: "Successfully approved curator" }
+    return { success: true, data: "Successfully approved curator" };
   } catch (error) {
-    devLog(error)
-    return { success: false, data: "Something went wrong."}
+    devLog(error);
+    return { success: false, data: "Something went wrong." };
   }
-}
+};
 
-export const rejectCurator = async (id: string, isApproved: boolean): Promise<ApiResponse<string>> => {
+export const rejectCurator = async (
+  id: string,
+  isApproved: boolean
+): Promise<ApiResponse<string>> => {
   try {
     const userSnap = await findFirestoreUserById(id);
     if (!userSnap || userSnap.empty) throw new Error("User not found");
     const user = userSnap.docs[0].data();
-    const process = await updateFirestoreUser(id, { is_verified: false } as Partial<IsCurator<User>>);
-    if(!process) throw new Error("Failed to update user.");
+    const process = await updateFirestoreUser(id, {
+      is_verified: false,
+    } as Partial<IsCurator<User>>);
+    if (!process) throw new Error("Failed to update user.");
     const html = `
       <h2>Curator Application Rejected</h2>
       <p>Hello,</p>
@@ -97,9 +112,9 @@ export const rejectCurator = async (id: string, isApproved: boolean): Promise<Ap
       <p>Thanks,<br/>The Moldify Team</p>
     `; //TODO: idk process after rejecting curator
     await sendEmail(user.email, "Curator Application Rejected", html);
-    return { success: true, data: "Successfully rejected curator" }
+    return { success: true, data: "Successfully rejected curator" };
   } catch (error) {
-    devLog(error)
-    return { success: false, data: "Something went wrong."}
+    devLog(error);
+    return { success: false, data: "Something went wrong." };
   }
-}
+};

@@ -25,10 +25,11 @@ export const addMonitoredMoldToFirestore = async (
       metadata: {
         created_at: Timestamp.now(),
         updated_at: null,
-        deleted_at: null
-      }
+        deleted_at: null,
+      },
     };
-    const mold: DocumentSnapshot | null = await addMonitoredMold(detailsWithMetadata);
+    const mold: DocumentSnapshot | null =
+      await addMonitoredMold(detailsWithMetadata);
     if (!mold) throw new Error("Cannot add monitored mold.");
     return documentToJson<MonitoredMold>(mold);
   } catch (error) {
@@ -40,10 +41,14 @@ export const addMonitoredMoldToFirestore = async (
 export const retrieveAllMonitoredMolds = async (
   limit: number,
   offset: number,
-  id: string,
+  id: string
 ): Promise<MonitoredMold[] | null> => {
   try {
-    const molds: QuerySnapshot | null = await findAllMonitoredMolds(id, limit, offset);
+    const molds: QuerySnapshot | null = await findAllMonitoredMolds(
+      id,
+      limit,
+      offset
+    );
     if (!molds) throw new Error("No monitored molds found.");
     return queryToJson<MonitoredMold>(molds);
   } catch (error) {
@@ -52,7 +57,9 @@ export const retrieveAllMonitoredMolds = async (
   }
 };
 
-export const retrieveMonitoredMoldById = async (id: string): Promise<MonitoredMold | null> => {
+export const retrieveMonitoredMoldById = async (
+  id: string
+): Promise<MonitoredMold | null> => {
   try {
     const mold: QuerySnapshot | null = await findMonitoredMoldById(id);
     if (!mold) throw new Error("No monitored mold found.");

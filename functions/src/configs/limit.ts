@@ -5,10 +5,10 @@ export const limitingOptions: Partial<Options> = {
   max: 100,
   standardHeaders: true,
   legacyHeaders: false,
-}
+};
 
 // Step 1: Send code (strict limit)
-export const sendCodeLimiter: Partial<Options>  = {
+export const sendCodeLimiter: Partial<Options> = {
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 3, // 3 requests per hour per IP
   message: "Too many requests. Please try again later.",

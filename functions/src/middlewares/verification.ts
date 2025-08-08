@@ -25,23 +25,31 @@ const verifyUserToken =
       const user = await verifyToken(idToken);
       if (
         !user?.user.role ||
-        (requiredRole && user.user.role !== requiredRole && user.user.role !== Role.ADMIN)
+        (requiredRole &&
+          user.user.role !== requiredRole &&
+          user.user.role !== Role.ADMIN)
       ) {
-        devLog("User role:" + user?.user.role + "\nRequired role:" + requiredRole);
+        devLog(
+          "User role:" + user?.user.role + "\nRequired role:" + requiredRole
+        );
         sendError(res, "Forbidden", 403);
         return;
       }
 
-      if(requiredRole && requiredRole === user.user.role  && user.user.role === Role.CURATOR){
+      if (
+        requiredRole &&
+        requiredRole === user.user.role &&
+        user.user.role === Role.CURATOR
+      ) {
         const curator = await findFirestoreUserById(user.id);
-        if(!curator) throw new Error('Cannot find user.')
-        if(!curator.docs[0].data().is_verified) {
-          sendError(res, 'Curator not verified!', 401)
-          return 
+        if (!curator) throw new Error("Cannot find user.");
+        if (!curator.docs[0].data().is_verified) {
+          sendError(res, "Curator not verified!", 401);
+          return;
         }
       }
       // Attach user info to request
-      req.user = user
+      req.user = user;
       next();
     } catch (error) {
       devLog(error);
@@ -69,22 +77,30 @@ const verifyUserCookie =
       const user = await verifyCookie(sessionCookie);
       if (
         !user?.user.role ||
-        (requiredRole && user.user.role !== requiredRole && user.user.role !== Role.ADMIN)
+        (requiredRole &&
+          user.user.role !== requiredRole &&
+          user.user.role !== Role.ADMIN)
       ) {
-        devLog("User role:" + user?.user.role + "\nRequired role:" + requiredRole);
+        devLog(
+          "User role:" + user?.user.role + "\nRequired role:" + requiredRole
+        );
         sendError(res, "Forbidden", 403);
         return;
       }
 
-      if(requiredRole && requiredRole === user.user.role  && user.user.role === Role.CURATOR){
+      if (
+        requiredRole &&
+        requiredRole === user.user.role &&
+        user.user.role === Role.CURATOR
+      ) {
         const curator = await findFirestoreUserById(user.id);
-        if(!curator) throw new Error('Cannot find user.')
-        if(!curator.docs[0].data().is_verified) {
-          sendError(res, 'Curator not verified!', 401)
-          return 
+        if (!curator) throw new Error("Cannot find user.");
+        if (!curator.docs[0].data().is_verified) {
+          sendError(res, "Curator not verified!", 401);
+          return;
         }
       }
-      
+
       // Attach user info to request
       req.user = user;
       next();

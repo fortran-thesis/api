@@ -55,8 +55,16 @@ export const createUser = async (req: Request, res: Response) => {
    *         description: Server error
    */
   try {
-    const { username, email, password }: { username: string, email: string; password: string } = req.body;
-    const process: ApiResponse<string> = await registerUser(username, email, password);
+    const {
+      username,
+      email,
+      password,
+    }: { username: string; email: string; password: string } = req.body;
+    const process: ApiResponse<string> = await registerUser(
+      username,
+      email,
+      password
+    );
     if (!process.success) return sendError(res, process.error);
     return sendSuccess(res, process.data);
   } catch (error) {
@@ -77,7 +85,7 @@ export const loginUser = async (req: Request, res: Response) => {
     const password: string = req.body.password;
 
     const token: string | null = await identifyUser(username, password);
-    if(!token) return sendError(res, 'Incorrect credentials');
+    if (!token) return sendError(res, "Incorrect credentials");
     const cookie: string | null = await authenticateUser(token);
     if (!cookie) return sendError(res, "Incorrect credentials");
 
@@ -92,7 +100,7 @@ export const loginUser = async (req: Request, res: Response) => {
     devLog(error);
     return defaultError(res);
   }
-}
+};
 
 /**
  * OAuth2 login/register
@@ -104,9 +112,9 @@ export const oAuth = async (req: Request, res: Response) => {
   try {
     const token: string = req.body.token;
     const uid: string | null = await identifyOAuthUser(token);
-    if(!uid) return sendError(res, 'Something went wrong.')
+    if (!uid) return sendError(res, "Something went wrong.");
     const process: ApiResponse<string> = await registerOAuthUser(uid);
-    if(!process.success) return sendError(res, 'Something went wrong.')
+    if (!process.success) return sendError(res, "Something went wrong.");
     const cookie: string | null = await authenticateUser(token);
     if (!cookie) return sendError(res, "Incorrect credentials");
 
@@ -121,7 +129,7 @@ export const oAuth = async (req: Request, res: Response) => {
     devLog(error);
     return defaultError(res);
   }
-}
+};
 
 /**
  * Send verification code to email
@@ -129,7 +137,10 @@ export const oAuth = async (req: Request, res: Response) => {
  * @route POST /api/v1/auth/send-verification
  * @access Public
  */
-export const sendVerificationCodeEmail = async (req: Request, res: Response) => {
+export const sendVerificationCodeEmail = async (
+  req: Request,
+  res: Response
+) => {
   /**
    * @swagger
    * /api/v1/auth/send-verification:
@@ -174,7 +185,10 @@ export const sendVerificationCodeEmail = async (req: Request, res: Response) => 
  * @route POST /api/v1/auth/check-verification
  * @access Public
  */
-export const checkVerificationCodeEmail = async (req: Request, res: Response) => {
+export const checkVerificationCodeEmail = async (
+  req: Request,
+  res: Response
+) => {
   /**
    * @swagger
    * /api/v1/auth/check-verification:
@@ -207,16 +221,16 @@ export const checkVerificationCodeEmail = async (req: Request, res: Response) =>
    *         description: Server error
    */
   try {
-    const email: string = req.body.email
-    const code: string = req.body.code
-    const token = await checkVerificationCode(email, code)
-    if(!token) return sendError(res, 'Invalid code!');
+    const email: string = req.body.email;
+    const code: string = req.body.code;
+    const token = await checkVerificationCode(email, code);
+    if (!token) return sendError(res, "Invalid code!");
     return sendSuccess(res, token);
   } catch (error) {
     devLog(error);
     return defaultError(res);
   }
-}
+};
 
 /**
  * Change password with verification
@@ -256,16 +270,16 @@ export const verifiedChangePassword = async (req: Request, res: Response) => {
    *         description: Server error
    */
   try {
-    const token: string = req.body.token
-    const newPass: string = req.body.newPassword
-    const process = await changePassword(token, newPass)
-    if(!process.success) return sendError(res, 'Invalid code!');
-    return sendSuccess(res, 'Successfully changed password!');
+    const token: string = req.body.token;
+    const newPass: string = req.body.newPassword;
+    const process = await changePassword(token, newPass);
+    if (!process.success) return sendError(res, "Invalid code!");
+    return sendSuccess(res, "Successfully changed password!");
   } catch (error) {
     devLog(error);
     return defaultError(res);
   }
-}
+};
 
 /**
  * Send username to email after verification
@@ -302,15 +316,15 @@ export const verifiedForgetUsername = async (req: Request, res: Response) => {
    *         description: Server error
    */
   try {
-    const token: string = req.body.token
-    const process = await forgetUsername(token)
-    if(!process.success) return sendError(res, 'Invalid code!');
-    return sendSuccess(res, 'Successfully sent email to show username!');
+    const token: string = req.body.token;
+    const process = await forgetUsername(token);
+    if (!process.success) return sendError(res, "Invalid code!");
+    return sendSuccess(res, "Successfully sent email to show username!");
   } catch (error) {
     devLog(error);
     return defaultError(res);
   }
-}
+};
 
 /**
  * Change password (authenticated)
@@ -356,17 +370,18 @@ export const changeUserPassword = async (req: Request, res: Response) => {
    */
   try {
     const email: string | undefined = req.user?.details.email;
-    const uid: string | undefined = req.user?.id
+    const uid: string | undefined = req.user?.id;
     const oldPassword: string = req.body.oldPassword;
     const newPassword: string = req.body.newPassword;
 
-    if(!email || !uid) return sendError(res, 'User not authenticated properly.')
-    const correctAuth = checkUserChangePassword(email, oldPassword)
-    if(!correctAuth) return sendError(res, 'Wrong credentials')
-    await getAuth().updateUser(uid, {password: newPassword})
-    return sendSuccess(res, 'Successfully changed password!')
+    if (!email || !uid)
+      return sendError(res, "User not authenticated properly.");
+    const correctAuth = checkUserChangePassword(email, oldPassword);
+    if (!correctAuth) return sendError(res, "Wrong credentials");
+    await getAuth().updateUser(uid, { password: newPassword });
+    return sendSuccess(res, "Successfully changed password!");
   } catch (error) {
-    devLog(error)
-    return defaultError(res)
+    devLog(error);
+    return defaultError(res);
   }
-}
+};
