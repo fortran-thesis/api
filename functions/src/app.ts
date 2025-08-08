@@ -9,7 +9,7 @@ import { Router } from "express";
 import userRoutes from "./routes/userRoutes";
 import { limitingOptions } from "./configs/limit";
 import helmet from "helmet";
-import scanRoutes from "./routes/scanRoutes";
+import scanRoutes from "./routes/scannedMoldRoutes";
 import monitorRoutes from "./routes/monitoredMoldRoutes";
 import moldRoutes from "./routes/moldRoutes";
 import feedbackRoutes from "./routes/feedbackRoutes";

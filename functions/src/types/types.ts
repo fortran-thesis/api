@@ -62,7 +62,6 @@ export interface MoldFolder {
 export interface ScannedMold {
   user_id: string;
   image_url: string;
-  uploaded_at: Timestamp;
   image_format: string;
   scanned_results: ScannedResult;
 }
