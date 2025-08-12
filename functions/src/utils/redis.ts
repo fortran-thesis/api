@@ -33,6 +33,7 @@ export const deleteCache = async (key: string): Promise<void> => {
 
 export const deleteCachePattern = async (pattern: string) => {
   try {
+    await redisReady;
     let cursor = '0';
     let keys: string[] = [];
     do {
