@@ -1,3 +1,4 @@
+import { FieldPath } from "firebase-admin/firestore";
 import {
   addDocument,
   getDocumentsByField,

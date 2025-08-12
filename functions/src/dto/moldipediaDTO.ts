@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 export const MoldipediaIdSchema = z.object({
   id: z
     .string({ required_error: "ID is required" })
@@ -6,7 +8,6 @@ export const MoldipediaIdSchema = z.object({
     .max(28, { message: "ID must be at most 28 characters" })
     .regex(/^[A-Za-z0-9-_]+$/, { message: "ID format is invalid" }),
 });
-import { z } from "zod";
 
 export const MoldipediaCreateSchema = z.object({
   title: z

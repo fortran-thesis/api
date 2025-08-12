@@ -24,12 +24,14 @@ export const getAuditLogs = async (req: Request, res: Response) => {
  *         name: page
  *         schema:
  *           type: integer
- *         description: Page number (default: 1)
+ *         description: 
+ *              Page number (default: 1)
  *       - in: query
  *         name: limit
  *         schema:
  *           type: integer
- *         description: Page size (default: 10)
+ *         description: 
+ *              Page size (default: 10)
  *     responses:
  *       200:
  *         description: List of audit logs
