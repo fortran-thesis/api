@@ -1,3 +1,4 @@
+import auditLogRoutes from "./routes/auditLogRoutes";
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -12,7 +13,12 @@ import helmet from "helmet";
 import scanRoutes from "./routes/scannedMoldRoutes";
 import monitorRoutes from "./routes/monitoredMoldRoutes";
 import moldRoutes from "./routes/moldRoutes";
-import feedbackRoutes from "./routes/feedbackRoutes";
+import moldipediaRoutes from "./routes/moldipediaRoutes";
+import moldFolderRoutes from "./routes/moldFolderRoutes";
+import curatorRoutes from "./routes/curatorRoutes";
+import adminRoutes from "./routes/adminRoutes";
+import reportRoutes from "./routes/reportRoutes";
+import systemRequestRoutes from "./routes/systemRequestRoutes";
 
 const app = express();
 app.use(helmet());
@@ -23,12 +29,19 @@ app.use(rateLimit(limitingOptions));
 setupSwagger(app);
 
 const router = Router();
+
 router.use("/v1/auth", authRoutes);
 router.use("/v1/user", userRoutes);
 router.use("/v1/mold", moldRoutes);
 router.use("/v1/scan", scanRoutes);
 router.use("/v1/monitor", monitorRoutes);
-router.use("/v1/feedback", feedbackRoutes);
+router.use("/v1/moldipedia", moldipediaRoutes);
+router.use("/v1/mold-folder", moldFolderRoutes);
+router.use("/v1/curator", curatorRoutes);
+router.use("/v1/admin", adminRoutes);
+router.use("/v1/report", reportRoutes);
+router.use("/v1/system-request", systemRequestRoutes);
+router.use("/v1/audit-log", auditLogRoutes);
 
 app.use("/api", router);
 

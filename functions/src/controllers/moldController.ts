@@ -10,7 +10,9 @@ import {
   softRemoveMold,
   updateMoldInFirestore,
 } from "../services/moldService";
-import { Mold } from "../types/types";
+import { Mold, WithId } from "../types/types";
+import { createLog } from "../utils/logging";
+import { AuditAction } from "../types/enums";
 import { uploadFiles } from "../lib/storage";
 
 export const createMold = async (req: Request, res: Response) => {
@@ -59,11 +61,15 @@ export const createMold = async (req: Request, res: Response) => {
     const details: Omit<Mold, "photo_url"> = req.body.details;
     const photos: Express.Multer.File[] = req.files as Express.Multer.File[];
     const urls = await uploadFiles(photos, details.name);
-    const mold: Mold | null = await addMoldToFirestore({
+    const mold: WithId<Mold> | null = await addMoldToFirestore({
       ...details,
       photo_url: urls,
     });
     if (!mold) return sendError(res, "Failed to retrieve mold", 404);
+    // Audit log
+    if (req.user) {
+      createLog(req.user.id, req.user.user.role, AuditAction.ADD_MOLD, `Created mold: ${details.name}`, mold.id || "");
+    }
     return sendSuccess(res, mold);
   } catch (error) {
     devLog(error);
@@ -235,6 +241,10 @@ export const patchMold = async (req: Request, res: Response) => {
     const details: Mold = req.body.details;
     const mold = await updateMoldInFirestore(id, details);
     if (!mold) return sendError(res, "Failed to update mold", 404);
+    // Audit log
+    if (req.user) {
+      createLog(req.user.id, req.user.user.role, AuditAction.EDIT_MOLD, `Updated mold: ${id}`, id);
+    }
     return sendSuccess(res, "Successfully updated mold.");
   } catch (error) {
     devLog(error);
@@ -270,6 +280,10 @@ export const deleteMold = async (req: Request, res: Response) => {
   try {
     const id: string = req.params.id;
     await removeMold(id);
+    // Audit log
+    if (req.user) {
+      createLog(req.user.id, req.user.user.role, AuditAction.EDIT_MOLD, `Soft deleted mold: ${id}`, id);
+    }
     return sendSuccess(res, "Successfully deleted mold");
   } catch (error) {
     devLog(error);

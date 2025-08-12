@@ -14,11 +14,11 @@ import {
   softDeleteMoldipedia,
   updateMoldipedia,
 } from "../repositories/moldipediaRepository";
-import { Moldipedia, WithMetadata } from "../types/types";
+import { Moldipedia, WithMetadata, WithId } from "../types/types";
 
 export const addMoldipediaToFirestore = async (
   details: Moldipedia
-): Promise<Moldipedia | null> => {
+): Promise<WithId<Moldipedia> | null> => {
   try {
     const detailsWithMetadata: WithMetadata<Moldipedia> = {
       ...details,
@@ -31,7 +31,7 @@ export const addMoldipediaToFirestore = async (
     const doc: DocumentSnapshot | null =
       await addMoldipedia(detailsWithMetadata);
     if (!doc) throw new Error("Cannot add moldipedia.");
-    return documentToJson<Moldipedia>(doc);
+    return documentToJson<WithId<Moldipedia>>(doc);
   } catch (error) {
     devLog(error);
     return null;

@@ -18,7 +18,7 @@ export function computeDiff<T extends object>(oldData: T, newData: T): Record<st
   return diff;
 }
 
-export const createLog = (id: string, role: Role, type: AuditAction, details: string, targetId: string) => {
+export const createLog = async (id: string, role: Role, type: AuditAction, details: string, targetId: string) => {
   try {
     const logEntry: AuditLogEntry = {
       actor_id: id,

@@ -79,6 +79,37 @@ export const createUser = async (req: Request, res: Response) => {
  * @route POST /api/v1/auth/login
  * @access Public
  */
+/**
+ * @swagger
+ * /api/v1/auth/login:
+ *   post:
+ *     summary: Login user
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - username
+ *               - password
+ *             properties:
+ *               username:
+ *                 type: string
+ *                 description: Username or email of the user
+ *               password:
+ *                 type: string
+ *                 format: password
+ *                 description: User password
+ *     responses:
+ *       200:
+ *         description: Successfully logged in
+ *       400:
+ *         description: Incorrect credentials
+ *       500:
+ *         description: Server error
+ */
 export const loginUser = async (req: Request, res: Response) => {
   try {
     const username: string = req.body.username;
@@ -107,6 +138,32 @@ export const loginUser = async (req: Request, res: Response) => {
  *
  * @route POST /api/v1/auth/oauth
  * @access Public
+ */
+/**
+ * @swagger
+ * /api/v1/auth/oauth:
+ *   post:
+ *     summary: OAuth2 login/register
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - token
+ *             properties:
+ *               token:
+ *                 type: string
+ *                 description: OAuth2 provider token
+ *     responses:
+ *       200:
+ *         description: Successfully logged in
+ *       400:
+ *         description: Invalid OAuth token or registration failed
+ *       500:
+ *         description: Server error
  */
 export const oAuth = async (req: Request, res: Response) => {
   try {
