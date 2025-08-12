@@ -285,7 +285,7 @@ export const changePassword = async (
     await getAuth().updateUser(user.id, { password: newPassword });
     await redis.del(`token:${redisToken}`);
     const check = await redis.get(`token:${redisToken}`);
-    console.log(check);
+    devLog(check);
     return { success: true, data: "Password changed successfully!" };
   } catch (error) {
     devLog(error);

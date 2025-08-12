@@ -29,7 +29,7 @@ export const createLog = (id: string, role: Role, type: AuditAction, details: st
       target_id: targetId,
     };
 
-    addDocument('audit_logs', logEntry);
+    await addDocument('audit_logs', logEntry);
   } catch (error) {
     devLog(error);
     // Optionally: send to backup log, alert, etc.
