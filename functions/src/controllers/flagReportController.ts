@@ -1,0 +1,260 @@
+import { Request, Response } from "express";
+import { devLog } from "../utils/dev";
+import { defaultError, sendError, sendSuccess } from "../utils/response";
+import {
+  addFlagReportToFirestore,
+  retrieveAllFlagReports,
+  retrieveFlagReportById,
+  updateFlagReportInFirestore,
+  removeFlagReport,
+  softRemoveFlagReport,
+} from "../services/flagReportService";
+import { createLog } from "../utils/logging";
+import { AuditAction } from "../types/enums";
+
+export const createFlagReport = async (req: Request, res: Response) => {
+  /**
+   * @swagger
+   * /api/v1/flag-reports:
+   *   post:
+   *     summary: Create a flag report (content)
+   *     tags: [FlagReports]
+   *     security:
+   *       - bearerAuth: []
+   *       - cookieAuth: []
+   *     description: Flag content as incorrect or inappropriate. Requires authentication.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/CreateFlagReportDTO'
+   *     responses:
+   *       200:
+   *         description: Successfully created flag report
+   *       400:
+   *         description: Error
+   *       500:
+   *         description: Server error
+   */
+  try {
+    const details = req.body;
+    const reporter_id = req.user?.id;
+    if (!reporter_id) return sendError(res, "Missing reporter id", 400);
+    const report = await addFlagReportToFirestore({ ...details, reporter_id, status: "unresolved" });
+    if (!report) return sendError(res, "Failed to create flag report");
+    if (req.user) {
+      createLog(reporter_id, req.user.user.role, AuditAction.CORRECT_FLAG_REPORT, `Flagged content ${details.content_id}`, details.content_id);
+    }
+    return sendSuccess(res, report);
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
+export const getAllFlagReports = async (req: Request, res: Response) => {
+  /**
+   * @swagger
+   * /api/v1/flag-reports:
+   *   get:
+   *     summary: List flag reports
+   *     tags: [FlagReports]
+   *     security:
+   *       - bearerAuth: []
+   *       - cookieAuth: []
+   *     description: List all flag reports, paginated.
+   *     parameters:
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *         description: Page number
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *         description: Page size
+   *     responses:
+   *       200:
+   *         description: List of flag reports
+   *       500:
+   *         description: Server error
+   */
+  try {
+    const page: number = parseInt(req.query.page as string) || 1;
+    const limit: number = parseInt(req.query.limit as string) || 10;
+    const offset: number = (page - 1) * limit;
+    const reports = await retrieveAllFlagReports(limit, offset);
+    return sendSuccess(res, reports);
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
+export const getFlagReportById = async (req: Request, res: Response) => {
+  /**
+   * @swagger
+   * /api/v1/flag-reports/{id}:
+   *   get:
+   *     summary: Get flag report by ID
+   *     tags: [FlagReports]
+   *     security:
+   *       - bearerAuth: []
+   *       - cookieAuth: []
+   *     description: Retrieve a flag report by its ID. Requires authentication.
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Flag report ID
+   *     responses:
+   *       200:
+   *         description: Flag report
+   *       404:
+   *         description: Not found
+   *       500:
+   *         description: Server error
+   */
+  try {
+    const id = req.params.id;
+    const report = await retrieveFlagReportById(id);
+    if (!report) return sendError(res, "Flag report not found", 404);
+    return sendSuccess(res, report);
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
+export const patchFlagReport = async (req: Request, res: Response) => {
+  /**
+   * @swagger
+   * /api/v1/flag-reports/{id}:
+   *   patch:
+   *     summary: Update flag report
+   *     tags: [FlagReports]
+   *     security:
+   *       - bearerAuth: []
+   *       - cookieAuth: []
+   *     description: Update a flag report by its ID. Requires authentication.
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Flag report ID
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               status:
+   *                 type: string
+   *                 enum: [unresolved, resolved]
+   *                 description: New status
+   *               details:
+   *                 type: string
+   *                 description: Optional details
+   *     responses:
+   *       200:
+   *         description: Successfully updated flag report
+   *       404:
+   *         description: Not found
+   *       500:
+   *         description: Server error
+   */
+  try {
+    const id: string = req.params.id;
+    const details: Partial<any> = req.body;
+    const updated = await updateFlagReportInFirestore(id, details);
+    if (!updated) return sendError(res, "Failed to update flag report", 404);
+    if (details.status === "resolved" && req.user) {
+      createLog(req.user.id, req.user.user.role, AuditAction.CORRECT_FLAG_REPORT, `Resolved flag report ${id}`, id);
+    }
+    return sendSuccess(res, updated);
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
+export const deleteFlagReport = async (req: Request, res: Response) => {
+  /**
+   * @swagger
+   * /api/v1/flag-reports/{id}:
+   *   delete:
+   *     summary: Hard delete flag report
+   *     tags: [FlagReports]
+   *     security:
+   *       - bearerAuth: []
+   *       - cookieAuth: []
+   *     description: Hard delete a flag report by its ID. Requires authentication.
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Flag report ID
+   *     responses:
+   *       200:
+   *         description: Successfully deleted flag report
+   *       404:
+   *         description: Not found
+   *       500:
+   *         description: Server error
+   */
+  try {
+    const id: string = req.params.id;
+    const ok = await removeFlagReport(id);
+    if (!ok) return sendError(res, "Failed to delete flag report", 404);
+    return sendSuccess(res, "Successfully deleted flag report");
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
+export const softDeleteFlagReport = async (req: Request, res: Response) => {
+  /**
+   * @swagger
+   * /api/v1/flag-reports/soft/{id}:
+   *   delete:
+   *     summary: Soft delete flag report
+   *     tags: [FlagReports]
+   *     security:
+   *       - bearerAuth: []
+   *       - cookieAuth: []
+   *     description: Soft delete a flag report by its ID. Requires authentication.
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Flag report ID
+   *     responses:
+   *       200:
+   *         description: Successfully soft deleted flag report
+   *       404:
+   *         description: Not found
+   *       500:
+   *         description: Server error
+   */
+  try {
+    const id: string = req.params.id;
+    const ok = await softRemoveFlagReport(id);
+    if (!ok) return sendError(res, "Failed to soft delete flag report", 404);
+    return sendSuccess(res, "Successfully soft deleted flag report.");
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};

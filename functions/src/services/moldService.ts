@@ -15,11 +15,11 @@ import {
   softDeleteMold,
   updateMold,
 } from "../repositories/moldRepository";
-import { Mold, WithMetadata } from "../types/types";
+import { Mold, WithId, WithMetadata } from "../types/types";
 
 export const addMoldToFirestore = async (
   details: Mold
-): Promise<Mold | null> => {
+): Promise<WithId<Mold> | null> => {
   try {
     const detailsWithMetadata: WithMetadata<Mold> = {
       ...details,
@@ -31,7 +31,7 @@ export const addMoldToFirestore = async (
     };
     const mold: DocumentSnapshot | null = await addMold(detailsWithMetadata);
     if (!mold) throw new Error("Cannot add mold.");
-    return documentToJson<Mold>(mold);
+    return documentToJson<WithId<Mold>>(mold);
   } catch (error) {
     devLog(error);
     return null;

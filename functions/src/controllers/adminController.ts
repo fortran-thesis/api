@@ -2,6 +2,8 @@ import { Request, Response } from "express";
 import { devLog } from "../utils/dev";
 import { defaultError, sendError, sendSuccess } from "../utils/response";
 import { banUser, toggleUser } from "../services/adminService";
+import { createLog } from "../utils/logging";
+import { AuditAction } from "../types/enums";
 
 export const disableUser = async (req: Request, res: Response) => {
   /**
@@ -41,6 +43,11 @@ export const disableUser = async (req: Request, res: Response) => {
     const email = req.body.email;
     const process = await toggleUser(id, email, true);
     if (!process.success) return sendError(res, "Failed to disable user.");
+    // Audit log
+    if (req.user) {
+      const { id: actorId, user: { role } } = req.user;
+      createLog(actorId, role, AuditAction.DISABLE_USER, `Disabled user ${id}`, id);
+    }
     return sendSuccess(res, "Successfully disabled user.");
   } catch (error) {
     devLog(error);
@@ -83,9 +90,14 @@ export const enableUser = async (req: Request, res: Response) => {
    */
   try {
     const id = req.body.id;
-    const email = req.body.id;
+    const email = req.body.email;
     const process = await toggleUser(id, email, false);
     if (!process.success) return sendError(res, "Failed to enable user.");
+    // Audit log
+    if (req.user) {
+      const { id: actorId, user: { role } } = req.user;
+      createLog(actorId, role, AuditAction.APPROVE_CURATOR, `Enabled user ${id}`, id); // Todo: wrong audit action
+    }
     return sendSuccess(res, "Successfully enabled user.");
   } catch (error) {
     devLog(error);
@@ -128,9 +140,14 @@ export const banUserController = async (req: Request, res: Response) => {
    */
   try {
     const id = req.body.id;
-    const email = req.body.id;
+    const email = req.body.email;
     const process = await banUser(id, email);
     if (!process.success) return sendError(res, "Failed to ban user.");
+    // Audit log
+    if (req.user) {
+      const { id: actorId, user: { role } } = req.user;
+      createLog(actorId, role, AuditAction.BAN_USER, `Banned user ${id}`, id);
+    }
     return sendSuccess(res, "Successfully banned user.");
   } catch (error) {
     devLog(error);

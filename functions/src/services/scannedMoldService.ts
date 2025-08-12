@@ -15,13 +15,13 @@ import {
   updateScannedMold,
 } from "../repositories/scannedMoldRepository";
 
-import { ScannedMold, WithMetadata } from "../types/types";
+import { ScannedMold, WithMetadata, WithId } from "../types/types";
 
 
 export const addScannedMoldToFirestore = async (
   details: Omit<ScannedMold, "image_url">,
   image_url: string
-): Promise<WithMetadata<ScannedMold> | null> => {
+): Promise<WithId<ScannedMold> | null> => {
   try {
     const detailsWithMeta: WithMetadata<ScannedMold> = {
       ...details,
@@ -34,7 +34,7 @@ export const addScannedMoldToFirestore = async (
     };
     const doc: DocumentSnapshot | null = await addScannedMold(detailsWithMeta);
     if (!doc) throw new Error("Cannot add scanned mold.");
-    return documentToJson<WithMetadata<ScannedMold>>(doc);
+    return documentToJson<WithId<ScannedMold>>(doc);
   } catch (error) {
     devLog(error);
     return null;

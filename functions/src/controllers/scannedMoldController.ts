@@ -1,7 +1,9 @@
 import { Request, Response } from "express";
 import { devLog } from "../utils/dev";
 import { defaultError, sendError, sendSuccess } from "../utils/response";
-import { ScannedMold } from "../types/types";
+import { ScannedMold, WithId } from "../types/types";
+import { createLog } from "../utils/logging";
+import { AuditAction } from "../types/enums";
 import { uploadFile } from "../lib/storage";
 import {
   addScannedMoldToFirestore,
@@ -92,11 +94,16 @@ export const createScannedMold = async (req: Request, res: Response) => {
         "Invalid photo, please upload a different image.",
         400
       );
-    const scanned: ScannedMold | null = await addScannedMoldToFirestore(
+    const scanned: WithId<ScannedMold> | null = await addScannedMoldToFirestore(
       details,
       url
     );
     if (!scanned) return sendError(res, "Failed to create scanned mold", 400);
+    // Audit log
+    if (req.user) {
+      const { id, user: { role } } = req.user;
+      createLog(id, role, AuditAction.IDENTIFY_MOLD, `Created scanned mold`, scanned.id || "unknown");
+    }
     return sendSuccess(res, scanned);
   } catch (error) {
     devLog(error);
@@ -321,6 +328,11 @@ export const patchScannedMold = async (req: Request, res: Response) => {
     const details: Partial<ScannedMold> = req.body;
     const updated = await updateScannedMoldInFirestore(id, details);
     if (!updated) return sendError(res, "Failed to update scanned mold", 404);
+    // Audit log
+    if (req.user) {
+      const { id: actorId, user: { role } } = req.user;
+      createLog(actorId, role, AuditAction.EDIT_MOLD, `Updated scanned mold ${id}`, id);
+    }
     return sendSuccess(res, updated);
   } catch (error) {
     devLog(error);
@@ -378,6 +390,11 @@ export const deleteScannedMold = async (req: Request, res: Response) => {
   try {
     const id: string = req.params.id;
     await removeScannedMold(id);
+    // Audit log
+    if (req.user) {
+      const { id: actorId, user: { role } } = req.user;
+      createLog(actorId, role, AuditAction.ARCHIVE_WIKIMOLD, `Hard deleted scanned mold ${id}`, id);
+    }
     return sendSuccess(res, "Successfully deleted scanned mold");
   } catch (error) {
     devLog(error);
@@ -435,6 +452,11 @@ export const softDeleteScannedMold = async (req: Request, res: Response) => {
   try {
     const id: string = req.params.id;
     await softRemoveScannedMold(id);
+    // Audit log
+    if (req.user) {
+      const { id: actorId, user: { role } } = req.user;
+      createLog(actorId, role, AuditAction.ARCHIVE_WIKIMOLD, `Soft deleted scanned mold ${id}`, id);
+    }
     return sendSuccess(res, "Successfully soft deleted scanned mold.");
   } catch (error) {
     devLog(error);

@@ -1,7 +1,9 @@
 import { Request, Response } from "express";
 import { devLog } from "../utils/dev";
 import { defaultError, sendError, sendSuccess } from "../utils/response";
-import { Moldipedia } from "../types/types";
+import { Moldipedia, WithId } from "../types/types";
+import { createLog } from "../utils/logging";
+import { AuditAction } from "../types/enums";
 import { uploadFile } from "../lib/storage";
 import {
   addMoldipediaToFirestore,
@@ -57,8 +59,12 @@ export const createMoldipedia = async (req: Request, res: Response) => {
     const photo: Express.Multer.File = req.file as Express.Multer.File;
     const url = await uploadFile("moldipedia", photo.originalname, photo.buffer, photo.mimetype);
     if (!url) return sendError(res, "Invalid cover photo, please upload a different image.", 400);
-    const article: Moldipedia | null = await addMoldipediaToFirestore({ ...details, cover_photo: url });
+    const article: WithId<Moldipedia> | null = await addMoldipediaToFirestore({ ...details, cover_photo: url });
     if (!article) return sendError(res, "Failed to create moldipedia article", 400);
+    // Audit log
+    if (req.user) {
+      createLog(req.user.id, req.user.user.role, AuditAction.ADD_WIKIMOLD, `Created moldipedia: ${details.title}`, article["id"] || "");
+    }
     return sendSuccess(res, article);
   } catch (error) {
     devLog(error);
@@ -192,6 +198,10 @@ export const patchMoldipedia = async (req: Request, res: Response) => {
     const details: Partial<Moldipedia> = req.body.details;
     const updated = await updateMoldipediaInFirestore(id, details);
     if (!updated) return sendError(res, "Failed to update moldipedia article", 404);
+    // Audit log
+    if (req.user) {
+      createLog(req.user.id, req.user.user.role, AuditAction.EDIT_WIKIMOLD, `Updated moldipedia: ${id}`, id);
+    }
     return sendSuccess(res, updated);
   } catch (error) {
     devLog(error);
@@ -227,6 +237,10 @@ export const deleteMoldipedia = async (req: Request, res: Response) => {
   try {
     const id: string = req.params.id;
     await removeMoldipedia(id);
+    // Audit log
+    if (req.user) {
+      createLog(req.user.id, req.user.user.role, AuditAction.ARCHIVE_WIKIMOLD, `Deleted moldipedia: ${id}`, id);
+    }
     return sendSuccess(res, "Successfully deleted moldipedia article");
   } catch (error) {
     devLog(error);
