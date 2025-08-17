@@ -37,7 +37,7 @@ export const deleteCachePattern = async (pattern: string) => {
     let cursor = '0';
     let keys: string[] = [];
     do {
-      const [nextCursor, foundKeys] = await redis.scan(cursor, { MATCH: pattern, COUNT: 100 });
+      const { cursor: nextCursor, keys: foundKeys } = await redis.scan(cursor, { MATCH: pattern, COUNT: 100 });
       cursor = nextCursor;
       if (foundKeys.length > 0) {
         keys.push(...foundKeys);
