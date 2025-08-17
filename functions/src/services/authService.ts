@@ -85,7 +85,13 @@ export const registerOAuthUser = async (
     } catch (err: any) {
       if (err.code !== "auth/user-not-found") throw err;
     }
-    if (userExists) return { success: false, error: "User already exists!" };
+    if (userExists) {
+      // User already exists, treat as success
+      return {
+        success: true,
+        data: "User already exists in Firebase Auth.",
+      };
+    }
 
     const user: WithMetadata<User> = {
       username: "",
@@ -219,9 +225,8 @@ export const generateVerificationCode = async (
   try {
     // Generate a random 4-digit code, zero-padded (e.g., '0004', '0348')
     const code = generateCode();
-    // Ensure Redis connection is ready
     await redisReady;
-    // Store in Redis with a TTL (e.g., 10 minutes)
+    // Always overwrite the code in Redis, even if one already exists
     await redis.set(`verify:${email}`, code, { EX: 600 });
     return code;
   } catch (error) {
@@ -279,19 +284,23 @@ export const changePassword = async (
   try {
     await redisReady;
     const email = await redis.get(`token:${redisToken}`);
-    if (!email) return { success: false, data: "Invalid or expired token!" };
+    if (!email) {
+      devLog(`changePassword: Invalid or expired token: ${redisToken}`);
+      return { success: false, data: "Invalid or expired token!" };
+    }
     const user = await getAuthUserByEmail(email);
-    if (!user) return { success: false, data: "Something went wrong." };
+    if (!user) {
+      devLog(`changePassword: No user found for email: ${email}`);
+      return { success: false, data: "User not found." };
+    }
     await getAuth().updateUser(user.id, { password: newPassword });
     await redis.del(`token:${redisToken}`);
-    const check = await redis.get(`token:${redisToken}`);
-    devLog(check);
     return { success: true, data: "Password changed successfully!" };
   } catch (error) {
     devLog(error);
     return { success: false, data: "Something went wrong." };
   }
-};
+}
 
 export const forgetUsername = async (
   redisToken: string
@@ -300,18 +309,15 @@ export const forgetUsername = async (
     await redisReady;
     const email = await redis.get(`token:${redisToken}`);
     if (!email) return { success: false, data: "Invalid or expired token!" };
-    const uid = await getDocumentIdByField("users", "email", email);
-    if (!uid) throw new Error("No user found in Firebase Firestore");
-    // You may need to fetch user details from Firestore
-    const querySnap = await findFirestoreUserById(uid);
-    const user = querySnap?.docs[0].data();
-    if (!user) throw new Error("No user found in Firebase Firestore");
+    const user = await getAuthUserByEmail(email);
+    if (!user) throw new Error("No user found in Firebase");
+    const username = user.user.username
     const html = `
       <h2>Username</h2>
       <p>Hello,</p>
       <p>Account: <strong>${email}</strong></p>
       <p>This is your username:</p>
-      <div style="font-size:2em;font-weight:bold;letter-spacing:0.2em;background:#f5f5f5;padding:10px;border-radius:6px;width:max-content;">${user.username}</div>
+      <div style="font-size:2em;font-weight:bold;letter-spacing:0.2em;background:#f5f5f5;padding:10px;border-radius:6px;width:max-content;">${username}</div>
       <p>If you did not request this, you can ignore this email.</p>
       <p>Thanks,<br/>The Moldify Team</p>
     `;

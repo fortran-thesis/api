@@ -150,6 +150,46 @@ export const getAllUsers = async (req: Request, res: Response) => {
   }
 };
 
+export const getUserProfile = async (req: Request, res: Response) => {
+  /**
+   * @swagger
+   * /api/v1/users/{id}:
+   *   get:
+   *     summary: Get user by ID
+   *     tags: [Users]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: User ID
+   *     security:
+   *       - bearerAuth: []
+   *       - cookieAuth: []
+   *     description:
+   *       - Requires authentication (Bearer token or session cookie)
+   *     responses:
+   *       200:
+   *         description: User found
+   *       404:
+   *         description: User not found
+   *       500:
+   *         description: Server error
+   */
+  try {
+    const id = req.user?.id;
+    if(!id) return sendError(res, "Unauthenticated", 401);
+    const user = await retrieveUserById(id);
+    if (!user) return sendError(res, "Failed to retrieve user", 404);
+    return sendSuccess(res, user);
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
+
 /**
  * Update user details
  *

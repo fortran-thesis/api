@@ -19,6 +19,7 @@ import curatorRoutes from "./routes/curatorRoutes";
 import adminRoutes from "./routes/adminRoutes";
 import reportRoutes from "./routes/reportRoutes";
 import systemRequestRoutes from "./routes/systemRequestRoutes";
+import testRoute from "./routes/testRoute";
 
 const app = express();
 app.use(helmet());
@@ -42,6 +43,7 @@ router.use("/v1/admin", adminRoutes);
 router.use("/v1/report", reportRoutes);
 router.use("/v1/system-request", systemRequestRoutes);
 router.use("/v1/audit-log", auditLogRoutes);
+router.use("/v1/test", testRoute);
 
 app.use("/api", router);
 

@@ -1,7 +1,7 @@
 import { getAuth, UserRecord } from "firebase-admin/auth";
 import { firebase } from "../configs/firebase";
 import { User, WithId } from "../types/types";
-import { getDocumentById } from "./firestore";
+import { getDocumentId } from "./firestore";
 import { concurrent } from "../utils/concurrent";
 import { devLog } from "../utils/dev";
 import { envOptions } from "../configs/environment";
@@ -31,6 +31,7 @@ export const getAuthUserById = async (uid: string): Promise<WithId<APIUser> | nu
       details: {
         email: user.email,
         displayName: user.displayName,
+        photo_url: user.photoURL ?? "",
         disabled: user.disabled
       }
     };
@@ -56,6 +57,7 @@ export const getAuthUserByEmail = async (email: string): Promise<WithId<APIUser>
       details: {
         email: user.email,
         displayName: user.displayName,
+        photo_url: user.photoURL ?? "",
         disabled: user.disabled
       }
     };
@@ -72,9 +74,9 @@ export const getAuthUserByEmail = async (email: string): Promise<WithId<APIUser>
  */
 const getFirestoreUser = async (uid: string): Promise<User | null> => {
   try {
-    const snap = await getDocumentById("users", uid);
-    if (snap && Array.isArray(snap.docs) && snap.docs.length > 0) {
-      return snap.docs[0].data() as User;
+    const snap = await getDocumentId("users", uid);
+    if (snap && snap.exists) {
+      return snap.data() as User;
     }
     return null;
   } catch (error) {
