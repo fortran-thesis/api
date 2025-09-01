@@ -11,6 +11,7 @@
     "strict": true,
     "target": "es2017",
     "resolveJsonModule": true,
+    "isolatedModules": true
   },
   "compileOnSave": true,
   "include": [

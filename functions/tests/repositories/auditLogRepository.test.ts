@@ -6,7 +6,10 @@ describe('auditLogRepository (integration)', () => {
     it('skipped: requires Firestore emulator', () => { expect(true).toBe(true); });
     return;
   }
-  it('should export expected functions', () => {
-    expect(repo).toBeDefined();
+  it('should find audit logs by action and paginate', async () => {
+    const logs = await repo.findAuditLogsByAction('CREATE');
+    expect(logs).toBeDefined();
+    const paginated = await repo.findAllAuditLogs(10, 0);
+    expect(paginated).toBeDefined();
   });
 });

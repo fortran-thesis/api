@@ -6,7 +6,21 @@ describe('reportRepository (integration)', () => {
     it('skipped: requires Firestore emulator', () => { expect(true).toBe(true); });
     return;
   }
-  it('should export expected functions', () => {
-    expect(repo).toBeDefined();
+  it('should add, find, update, and delete a report', async () => {
+    const testReport = { title: 'test', description: 'desc', created_at: Date.now() };
+    const addRes = await repo.addReport(testReport as any);
+    expect(addRes && addRes.id).toBeDefined();
+    if (!addRes) return;
+    const found = await repo.findReportById(addRes.id);
+    expect(found && !found.empty).toBe(true);
+    if (!found || found.empty) return;
+    await repo.updateReport(addRes.id, { details: 'updated' });
+    const updated = await repo.findReportById(addRes.id);
+    expect(updated && !updated.empty).toBe(true);
+    if (!updated || updated.empty) return;
+    expect(updated.docs[0].data()?.details).toBe('updated');
+    await repo.deleteReport(addRes.id);
+    const deleted = await repo.findReportById(addRes.id);
+    expect(deleted && !deleted.empty).toBe(false);
   });
 });

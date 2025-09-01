@@ -6,7 +6,21 @@ describe('systemRequestRepository (integration)', () => {
     it('skipped: requires Firestore emulator', () => { expect(true).toBe(true); });
     return;
   }
-  it('should export expected functions', () => {
-    expect(repo).toBeDefined();
+  it('should add, find, update, and delete a system request', async () => {
+    const testRequest = { type: 'test', payload: {}, created_at: Date.now() };
+    const addRes = await repo.addSystemRequest(testRequest as any);
+    expect(addRes && addRes.id).toBeDefined();
+    if (!addRes) return;
+    const found = await repo.findSystemRequestById(addRes.id);
+    expect(found && !found.empty).toBe(true);
+    if (!found || found.empty) return;
+    await repo.updateSystemRequest(addRes.id, { message: 'updated' });
+    const updated = await repo.findSystemRequestById(addRes.id);
+    expect(updated && !updated.empty).toBe(true);
+    if (!updated || updated.empty) return;
+    expect(updated.docs[0].data()?.message).toBe('updated');
+    await repo.deleteSystemRequest(addRes.id);
+    const deleted = await repo.findSystemRequestById(addRes.id);
+    expect(deleted && !deleted.empty).toBe(false);
   });
 });

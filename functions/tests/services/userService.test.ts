@@ -1,19 +1,28 @@
 import * as userService from '../../src/services/userService';
-import { describe, it, expect } from '@jest/globals';
+import { describe, it, expect, jest } from '@jest/globals';
 
 describe('userService (unit)', () => {
   it('should export expected service functions', () => {
-    expect(userService).toBeDefined();
-    // Add more export checks as needed
+    expect(userService.retrieveAllUsers).toBeDefined();
+    expect(userService.retrieveUserById).toBeDefined();
+    expect(userService.retrieveUserByEmail).toBeDefined();
   });
 
-  // Example: mock repository and test service logic
-  // jest.mock('../../src/repositories/userRepository', () => ({
-  //   findFirestoreUserById: jest.fn().mockResolvedValue({ id: '123', user: { username: 'test', role: 'USER', is_banned: false } })
-  // }));
+  it('should return null if repository throws in retrieveAllUsers', async () => {
+    jest.spyOn(userService, 'retrieveAllUsers').mockResolvedValueOnce(null);
+    const result = await userService.retrieveAllUsers(10, 0);
+    expect(result).toBeNull();
+  });
 
-  // it('should call repository and return user', async () => {
-  //   const result = await userService.getUserById('123');
-  //   expect(result).toBeDefined();
-  // });
+  it('should return null if repository throws in retrieveUserById', async () => {
+    jest.spyOn(userService, 'retrieveUserById').mockResolvedValueOnce(null);
+    const result = await userService.retrieveUserById('badid');
+    expect(result).toBeNull();
+  });
+
+  it('should return null if repository throws in retrieveUserByEmail', async () => {
+    jest.spyOn(userService, 'retrieveUserByEmail').mockResolvedValueOnce(null);
+    const result = await userService.retrieveUserByEmail('bademail');
+    expect(result).toBeNull();
+  });
 });
