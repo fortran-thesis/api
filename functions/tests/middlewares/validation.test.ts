@@ -41,4 +41,44 @@ describe('validation middleware', () => {
     expect(next).toHaveBeenCalled();
     expect(req.query).toEqual({ name: 'Jane' });
   });
+
+  it('should handle missing body data gracefully', () => {
+    const req = { body: undefined };
+    const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
+    const next = jest.fn();
+    validateBody(schema)(req as any, res as any, next);
+    expect(next).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      success: false,
+      error: expect.stringContaining('Required')
+    });
+  });
+
+  it('should validate complex nested schema', () => {
+    const complexSchema = z.object({
+      user: z.object({
+        name: z.string().min(2),
+        email: z.string().email(),
+        age: z.number().min(18)
+      }),
+      tags: z.array(z.string()).optional()
+    });
+
+    const validReq = {
+      body: {
+        user: { name: 'John Doe', email: 'john@example.com', age: 25 },
+        tags: ['admin', 'user']
+      }
+    };
+    const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
+    const next = jest.fn();
+
+    validateBody(complexSchema)(validReq as any, res as any, next);
+    expect(next).toHaveBeenCalled();
+    expect(validReq.body).toEqual({
+      user: { name: 'John Doe', email: 'john@example.com', age: 25 },
+      tags: ['admin', 'user']
+    });
+  });
 });
