@@ -48,8 +48,6 @@ router.post(
 
 router.post(
   "/login/oauth",
-  sanitizeBody,
-  validateBody(TokenSchema),
   async (req: Request, res: Response) => {
     oAuth(req, res);
   }
@@ -65,7 +63,7 @@ router.post(
 );
 
 router.post(
-  "/forget-password/verify",
+  "/forgot-password/verify",
   rateLimit(finalActionLimiter),
   async (req: Request, res: Response) => {
     verifiedChangePassword(req, res);
@@ -73,7 +71,7 @@ router.post(
 );
 
 router.post(
-  "/forget-username/verify",
+  "/forgot-username/verify",
   rateLimit(finalActionLimiter),
   async (req: Request, res: Response) => {
     verifiedForgetUsername(req, res);
@@ -81,7 +79,7 @@ router.post(
 );
 
 router.post(
-  "/forget-password",
+  "/forgot-password",
   rateLimit(sendCodeLimiter),
   sanitizeBody,
   validateBody(EmailSchema),
@@ -91,7 +89,7 @@ router.post(
 );
 
 router.post(
-  "/forget-username",
+  "/forgot-username",
   rateLimit(sendCodeLimiter),
   sanitizeBody,
   validateBody(EmailSchema),

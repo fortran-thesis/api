@@ -6,6 +6,7 @@ import {
   getAllUsers,
   getUserByEmail,
   getUserById,
+  getUserProfile,
   patchUser,
   softDeleteUser,
 } from "../controllers/userController";
@@ -19,6 +20,14 @@ import { PaginationQuerySchema } from "../dto/paginationDTO";
 import { sanitizeBody, sanitizeParams } from "../middlewares/sanitation";
 
 const router = Router();
+
+router.get(
+  "/profile",
+  verifyUser(),
+  async (req: Request, res: Response) => {
+    getUserProfile(req, res);
+  }
+);
 
 router.get(
   "/",

@@ -189,6 +189,20 @@ export const getDocumentById = async (
   }
 };
 
+export const getDocumentId = async (
+  collection: string,
+  uid: string
+): Promise<FirebaseFirestore.DocumentSnapshot | null> => {
+  try {
+    const docSnap = await callFirebase(collection).doc(uid).get();
+    if (!docSnap.exists) throw new Error("Document does not exist");
+    return docSnap;
+  } catch (error) {
+    devLog(error);
+    return null;
+  }
+}
+
 /**
  * Retrieves all documents in a Firestore collection.
  * @param collection - The name of the Firestore collection

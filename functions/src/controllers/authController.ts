@@ -37,9 +37,13 @@ export const createUser = async (req: Request, res: Response) => {
    *           schema:
    *             type: object
    *             required:
+   *               - username
    *               - email
    *               - password
    *             properties:
+   *               username:
+   *                 type: string
+   *                 format: string
    *               email:
    *                 type: string
    *                 format: email
@@ -169,9 +173,9 @@ export const oAuth = async (req: Request, res: Response) => {
   try {
     const token: string = req.body.token;
     const uid: string | null = await identifyOAuthUser(token);
-    if (!uid) return sendError(res, "Something went wrong.");
+    if (!uid) return sendError(res, "Something went wrong identifying user.");
     const process: ApiResponse<string> = await registerOAuthUser(uid);
-    if (!process.success) return sendError(res, "Something went wrong.");
+    if (!process.success) return sendError(res, "Something went wrong registering user.");
     const cookie: string | null = await authenticateUser(token);
     if (!cookie) return sendError(res, "Incorrect credentials");
 

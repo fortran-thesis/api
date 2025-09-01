@@ -9,6 +9,7 @@ export interface User {
 export interface UserDetails {
   displayName?: string;
   email?: string;
+  photo_url: string;
   disabled: boolean;
 }
 

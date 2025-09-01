@@ -30,8 +30,9 @@ export const retrieveAllUsers = async (
           is_banned: firestoreUser.is_banned,
         },
         details: {
-          email: authUser?.email,
-          displayName: authUser?.displayName,
+          email: authUser?.email ?? "",
+          displayName: authUser?.displayName ?? "",
+          photo_url: authUser?.photoURL ?? "",
           disabled: !!authUser?.disabled,
         },
       };
