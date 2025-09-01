@@ -14,7 +14,6 @@ import {
   RegisterSchema,
   LoginSchema,
   EmailSchema,
-  TokenSchema,
   ChangePasswordSchema,
 } from "../dto/dto";
 import { sanitizeBody } from "../middlewares/sanitation";

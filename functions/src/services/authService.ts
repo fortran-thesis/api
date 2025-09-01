@@ -8,7 +8,6 @@ import {
 import {
   addUser,
   deleteFirestoreUser,
-  findFirestoreUserById,
   softDeleteFirestoreUser,
   updateFirestoreUser,
 } from "../repositories/userRepository";

@@ -1,5 +1,5 @@
 import * as userService from '../../src/services/userService';
-import { describe, it, expect, jest } from '@jest/globals';
+import { describe, it, expect } from '@jest/globals';
 
 describe('userService (unit)', () => {
   it('should export expected service functions', () => {

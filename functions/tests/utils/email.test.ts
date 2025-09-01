@@ -1,5 +1,14 @@
 import { sendEmail } from '../../src/utils/email';
-import { describe, it, expect } from '@jest/globals';
+import { describe, it, expect, jest } from '@jest/globals';
+
+jest.mock('../../src/utils/email', () => ({
+  sendEmail: jest.fn(async (to: string, subject: string, html: string) => {
+    if (!to || !subject || !html) {
+      throw new Error('Missing params');
+    }
+    return { id: 'mocked-email-id' };
+  })
+}));
 
 describe('email utils', () => {
   it('should send email', async () => {

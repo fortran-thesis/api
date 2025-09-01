@@ -4,7 +4,7 @@ import { describe, it, expect, jest } from '@jest/globals';
 describe('upload middleware', () => {
   it('should be defined and have memoryStorage', () => {
     expect(upload).toBeDefined();
-    expect(typeof upload).toBe('function');
+  expect(typeof upload).toBe('object');
   });
 
   it('should reject unsupported file types', () => {

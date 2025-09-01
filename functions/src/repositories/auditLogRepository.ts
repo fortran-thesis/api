@@ -1,5 +1,4 @@
 import { getPaginatedDocuments, getDocumentsByField } from "../lib/firestore";
-import { AuditLogEntry } from "../types/types";
 
 const collection = "audit_logs";
 

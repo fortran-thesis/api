@@ -1,6 +1,21 @@
 import { verifyUser } from '../../src/middlewares/verification';
 import { describe, it, expect, jest } from '@jest/globals';
 
+jest.mock('../../src/lib/auth', () => ({
+  verifyToken: jest.fn(async (token: string) => {
+    if (token === 'validtoken') {
+      return { id: '123', user: { role: 'ADMIN' } };
+    }
+    return null;
+  }),
+  verifyCookie: jest.fn(async (cookie: string) => {
+    if (cookie === 'validcookie') {
+      return { id: '123', user: { role: 'ADMIN' } };
+    }
+    return null;
+  }),
+}));
+
 describe('verification middleware', () => {
   it('should be a function', () => {
     expect(typeof verifyUser).toBe('function');
