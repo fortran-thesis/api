@@ -22,14 +22,8 @@ jest.mock('../../src/lib/auth', () => ({
     if (cookie === 'usercookie') {
       return { id: '456', user: { role: 'user' } };
     }
-    return null;
-  }),
-}));
-
-jest.mock('../../src/repositories/userRepository', () => ({
-  findFirestoreUserById: jest.fn(async (id: string) => {
-    if (id === '789') {
-      return { docs: [{ data: () => ({ is_verified: true }) }] };
+    if (cookie === 'curatorcookie') {
+      return { id: '789', user: { role: 'curator' }};
     }
     return null;
   }),
@@ -59,25 +53,59 @@ describe('verification middleware', () => {
     expect(next).not.toHaveBeenCalled();
   });
 
-  it('should handle role-based authorization for different user roles', async () => {
-    const req = { headers: { authorization: 'Bearer usertoken' }, cookies: {} };
+  describe('handle role-based authorization for different user roles using token', () => {
     const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
     const next = jest.fn();
     
     // Test USER role with no requirements - should pass
-    await verifyUser()(req as any, res as any, next);
-    expect(next).toHaveBeenCalled();
-    expect((req as any).user.user.role).toBe('user');
+    it('should return USER role', async () => {
+      const req = { headers: { authorization: 'Bearer usertoken' }, cookies: {} };
+      await verifyUser()(req as any, res as any, next);
+      expect(next).toHaveBeenCalled();
+      expect((req as any).user.user.role).toBe('user');
+    })
+
+    it('should return CURATOR role', async () => {
+      const req = { headers: { authorization: 'Bearer curatortoken' }, cookies: {} };
+      await verifyUser()(req as any, res as any, next);
+      expect(next).toHaveBeenCalled();
+      expect((req as any).user.user.role).toBe('curator');
+    })
+
+    it('should return ADMIN role', async () => {
+      const req = { headers: { authorization: 'Bearer validtoken' }, cookies: {} };
+      await verifyUser()(req as any, res as any, next);
+      expect(next).toHaveBeenCalled();
+      expect((req as any).user.user.role).toBe('admin');
+    })
+    
   });
 
-  it('should verify curator with proper verification status', async () => {
-    const req = { headers: { authorization: 'Bearer curatortoken' }, cookies: {} };
+  describe('handle role-based authorization for different user roles using cookie', () => {
     const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
     const next = jest.fn();
     
-    // Test curator role with verification requirement
-    await verifyUser(Role.CURATOR)(req as any, res as any, next);
-    expect(next).toHaveBeenCalled();
-    expect((req as any).user.user.role).toBe('curator');
+    // Test USER role with no requirements - should pass
+    it('should return USER role', async () => {
+      const req = { headers: {}, cookies: { session: 'usercookie'} };
+      await verifyUser()(req as any, res as any, next);
+      expect(next).toHaveBeenCalled();
+      expect((req as any).user.user.role).toBe('user');
+    })
+
+    it('should return CURATOR role', async () => {
+      const req = { headers: {}, cookies: { session: 'curatorcookie'} };
+      await verifyUser()(req as any, res as any, next);
+      expect(next).toHaveBeenCalled();
+      expect((req as any).user.user.role).toBe('curator');
+    })
+
+    it('should return ADMIN role', async () => {
+      const req = { headers: {}, cookies: { session: 'validcookie' } };
+      await verifyUser()(req as any, res as any, next);
+      expect(next).toHaveBeenCalled();
+      expect((req as any).user.user.role).toBe('admin');
+    })
+    
   });
 });
