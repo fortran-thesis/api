@@ -1,8 +1,8 @@
 import { firebase } from "../configs/firebase";
-import { FieldPath, getFirestore, Timestamp } from "firebase-admin/firestore";
+import { FieldPath, getFirestore, QuerySnapshot, Timestamp } from "firebase-admin/firestore";
 import { devLog } from "../utils/dev";
-import { WithId, WithMetadata } from "../types/types";
-import { paginateQuery } from '../utils/pagination';
+import { PaginatedResult, WithId, WithMetadata } from "../types/types";
+import { GetPaginatedOptions, OrderField, paginateQuery } from '../utils/pagination';
 
 const db = getFirestore(firebase);
 
@@ -53,7 +53,7 @@ export const addDocument = async <T extends object>(
       return ref.get();
     }
 
-    return (await callFirebase(collection).add(document)).get();
+    return (await callFirebase(collection).add(withMetadata)).get();
   } catch (error) {
     devLog(error);
     return null;
@@ -200,33 +200,12 @@ export const getDocumentByFieldId = async (
 };
 
 /**
- * Retrieves a single Firestore document by field ID.
- * @param collection - The name of the Firestore collection
- * @param documentUid - The document ID
- * @returns The document snapshot or null if not found/error
- */
-export const getDocumentById = async (
-  collection: string,
-  documentUid: string,
-): Promise<FirebaseFirestore.QuerySnapshot | null> => {
-  try {
-    const querySnap = await getDocumentsByField(collection, "id", documentUid);
-    if (!querySnap || querySnap.empty)
-      throw new Error("Document does not exist");
-    return querySnap;
-  } catch (error) {
-    devLog(error);
-    return null;
-  }
-};
-
-/**
  * Retrieves a single Firestore document by its document ID.
  * @param collection - The name of the Firestore collection
  * @param documentUid - The document ID
  * @returns The document snapshot or null if not found/error
  */
-export const getDocumentId = async (
+export const getDocumentById = async (
   collection: string,
   uid: string
 ): Promise<FirebaseFirestore.DocumentSnapshot| null> => {
@@ -240,36 +219,25 @@ export const getDocumentId = async (
   }
 }
 
-/**
- * Retrieves all documents in a Firestore collection.
- * @param collection - The name of the Firestore collection
- * @returns The query snapshot or null if empty/error
- */
-export const getAllDocuments = async (
-  collection: string
-): Promise<FirebaseFirestore.QuerySnapshot | null> => {
-  try {
-    const querySnap = await callFirebase(collection).get();
-    if (querySnap.empty) throw new Error("No documents found");
-    return querySnap;
-  } catch (error) {
-    devLog(error);
-    return null;
-  }
-};
-
 export const getPaginatedDocuments = async (
   collection: string,
   limit: number,
   token?: string,
-  orderFields: (string | FieldPath)[] = [FieldPath.documentId()]
-): Promise<{ snapshot: FirebaseFirestore.QuerySnapshot; nextPageToken: string | null } | null> => {
+  orderFields: OrderField[] = [FieldPath.documentId()],
+  options: GetPaginatedOptions = {}
+): Promise<PaginatedResult<QuerySnapshot> | null> => {
   try {
-    let query: FirebaseFirestore.Query = callFirebase(collection);
-    // Apply orderBy for each field
+    const dbQueryBase: FirebaseFirestore.Query = callFirebase(collection);
+
+    // Apply optional filters or other query modifiers first (where, startAt/endAt, etc.)
+    let query: FirebaseFirestore.Query = options.queryModifier ? options.queryModifier(dbQueryBase) : dbQueryBase;
+
+    // Apply orderBy for each order field (paginateQuery expects the same ordering sequence)
     for (const field of orderFields) {
       query = query.orderBy(field);
     }
+
+    // Delegate to paginateQuery (it will apply startAfter(token) and limit)
     return await paginateQuery(query, limit, token, orderFields);
   } catch (error) {
     devLog(error);

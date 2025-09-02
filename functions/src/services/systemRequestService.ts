@@ -14,7 +14,7 @@ import {
   softDeleteSystemRequest,
   updateSystemRequest,
 } from "../repositories/systemRequestRepository";
-import { SystemRequest, WithMetadata, WithId } from "../types/types";
+import { SystemRequest, WithMetadata, WithId, PaginatedResult } from "../types/types";
 
 export const addSystemRequestToFirestore = async (
   details: SystemRequest
@@ -39,12 +39,12 @@ export const addSystemRequestToFirestore = async (
 
 export const retrieveAllSystemRequests = async (
   limit: number,
-  offset: number
-): Promise<SystemRequest[] | null> => {
+  token?: string
+): Promise<PaginatedResult<SystemRequest[]> | null> => {
   try {
-    const docs: QuerySnapshot | null = await findAllSystemRequests(limit, offset);
+    const docs: PaginatedResult<QuerySnapshot> | null = await findAllSystemRequests(limit, token);
     if (!docs) throw new Error("No system requests found.");
-    return queryToJson<SystemRequest>(docs);
+    return {snapshot: queryToJson<SystemRequest>(docs.snapshot), nextPageToken: docs.nextPageToken};
   } catch (error) {
     devLog(error);
     return null;
@@ -55,9 +55,9 @@ export const retrieveSystemRequestById = async (
   id: string
 ): Promise<SystemRequest | null> => {
   try {
-    const doc: QuerySnapshot | null = await findSystemRequestById(id);
+    const doc: DocumentSnapshot | null = await findSystemRequestById(id);
     if (!doc) throw new Error("System request not found.");
-    return queryToJson<SystemRequest>(doc)[0];
+    return documentToJson<SystemRequest>(doc);
   } catch (error) {
     devLog(error);
     return null;

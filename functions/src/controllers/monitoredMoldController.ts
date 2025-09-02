@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { devLog } from "../utils/dev";
 import { defaultError, sendError, sendSuccess } from "../utils/response";
-import { MonitoredMold } from "../types/types";
+import { MonitoredMold, PaginatedResult } from "../types/types";
 import {
   addMonitoredMoldToFirestore,
   retrieveAllMonitoredMolds,
@@ -126,15 +126,14 @@ export const getAllMonitoredMoldsByFolderId = async (
    *       500:
    *         description: Server error
    */
-  const page: number = parseInt(req.query.page as string) || 1;
+  const pageToken: string | undefined = req.query.pageToken as string | undefined;
   const limit: number = parseInt(req.query.limit as string) || 10;
-  const offset: number = (page - 1) * limit;
   const id: string = req.params.id;
   try {
-    const molds: MonitoredMold[] | null = await retrieveAllMonitoredMolds(
+    const molds: PaginatedResult<MonitoredMold[]> | null = await retrieveAllMonitoredMolds(
+      id,
       limit,
-      offset,
-      id
+      pageToken
     );
     if (!molds)
       return sendError(res, "Failed to retrieve monitored molds", 404);

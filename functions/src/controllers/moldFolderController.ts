@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { devLog } from "../utils/dev";
 import { defaultError, sendError, sendSuccess } from "../utils/response";
 
-import { MoldFolder } from "../types/types";
+import { MoldFolder, PaginatedResult } from "../types/types";
 import { uploadFile } from "../lib/storage";
 import {
   addMoldFolderToFirestore,
@@ -99,15 +99,15 @@ export const getAllMoldFolders = async (req: Request, res: Response) => {
    *       - Requires authentication (Bearer token or session cookie)
    *     parameters:
    *       - in: query
-   *         name: page
-   *         schema:
-   *           type: string
-   *         description: Page number
-   *       - in: query
    *         name: limit
    *         schema:
-   *           type: string
+   *           type: integer
    *         description: Page size
+   *       - in: query
+   *         name: pageToken
+   *         schema:
+   *           type: string
+   *         description: Cursor token
    *     responses:
    *       200:
    *         description: List of mold folders
@@ -118,21 +118,14 @@ export const getAllMoldFolders = async (req: Request, res: Response) => {
    *       500:
    *         description: Server error
    */
-  const page: number = parseInt(req.query.page as string) || 1;
   const limit: number = parseInt(req.query.limit as string) || 10;
-  const offset: number = (page - 1) * limit;
+  const pageToken: string | undefined = req.query.pageToken as string | undefined;
   const uid: string | undefined = req.user?.id;
   try {
     if (!uid) return sendError(res, "Unauthorized", 401);
-    const molds: MoldFolder[] | null = await retrieveAllMoldFoldersByUser(
-      uid,
-      limit,
-      offset,
-      false
-    );
-
-    if (!molds) return sendError(res, "Failed to retrieve molds", 404);
-    return sendSuccess(res, molds);
+    const result: PaginatedResult<MoldFolder[]> | null = await retrieveAllMoldFoldersByUser(uid, limit, false, pageToken);
+    if (!result) return sendError(res, "Failed to retrieve molds", 404);
+    return sendSuccess(res, result);
   } catch (error) {
     devLog(error);
     return defaultError(res);
@@ -175,21 +168,14 @@ export const getAllArchivedMoldFolders = async (
    *       500:
    *         description: Server error
    */
-  const page: number = parseInt(req.query.page as string) || 1;
   const limit: number = parseInt(req.query.limit as string) || 10;
-  const offset: number = (page - 1) * limit;
+  const pageToken: string | undefined = req.query.pageToken as string | undefined;
   const uid: string | undefined = req.user?.id;
   try {
     if (!uid) return sendError(res, "Unauthorized", 401);
-    const molds: MoldFolder[] | null = await retrieveAllMoldFoldersByUser(
-      uid,
-      limit,
-      offset,
-      true
-    );
-
-    if (!molds) return sendError(res, "Failed to retrieve molds", 404);
-    return sendSuccess(res, molds);
+    const result: PaginatedResult<MoldFolder[]> | null = await retrieveAllMoldFoldersByUser(uid, limit, true, pageToken);
+    if (!result) return sendError(res, "Failed to retrieve molds", 404);
+    return sendSuccess(res, result);
   } catch (error) {
     devLog(error);
     return defaultError(res);

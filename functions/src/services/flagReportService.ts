@@ -9,13 +9,13 @@ import {
   softDeleteFlagReport,
   updateFlagReport,
 } from "../repositories/flagReportRepository";
-import { FlagReport, WithMetadata } from "../types/types";
+import { FlagReportBase, PaginatedResult, WithMetadata } from "../types/types";
 
 export const addFlagReportToFirestore = async (
-  details: FlagReport
-): Promise<FlagReport | null> => {
+  details: FlagReportBase
+): Promise<FlagReportBase | null> => {
   try {
-    const detailsWithTimestamp: WithMetadata<FlagReport> = {
+    const detailsWithTimestamp: WithMetadata<FlagReportBase> = {
       ...details,
       metadata: {
         created_at: Timestamp.now(),
@@ -25,18 +25,18 @@ export const addFlagReportToFirestore = async (
     };
     const doc: DocumentSnapshot | null = await addFlagReport(detailsWithTimestamp);
     if (!doc) throw new Error("Cannot add flag report.");
-    return documentToJson<FlagReport>(doc);
+    return documentToJson<FlagReportBase>(doc);
   } catch (error) {
     devLog(error);
     return null;
   }
 };
 
-export const retrieveAllFlagReports = async (limit: number, offset: number) => {
+export const retrieveAllFlagReports = async (limit: number, token?: string): Promise<PaginatedResult<FlagReportBase[]> | null> => {
   try {
-    const querySnap: QuerySnapshot | null = await findAllFlagReports(limit, offset);
+    const querySnap: PaginatedResult<QuerySnapshot> | null = await findAllFlagReports(limit, token);
     if (!querySnap) throw new Error("No flag reports found.");
-    return queryToJson<FlagReport>(querySnap);
+    return {snapshot: queryToJson<FlagReportBase>(querySnap.snapshot), nextPageToken: querySnap.nextPageToken};
   } catch (error) {
     devLog(error);
     return null;
@@ -45,16 +45,16 @@ export const retrieveAllFlagReports = async (limit: number, offset: number) => {
 
 export const retrieveFlagReportById = async (id: string) => {
   try {
-    const querySnap: QuerySnapshot | null = await findFlagReportById(id);
-    if (!querySnap || querySnap.empty) throw new Error("Flag report not found.");
-    return queryToJson<FlagReport>(querySnap)[0];
+    const doc: DocumentSnapshot | null = await findFlagReportById(id);
+    if (!doc || !doc.exists) throw new Error("Flag report not found.");
+    return documentToJson<FlagReportBase>(doc);
   } catch (error) {
     devLog(error);
     return null;
   }
 };
 
-export const updateFlagReportInFirestore = async (id: string, details: Partial<FlagReport>) => {
+export const updateFlagReportInFirestore = async (id: string, details: Partial<FlagReportBase>) => {
   try {
     const result: WriteResult | null = await updateFlagReport(id, details);
     return !!result;

@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { devLog } from "../utils/dev";
 import { defaultError, sendError, sendSuccess } from "../utils/response";
-import { Moldipedia, WithId } from "../types/types";
+import { Moldipedia, PaginatedResult, WithId } from "../types/types";
 import { createLog } from "../utils/logging";
 import { AuditAction } from "../types/enums";
 import { uploadFile } from "../lib/storage";
@@ -86,15 +86,15 @@ export const getAllMoldipedia = async (req: Request, res: Response) => {
    *       - Requires authentication (Bearer token or session cookie)
    *     parameters:
    *       - in: query
-   *         name: page
-   *         schema:
-   *           type: string
-   *         description: Page number
-   *       - in: query
    *         name: limit
    *         schema:
-   *           type: string
+   *           type: integer
    *         description: Page size
+   *       - in: query
+   *         name: pageToken
+   *         schema:
+   *           type: string
+   *         description: Cursor token
    *     responses:
    *       200:
    *         description: List of moldipedia articles
@@ -103,13 +103,12 @@ export const getAllMoldipedia = async (req: Request, res: Response) => {
    *       500:
    *         description: Server error
    */
-  const page: number = parseInt(req.query.page as string) || 1;
   const limit: number = parseInt(req.query.limit as string) || 10;
-  const offset: number = (page - 1) * limit;
+  const pageToken: string | undefined = req.query.pageToken as string | undefined;
   try {
-    const articles: Moldipedia[] | null = await retrieveAllMoldipedia(limit, offset);
-    if (!articles) return sendError(res, "Failed to retrieve moldipedia articles", 404);
-    return sendSuccess(res, articles);
+    const result: PaginatedResult<Moldipedia[]> | null = await retrieveAllMoldipedia(limit, pageToken);
+    if (!result) return sendError(res, "Failed to retrieve moldipedia articles", 404);
+    return sendSuccess(res, result);
   } catch (error) {
     devLog(error);
     return defaultError(res);

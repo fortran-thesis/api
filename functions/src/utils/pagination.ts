@@ -4,7 +4,12 @@ import { FieldPath, Timestamp } from "firebase-admin/firestore";
  * OrderField describes how the query is ordered; use FieldPath.documentId() as the last tiebreaker.
  * Example: ['created_at', FieldPath.documentId()]
  */
-type OrderField = string | FieldPath;
+export type OrderField = string | FieldPath;
+
+export interface GetPaginatedOptions {
+  // apply where() / other constraints before ordering
+  queryModifier?: (q: FirebaseFirestore.Query) => FirebaseFirestore.Query;
+}
 
 /**
  * Build a page token from the last document and the ordered fields used in the query.

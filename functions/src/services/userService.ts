@@ -1,4 +1,4 @@
-import { APIUser, User, WithId } from "../types/types";
+import { APIUser, User, WithId, PaginatedResult } from "../types/types";
 import {
   findAllUsers,
   findAuthUserByEmail,
@@ -11,7 +11,7 @@ import { queryToJson } from "../lib/firestore";
 export const retrieveAllUsers = async (
   limit: number,
   token?: string
-): Promise<{ users: APIUser[]; nextPageToken: string | null } | null> => {
+): Promise<PaginatedResult<APIUser[]> | null> => {
   try {
     // Use cursor-based pagination
     const result = await findAllUsers(limit, token, ["created_at", "username"]);
@@ -38,7 +38,7 @@ export const retrieveAllUsers = async (
       };
     });
 
-    return { users: userList, nextPageToken: result.nextPageToken };
+    return { snapshot: userList, nextPageToken: result.nextPageToken };
   } catch (error) {
     devLog(error);
     return null;

@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { devLog } from "../utils/dev";
 import { defaultError, sendError, sendSuccess } from "../utils/response";
-import { ScannedMold, WithId } from "../types/types";
+import { PaginatedResult, ScannedMold, WithId } from "../types/types";
 import { createLog } from "../utils/logging";
 import { AuditAction } from "../types/enums";
 import { uploadFile } from "../lib/storage";
@@ -170,13 +170,12 @@ export const getAllScannedMolds = async (req: Request, res: Response) => {
    *       500:
    *         description: Server error
    */
-  const page: number = parseInt(req.query.page as string) || 1;
   const limit: number = parseInt(req.query.limit as string) || 10;
-  const offset: number = (page - 1) * limit;
+  const pageToken: string | undefined = req.query.pageToken as string | undefined;
   try {
-    const molds: ScannedMold[] | null = await retrieveAllScannedMolds(
+    const molds: PaginatedResult<ScannedMold[]> | null = await retrieveAllScannedMolds(
       limit,
-      offset
+      pageToken
     );
     if (!molds) return sendError(res, "Failed to retrieve scanned molds", 404);
     return sendSuccess(res, molds);

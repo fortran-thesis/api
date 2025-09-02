@@ -2,7 +2,7 @@ import { QuerySnapshot } from "firebase-admin/firestore";
 import { queryToJson } from "../lib/firestore";
 import { devLog } from "../utils/dev";
 import { findAuditLogsByAction, findAllAuditLogs } from "../repositories/auditLogRepository";
-import { AuditLogEntry } from "../types/types";
+import { AuditLogEntry, PaginatedResult } from "../types/types";
 
 export const getAuditLogsByAction = async (action: string): Promise<AuditLogEntry[] | null> => {
   try {
@@ -15,11 +15,11 @@ export const getAuditLogsByAction = async (action: string): Promise<AuditLogEntr
   }
 };
 
-export const getAllAuditLogs = async (limit: number, offset: number): Promise<AuditLogEntry[] | null> => {
+export const getAllAuditLogs = async (limit: number, token?: string): Promise<PaginatedResult<AuditLogEntry[]> | null> => {
   try {
-    const docs: QuerySnapshot | null = await findAllAuditLogs(limit, offset);
+    const docs: PaginatedResult<QuerySnapshot> | null = await findAllAuditLogs(limit, token);
     if (!docs) throw new Error("No audit logs found.");
-    return queryToJson<AuditLogEntry>(docs);
+    return {snapshot: queryToJson<AuditLogEntry>(docs.snapshot), nextPageToken: docs.nextPageToken};
   } catch (error) {
     devLog(error);
     return null;

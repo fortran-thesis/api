@@ -1,14 +1,12 @@
 import * as firestoreLib from '../../src/lib/firestore';
 import {
   addDocument,
-  getDocumentId,
   updateDocument,
   deleteDocument,
   getDocumentsByField,
   getDocumentIdByField,
   getDocumentByFieldId,
   getDocumentById,
-  getAllDocuments,
   getPaginatedDocuments,
   deleteCollection,
   softDeleteDocument,
@@ -26,7 +24,7 @@ describe('firestore lib (integration)', () => {
       const testData = { name: 'testuser', value: 42 };
       const addRes = await addDocument(TEST_COLLECTION, testData);
       expect(addRes && addRes.id).toBeDefined();
-      const found = await getDocumentId(TEST_COLLECTION, addRes!.id);
+      const found = await getDocumentById(TEST_COLLECTION, addRes!.id);
       expect(found && found.exists).toBe(true);
       expect(found!.data()?.name).toBe('testuser');
     });
@@ -56,18 +54,11 @@ describe('firestore lib (integration)', () => {
         });
 
         it('should get document by id using getDocumentById', async () => {
-          const testData = { id: '123', name: 'byiduser', value: 321 };
+          const testData = { name: 'byiduser', value: 321 };
           const addRes = await addDocument(TEST_COLLECTION, testData);
-          console.log(addRes!.id)
-          const querySnap = await getDocumentById(TEST_COLLECTION, '123');
-          expect(querySnap && !querySnap.empty).toBe(true);
-          expect(querySnap!.docs[0].data().name).toBe('byiduser');
-        });
-
-        it('should get all documents in a collection', async () => {
-          await addDocument(TEST_COLLECTION, { name: 'alluser', value: 111 });
-          const querySnap = await getAllDocuments(TEST_COLLECTION);
-          expect(querySnap && querySnap.size > 0).toBe(true);
+          const querySnap = await getDocumentById(TEST_COLLECTION, addRes!.id);
+          expect(querySnap && querySnap.exists).toBe(true);
+          expect(querySnap!.data()?.name).toBe('byiduser');
         });
 
         describe('pagination', () => {
@@ -110,7 +101,7 @@ describe('firestore lib (integration)', () => {
       const addRes = await addDocument(TEST_COLLECTION, testData);
       expect(addRes && addRes.id).toBeDefined();
       await updateDocument(TEST_COLLECTION, addRes!.id, { value: 99 });
-      const updated = await getDocumentId(TEST_COLLECTION, addRes!.id);
+      const updated = await getDocumentById(TEST_COLLECTION, addRes!.id);
       expect(updated!.data()?.value).toBe(99);
     });
  
@@ -119,7 +110,7 @@ describe('firestore lib (integration)', () => {
       const addRes = await addDocument(TEST_COLLECTION, testData);
       expect(addRes && addRes.id).toBeDefined();
       await deleteDocument(TEST_COLLECTION, addRes!.id);
-      const found = await getDocumentId(TEST_COLLECTION, addRes!.id);
+      const found = await getDocumentById(TEST_COLLECTION, addRes!.id);
       expect(found && found.exists).toBe(null);
     });
 
@@ -128,7 +119,7 @@ describe('firestore lib (integration)', () => {
       const addRes = await addDocument(TEST_COLLECTION, testData);
       expect(addRes && addRes.id).toBeDefined();
       await softDeleteDocument(TEST_COLLECTION, addRes!.id);
-      const found = await getDocumentId(TEST_COLLECTION, addRes!.id);
+      const found = await getDocumentById(TEST_COLLECTION, addRes!.id);
       expect(found && found.exists).toBe(true);
       expect(found!.data()?.metadata?.deleted_at).toBeDefined();
     });

@@ -11,6 +11,7 @@ import {
 } from "../services/flagReportService";
 import { createLog } from "../utils/logging";
 import { AuditAction } from "../types/enums";
+import { FlagReportBase, PaginatedResult } from "../types/types";
 
 export const createFlagReport = async (req: Request, res: Response) => {
   /**
@@ -66,27 +67,27 @@ export const getAllFlagReports = async (req: Request, res: Response) => {
    *     description: List all flag reports, paginated.
    *     parameters:
    *       - in: query
-   *         name: page
-   *         schema:
-   *           type: integer
-   *         description: Page number
-   *       - in: query
    *         name: limit
    *         schema:
    *           type: integer
    *         description: Page size
+   *       - in: query
+   *         name: pageToken
+   *         schema:
+   *           type: string
+   *         description: Cursor token
    *     responses:
    *       200:
    *         description: List of flag reports
    *       500:
    *         description: Server error
    */
+  const limit: number = parseInt(req.query.limit as string) || 10;
+  const pageToken: string | undefined = req.query.pageToken as string | undefined;
   try {
-    const page: number = parseInt(req.query.page as string) || 1;
-    const limit: number = parseInt(req.query.limit as string) || 10;
-    const offset: number = (page - 1) * limit;
-    const reports = await retrieveAllFlagReports(limit, offset);
-    return sendSuccess(res, reports);
+    const result: PaginatedResult<FlagReportBase[]> | null = await retrieveAllFlagReports(limit, pageToken);
+    if (!result) return sendError(res, "Failed to retrieve flag reports", 500);
+    return sendSuccess(res, result);
   } catch (error) {
     devLog(error);
     return defaultError(res);

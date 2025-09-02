@@ -11,7 +11,7 @@ import {
   retrieveUserByEmail,
   retrieveUserById,
 } from "../services/userService";
-import { UserDetails } from "../types/types";
+import { APIUser, PaginatedResult, UserDetails } from "../types/types";
 
 /**
  * Get user by ID
@@ -137,16 +137,12 @@ export const getAllUsers = async (req: Request, res: Response) => {
    *       500:
    *         description: Server error
    */
-  // Cursor-based pagination
   const limit: number = parseInt(req.query.limit as string) || 10;
   const pageToken: string | undefined = req.query.pageToken as string | undefined;
   try {
-    const result = await retrieveAllUsers(limit, pageToken);
+    const result: PaginatedResult<APIUser[]> | null = await retrieveAllUsers(limit, pageToken);
     if (!result) return sendError(res, "Failed to retrieve users", 500);
-    return sendSuccess(res, {
-      users: result.users,
-      nextPageToken: result.nextPageToken
-    });
+    return sendSuccess(res, result);
   } catch (error) {
     devLog(error);
     return defaultError(res);

@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { devLog } from "../utils/dev";
 import { defaultError, sendError, sendSuccess } from "../utils/response";
-import { SystemRequest, WithId } from "../types/types";
+import { PaginatedResult, SystemRequest, WithId } from "../types/types";
 import { createLog } from "../utils/logging";
 import { AuditAction } from "../types/enums";
 import {
@@ -84,11 +84,10 @@ export const getAllSystemRequests = async (req: Request, res: Response) => {
    *       500:
    *         description: Server error
    */
-  const page: number = parseInt(req.query.page as string) || 1;
   const limit: number = parseInt(req.query.limit as string) || 10;
-  const offset: number = (page - 1) * limit;
+  const pageToken: string | undefined = req.query.pageToken as string | undefined;
   try {
-    const requests: SystemRequest[] | null = await retrieveAllSystemRequests(limit, offset);
+    const requests: PaginatedResult<SystemRequest[]> | null = await retrieveAllSystemRequests(limit, pageToken);
     if (!requests) return sendError(res, "Failed to retrieve system requests", 404);
     return sendSuccess(res, requests);
   } catch (error) {

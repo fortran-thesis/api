@@ -15,7 +15,7 @@ import {
   softDeleteMold,
   updateMold,
 } from "../repositories/moldRepository";
-import { Mold, WithId, WithMetadata } from "../types/types";
+import { Mold, PaginatedResult, WithId, WithMetadata } from "../types/types";
 import { getCache, setCache, deleteCache, deleteCachePattern } from '../utils/redis';
 
 export const addMoldToFirestore = async (
@@ -43,17 +43,29 @@ export const addMoldToFirestore = async (
 
 export const retrieveAllMolds = async (
   limit: number,
-  offset: number
-): Promise<Mold[] | null> => {
-  const cacheKey = `molds:list:${limit}:${offset}`;
+  token?: string
+): Promise<PaginatedResult<Mold[]> | null> => {
+  // Build a short, safe cache key based on limit + token hash (or 'start' for the first page)
+  const tokenKey = token
+  const cacheKey = `molds:list:${limit}:${tokenKey}`;
+
   try {
-    const cached = await getCache<Mold[]>(cacheKey);
+    const cached = await getCache<PaginatedResult<Mold[]>>(cacheKey);
     if (cached) return cached;
-    const molds: QuerySnapshot | null = await findAllMolds(limit, offset);
-    if (!molds) throw new Error("No users found.");
-    const result = queryToJson<Mold>(molds);
-    await setCache(cacheKey, result, 300); // cache for 5 minutes
-    return result;
+
+    // Use the common getPaginatedDocuments helper (cursor-first)
+    const paged = await findAllMolds(limit, token);
+    if (!paged) {
+      // return empty page (empty array + null token) could also be desirable instead of throwing
+      throw new Error("Failed to fetch molds.");
+    }
+
+    const items: PaginatedResult<Mold[]> = {snapshot: queryToJson<Mold>(paged.snapshot), nextPageToken: paged.nextPageToken};
+
+    // Cache the entire page (items + nextPageToken) for a short TTL (5 minutes)
+    await setCache(cacheKey, items, 300);
+
+    return items;
   } catch (error) {
     devLog(error);
     return null;
@@ -65,12 +77,11 @@ export const retrieveMoldById = async (id: string): Promise<Mold | null> => {
   try {
     const cached = await getCache<Mold>(cacheKey);
     if (cached) return cached;
-    const mold: QuerySnapshot | null = await findMoldById(id);
+    const mold: DocumentSnapshot | null = await findMoldById(id);
     if (!mold) throw new Error("No mold found.");
-    const molds = queryToJson<Mold>(mold);
-    const result = molds.length > 0 ? molds[0] : null;
-    if (result) await setCache(cacheKey, result, 300); // cache for 5 minutes
-    return result;
+    const molds = documentToJson<Mold>(mold);
+    if (molds) await setCache(cacheKey, molds, 300); // cache for 5 minutes
+    return molds;
   } catch (error) {
     devLog(error);
     return null;

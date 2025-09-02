@@ -1,5 +1,6 @@
 import {
   DocumentSnapshot,
+  FieldPath,
   QuerySnapshot,
   Timestamp,
   WriteResult,
@@ -14,7 +15,7 @@ import {
   softDeleteMonitoredMold,
   updateMonitoredMold,
 } from "../repositories/monitoredMoldRepository";
-import { MonitoredMold, WithMetadata } from "../types/types";
+import { MonitoredMold, PaginatedResult, WithMetadata } from "../types/types";
 
 export const addMonitoredMoldToFirestore = async (
   details: MonitoredMold
@@ -39,18 +40,22 @@ export const addMonitoredMoldToFirestore = async (
 };
 
 export const retrieveAllMonitoredMolds = async (
+  id: string,
   limit: number,
-  offset: number,
-  id: string
-): Promise<MonitoredMold[] | null> => {
+  token?: string,
+): Promise<PaginatedResult<MonitoredMold[]> | null> => {
   try {
-    const molds: QuerySnapshot | null = await findAllMonitoredMolds(
+    const queryModifier = (q: FirebaseFirestore.Query) => q.where("folder_id", "==", id)
+
+    const molds: PaginatedResult<QuerySnapshot> | null = await findAllMonitoredMolds(
       id,
       limit,
-      offset
+      ["metadata.created_at", "user_id", FieldPath.documentId()],
+      { queryModifier },
+      token
     );
     if (!molds) throw new Error("No monitored molds found.");
-    return queryToJson<MonitoredMold>(molds);
+    return {snapshot: queryToJson<MonitoredMold>(molds.snapshot), nextPageToken: molds.nextPageToken};
   } catch (error) {
     devLog(error);
     return null;
@@ -61,10 +66,10 @@ export const retrieveMonitoredMoldById = async (
   id: string
 ): Promise<MonitoredMold | null> => {
   try {
-    const mold: QuerySnapshot | null = await findMonitoredMoldById(id);
+    const mold: DocumentSnapshot | null = await findMonitoredMoldById(id);
     if (!mold) throw new Error("No monitored mold found.");
-    const molds = queryToJson<MonitoredMold>(mold);
-    return molds.length > 0 ? molds[0] : null;
+    const molds = documentToJson<MonitoredMold>(mold);
+    return molds
   } catch (error) {
     devLog(error);
     return null;

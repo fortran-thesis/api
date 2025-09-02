@@ -15,7 +15,7 @@ import {
   softDeleteMoldFolder,
   updateMoldFolder as updateMoldFolderRepo,
 } from "../repositories/moldFolderRespository";
-import { MoldFolder, WithMetadata } from "../types/types";
+import { MoldFolder, PaginatedResult, WithMetadata } from "../types/types";
 
 export const addMoldFolderToFirestore = async (
   details: MoldFolder
@@ -42,18 +42,18 @@ export const addMoldFolderToFirestore = async (
 export const retrieveAllMoldFoldersByUser = async (
   uid: string,
   limit: number,
-  offset: number,
-  isArchived: boolean
-): Promise<MoldFolder[] | null> => {
+  isArchived: boolean,
+  token?: string
+): Promise<PaginatedResult<MoldFolder[]> | null> => {
   try {
-    const folders: QuerySnapshot | null = await findAllMoldFolders(
+    const folders: PaginatedResult<QuerySnapshot> | null = await findAllMoldFolders(
       uid,
       limit,
-      offset,
-      isArchived
+      isArchived,
+      token
     );
     if (!folders) throw new Error("No folders found.");
-    return queryToJson<MoldFolder>(folders);
+    return {snapshot: queryToJson<MoldFolder>(folders.snapshot), nextPageToken: folders.nextPageToken};
   } catch (error) {
     devLog(error);
     return null;
@@ -64,10 +64,10 @@ export const retrieveMoldFolderById = async (
   id: string
 ): Promise<MoldFolder | null> => {
   try {
-    const folder: QuerySnapshot | null = await findMoldFolderById(id);
+    const folder: DocumentSnapshot | null = await findMoldFolderById(id);
     if (!folder) throw new Error("No folder found.");
-    const folders = queryToJson<MoldFolder>(folder);
-    return folders.length > 0 ? folders[0] : null;
+    const folders = documentToJson<MoldFolder>(folder);
+    return folders
   } catch (error) {
     devLog(error);
     return null;

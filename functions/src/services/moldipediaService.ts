@@ -14,7 +14,7 @@ import {
   softDeleteMoldipedia,
   updateMoldipedia,
 } from "../repositories/moldipediaRepository";
-import { Moldipedia, WithMetadata, WithId } from "../types/types";
+import { Moldipedia, WithMetadata, WithId, PaginatedResult } from "../types/types";
 
 export const addMoldipediaToFirestore = async (
   details: Moldipedia
@@ -40,12 +40,12 @@ export const addMoldipediaToFirestore = async (
 
 export const retrieveAllMoldipedia = async (
   limit: number,
-  offset: number
-): Promise<Moldipedia[] | null> => {
+  token?: string
+): Promise<PaginatedResult<Moldipedia[]> | null> => {
   try {
-    const docs: QuerySnapshot | null = await findAllMoldipedia(limit, offset);
+    const docs: PaginatedResult<QuerySnapshot> | null = await findAllMoldipedia(limit, token);
     if (!docs) throw new Error("No moldipedia entries found.");
-    return queryToJson<Moldipedia>(docs);
+    return {snapshot: queryToJson<Moldipedia>(docs.snapshot), nextPageToken: docs.nextPageToken};
   } catch (error) {
     devLog(error);
     return null;
@@ -56,9 +56,9 @@ export const retrieveMoldipediaById = async (
   id: string
 ): Promise<Moldipedia | null> => {
   try {
-    const query: QuerySnapshot | null = await findMoldipediaById(id);
+    const query: DocumentSnapshot | null = await findMoldipediaById(id);
     if (!query) throw new Error("No moldipedia found.");
-    return queryToJson<Moldipedia>(query)[0];
+    return documentToJson<Moldipedia>(query);
   } catch (error) {
     devLog(error);
     return null;
