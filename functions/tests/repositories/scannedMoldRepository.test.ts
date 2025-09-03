@@ -24,9 +24,32 @@ describe('scannedMoldRepository (integration)', () => {
     expect(updated!.data()?.scanned_results).toEqual({ confidence_score: 100, flagged: false });
   });
 
+  it('should soft delete the test scanned mold', async () => {
+    await repo.softDeleteScannedMold(globalId!);
+    const check = await repo.findScannedMoldById(globalId!);
+    expect(check && check.exists).toBe(true);
+    expect(check!.data()?.metadata.deleted_at).toBeDefined();
+  });
+
   it('should delete the test scanned mold', async () => {
     await repo.deleteScannedMold(globalId!);
-    const deleted = await repo.findScannedMoldById(globalId!);
-    expect(deleted && deleted.exists).toBe(null);
+    expect(await repo.findScannedMoldById(globalId!)).toBe(null);
+  });
+
+  describe('paginate scanned molds', () => {
+    it('should successfully paginate', async () => {
+      // seed extra scanned molds
+      const extraMolds = Array.from({ length: 7 }, (_, i) => ({ user_id: `user_${i}`, scan_id: `paginated_scan_${i}`, created_at: Date.now() }));
+      for (let i = 0; i < extraMolds.length; i++) {
+        await repo.addScannedMold(extraMolds[i] as any);
+      }
+      const first = await repo.findAllScannedMolds(3);
+      expect(first && first.snapshot.size).toBe(3);
+      expect(first!.nextPageToken).toBeTruthy();
+      const second = await repo.findAllScannedMolds(3, first!.nextPageToken || undefined);
+      expect(second && second.snapshot.size).toBe(3);
+      const third = await repo.findAllScannedMolds(3, second!.nextPageToken || undefined);
+      expect(third && third.snapshot.size >= 1).toBe(true);
+    });
   });
 });

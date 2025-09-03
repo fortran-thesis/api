@@ -9,8 +9,9 @@ import {
 } from "../lib/firestore";
 import { FlagReportBase } from "../types/types";
 import { OrderField } from "../utils/pagination";
+import { getCollectionName, FirestoreCollection } from "../types/models/firestoreCollections";
 
-const collection = "flag_reports";
+const collection = getCollectionName(FirestoreCollection.FLAG_REPORTS)
 
 export const addFlagReport = async (data: FlagReportBase) => addDocument(collection, data);
 export const findFlagReportById = async (id: string) => getDocumentById(collection, id);

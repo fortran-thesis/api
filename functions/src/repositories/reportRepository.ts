@@ -9,8 +9,9 @@ import {
 } from "../lib/firestore";
 import { Report } from "../types/types";
 import { OrderField } from "../utils/pagination";
+import { getCollectionName, FirestoreCollection } from "../types/models/firestoreCollections";
 
-const collection = "reports";
+const collection = getCollectionName(FirestoreCollection.REPORTS);
 
 export const addReport = async (data: Report) => addDocument(collection, data);
 export const findReportById = async (id: string) =>

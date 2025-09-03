@@ -10,8 +10,9 @@ import {
 } from "../lib/firestore";
 import { Mold } from "../types/types";
 import { OrderField } from "../utils/pagination";
+import { getCollectionName, FirestoreCollection } from "../types/models/firestoreCollections";
 
-const collection: string = "molds";
+const collection: string = getCollectionName(FirestoreCollection.MOLDS);
 
 export const addMold = async (data: Mold) => addDocument(collection, data);
 export const findMoldById = async (id: string) =>

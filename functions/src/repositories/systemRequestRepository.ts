@@ -9,8 +9,9 @@ import {
 } from "../lib/firestore";
 import { SystemRequest } from "../types/types";
 import { OrderField } from "../utils/pagination";
+import { getCollectionName, FirestoreCollection } from "../types/models/firestoreCollections";
 
-const collection = "system_requests";
+const collection = getCollectionName(FirestoreCollection.SYSTEM_REQUESTS);
 
 export const addSystemRequest = async (data: SystemRequest) => addDocument(collection, data);
 export const findSystemRequestById = async (id: string) => getDocumentById(collection, id);

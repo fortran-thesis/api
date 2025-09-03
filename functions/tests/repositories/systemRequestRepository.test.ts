@@ -2,7 +2,7 @@ import * as repo from '../../src/repositories/systemRequestRepository';
 import { describe, it, expect } from '@jest/globals';
 
 describe('systemRequestRepository (integration)', () => {
- let globalId: string | null = null;
+  let globalId: string | null = null;
 
   it('should add the test system request', async () => {
     const testRequest = { type: 'test', payload: {}, created_at: Date.now() };
@@ -24,9 +24,32 @@ describe('systemRequestRepository (integration)', () => {
     expect(updated!.data()?.message).toBe('updated');
   });
 
+  it('should soft delete the test system request', async () => {
+    await repo.softDeleteSystemRequest(globalId!);
+    const check = await repo.findSystemRequestById(globalId!);
+    expect(check && check.exists).toBe(true);
+    expect(check!.data()?.metadata.deleted_at).toBeDefined();
+  });
+
   it('should delete the test system request', async () => {
     await repo.deleteSystemRequest(globalId!);
-    const deleted = await repo.findSystemRequestById(globalId!);
-    expect(deleted && deleted.exists).toBe(null);
+    expect(await repo.findSystemRequestById(globalId!)).toBe(null);
+  });
+
+  describe('paginate system requests', () => {
+    it('should successfully paginate', async () => {
+      // seed extra requests
+      const extraRequests = Array.from({ length: 7 }, (_, i) => ({ userId: `user_${i}`, type: `paginated_type_${i}`, payload: {}, created_at: Date.now() }));
+      for (let i = 0; i < extraRequests.length; i++) {
+        await repo.addSystemRequest(extraRequests[i] as any);
+      }
+      const first = await repo.findAllSystemRequests(3);
+      expect(first && first.snapshot.size).toBe(3);
+      expect(first!.nextPageToken).toBeTruthy();
+      const second = await repo.findAllSystemRequests(3, first!.nextPageToken || undefined);
+      expect(second && second.snapshot.size).toBe(3);
+      const third = await repo.findAllSystemRequests(3, second!.nextPageToken || undefined);
+      expect(third && third.snapshot.size >= 1).toBe(true);
+    });
   });
 });

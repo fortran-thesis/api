@@ -9,8 +9,9 @@ import {
 } from "../lib/firestore";
 import { ScannedMold } from "../types/types";
 import { OrderField } from "../utils/pagination";
+import { getCollectionName, FirestoreCollection } from "../types/models/firestoreCollections";
 
-const collection = "scanned_molds";
+const collection = getCollectionName(FirestoreCollection.SCANNED_MOLDS);
 
 export const addScannedMold = async (data: ScannedMold) => addDocument(collection, data);
 export const findScannedMoldById = async (id: string) => getDocumentById(collection, id);

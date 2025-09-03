@@ -10,8 +10,9 @@ import {
 } from "../lib/firestore";
 import { MoldFolder } from "../types/types";
 import { devLog } from "../utils/dev";
+import { FirestoreCollection, getCollectionName } from '../types/models/firestoreCollections';
 
-const collection: string = "mold_folders";
+const collection: string = getCollectionName(FirestoreCollection.MOLD_FOLDERS);
 
 export const addMoldFolder = async (data: MoldFolder) =>
   addDocument(collection, data);

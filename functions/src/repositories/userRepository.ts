@@ -10,8 +10,9 @@ import {
 } from "../lib/firestore";
 import { IsCurator, User } from "../types/types";
 import { OrderField } from "../utils/pagination";
+import { FirestoreCollection, getCollectionName } from '../types/models/firestoreCollections';
 
-const collection: string = "users";
+const collection: string = getCollectionName(FirestoreCollection.USERS);
 
 export const addUser = async (data: User, uid: string) =>
   addDocument(collection, data, uid);

@@ -1,4 +1,5 @@
 import { FieldPath, Timestamp } from "firebase-admin/firestore";
+import { devLog } from "./dev";
 
 /**
  * OrderField describes how the query is ordered; use FieldPath.documentId() as the last tiebreaker.
@@ -77,7 +78,7 @@ export async function paginateQuery(
     return { snapshot: snap, nextPageToken };
   } catch (err) {
     // log/handle as you prefer
-    console.error("paginateQuery error:", err);
+    devLog("paginateQuery error: " + err);
     return null;
   }
 }

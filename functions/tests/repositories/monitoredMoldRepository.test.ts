@@ -28,4 +28,21 @@ describe('monitoredMoldRepository (integration)', () => {
     await repo.deleteMonitoredMold(globalId!);
     expect(await repo.findMonitoredMoldById(globalId!)).toBe(null);
   });
+
+  describe('paginate monitored molds', () => {
+    it('should successfully paginate', async () => {
+      // seed extra monitored molds
+      const extraMolds = Array.from({ length: 7 }, (_, i) => ({ mold_id: `paginated_mold_${i}`, created_at: Date.now() }));
+      for (let i = 0; i < extraMolds.length; i++) {
+        await repo.addMonitoredMold(extraMolds[i] as any);
+      }
+      const first = await repo.findAllMonitoredMolds(3);
+      expect(first && first.snapshot.size).toBe(3);
+      expect(first!.nextPageToken).toBeTruthy();
+      const second = await repo.findAllMonitoredMolds(3, first!.nextPageToken || undefined);
+      expect(second && second.snapshot.size).toBe(3);
+      const third = await repo.findAllMonitoredMolds(3, second!.nextPageToken || undefined);
+      expect(third && third.snapshot.size >= 1).toBe(true);
+    });
+  });
 });

@@ -9,8 +9,9 @@ import {
 } from "../lib/firestore";
 import { Moldipedia } from "../types/types";
 import { OrderField } from "../utils/pagination";
+import { getCollectionName, FirestoreCollection } from "../types/models/firestoreCollections";
 
-const collection = "moldipedia";
+const collection = getCollectionName(FirestoreCollection.MOLDIPEDIA);
 
 export const addMoldipedia = async (data: Moldipedia) =>
   addDocument(collection, data);
