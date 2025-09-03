@@ -1,4 +1,7 @@
 import swaggerJsdoc from "swagger-jsdoc";
+import swaggerUi from "swagger-ui-express";
+import { Express } from "express";
+import { envOptions } from "./environment";
 
 const options = {
   definition: {
@@ -27,3 +30,27 @@ const options = {
 };
 
 export const swaggerSpec = swaggerJsdoc(options);
+
+/**
+ * Determines if the application is running in Firebase emulators
+ */
+function isRunningInEmulator(): boolean {
+  return !!(process.env.FUNCTIONS_EMULATOR || 
+           envOptions.firebaseAuthEmulatorHost || 
+           envOptions.firestoreEmulatorHost);
+}
+
+export const setupSwagger = (app: Express) => {
+  if (isRunningInEmulator()) {
+    // In Firebase emulator, use default swagger-ui-express behavior
+    // This lets swagger-ui-express handle the spec serving automatically
+    app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+  } else {
+    // In local development, use the custom URL configuration
+    app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+      swaggerOptions: {
+        url: "/thesis-2e701/asia-southeast1/api/api-docs/swagger.json",
+      }
+    }));
+  }
+};
