@@ -1,5 +1,5 @@
 import { sendEmail } from '../../src/utils/email';
-import { describe, it, expect, jest } from '@jest/globals';
+import { describe, it, expect, jest, afterAll } from '@jest/globals';
 
 jest.mock('../../src/utils/email', () => ({
   sendEmail: jest.fn(async (to: string, subject: string, html: string) => {
@@ -22,5 +22,13 @@ describe('email utils', () => {
 
   it('should throw if called with missing params (mocked)', async () => {
     await expect(sendEmail('', '', '')).rejects.toBeDefined();
+  });
+
+  afterAll(async () => {
+    // Close MailHog transporter if used
+    const { transporter } = require('../../src/utils/email');
+    if (transporter && transporter.close) {
+      transporter.close();
+    }
   });
 });

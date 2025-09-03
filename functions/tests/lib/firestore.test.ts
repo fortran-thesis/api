@@ -11,7 +11,8 @@ import {
   deleteCollection,
   softDeleteDocument,
   queryToJson,
-  documentToJson
+  documentToJson,
+  getFirestore
 } from '../../src/lib/firestore';
 import { describe, it, expect, afterAll, beforeAll } from '@jest/globals';
 
@@ -127,6 +128,9 @@ describe('firestore lib (integration)', () => {
 
   afterAll(async () => {
     await deleteCollection(TEST_COLLECTION);
+    if (typeof getFirestore().terminate === "function") {
+      await getFirestore().terminate();
+    }
   });
 });
 
