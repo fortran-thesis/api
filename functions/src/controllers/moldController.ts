@@ -10,7 +10,7 @@ import {
   softRemoveMold,
   updateMoldInFirestore,
 } from "../services/moldService";
-import { Mold, WithId } from "../types/types";
+import { Mold, PaginatedResult, WithId } from "../types/types";
 import { createLog } from "../utils/logging";
 import { AuditAction } from "../types/enums";
 import { uploadFiles } from "../lib/storage";
@@ -91,15 +91,15 @@ export const getAllMolds = async (req: Request, res: Response) => {
    *       - Requires authentication (Bearer token or session cookie)
    *     parameters:
    *       - in: query
-   *         name: page
-   *         schema:
-   *           type: string
-   *         description: Page number
-   *       - in: query
    *         name: limit
    *         schema:
-   *           type: string
+   *           type: integer
    *         description: Page size
+   *       - in: query
+   *         name: pageToken
+   *         schema:
+   *           type: string
+   *         description: Cursor token
    *     responses:
    *       200:
    *         description: List of molds
@@ -108,13 +108,12 @@ export const getAllMolds = async (req: Request, res: Response) => {
    *       500:
    *         description: Server error
    */
-  const page: number = parseInt(req.query.page as string) || 1;
   const limit: number = parseInt(req.query.limit as string) || 10;
-  const offset: number = (page - 1) * limit;
+  const pageToken: string | undefined = req.query.pageToken as string | undefined;
   try {
-    const molds: Mold[] | null = await retrieveAllMolds(limit, offset);
-    if (!molds) return sendError(res, "Failed to retrieve molds", 404);
-    return sendSuccess(res, molds);
+    const result: PaginatedResult<Mold[]> | null = await retrieveAllMolds(limit, pageToken);
+    if (!result) return sendError(res, "Failed to retrieve molds", 404);
+    return sendSuccess(res, result);
   } catch (error) {
     devLog(error);
     return defaultError(res);

@@ -1,3 +1,4 @@
+import { FieldPath } from "firebase-admin/firestore";
 import {
   addDocument,
   getDocumentById,
@@ -6,13 +7,19 @@ import {
   deleteDocument,
   softDeleteDocument,
 } from "../lib/firestore";
-import { FlagReport } from "../types/types";
+import { FlagReportBase } from "../types/types";
+import { OrderField } from "../utils/pagination";
+import { getCollectionName, FirestoreCollection } from "../types/models/firestoreCollections";
 
-const collection = "flag_reports";
+const collection = getCollectionName(FirestoreCollection.FLAG_REPORTS)
 
-export const addFlagReport = async (data: FlagReport) => addDocument(collection, data);
+export const addFlagReport = async (data: FlagReportBase) => addDocument(collection, data);
 export const findFlagReportById = async (id: string) => getDocumentById(collection, id);
-export const findAllFlagReports = async (limit: number, offset: number) => getPaginatedDocuments(collection, limit, offset);
-export const updateFlagReport = async (id: string, updatedData: Partial<FlagReport>) => updateDocument(collection, id, updatedData);
+export const findAllFlagReports = async (
+  limit: number,
+  token?: string,
+  orderFields: OrderField[] = ["metadata.created_at", "content_id", FieldPath.documentId()]
+) => getPaginatedDocuments(collection, limit, token, orderFields);
+export const updateFlagReport = async (id: string, updatedData: Partial<FlagReportBase>) => updateDocument(collection, id, updatedData);
 export const deleteFlagReport = async (id: string) => deleteDocument(collection, id);
 export const softDeleteFlagReport = async (id: string) => softDeleteDocument(collection, id);

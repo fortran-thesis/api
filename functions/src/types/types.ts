@@ -6,3 +6,4 @@ export * from "./models/reportTypes";
 export * from "./models/moldipediaTypes";
 export * from "./models/utilityTypes";
 export * from "./models/flagReportTypes";
+export * from "./models/paginationTypes";

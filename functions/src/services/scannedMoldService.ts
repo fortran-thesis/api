@@ -15,8 +15,7 @@ import {
   updateScannedMold,
 } from "../repositories/scannedMoldRepository";
 
-import { ScannedMold, WithMetadata, WithId } from "../types/types";
-
+import { ScannedMold, WithMetadata, WithId, PaginatedResult } from "../types/types";
 
 export const addScannedMoldToFirestore = async (
   details: Omit<ScannedMold, "image_url">,
@@ -44,12 +43,12 @@ export const addScannedMoldToFirestore = async (
 
 export const retrieveAllScannedMolds = async (
   limit: number,
-  offset: number
-): Promise<WithMetadata<ScannedMold>[] | null> => {
+  token?: string
+): Promise<PaginatedResult<WithMetadata<ScannedMold>[]> | null> => {
   try {
-    const docs: QuerySnapshot | null = await findAllScannedMolds(limit, offset);
+    const docs: PaginatedResult<QuerySnapshot> | null = await findAllScannedMolds(limit, token);
     if (!docs) throw new Error("No scanned molds found.");
-    return queryToJson<WithMetadata<ScannedMold>>(docs);
+    return {snapshot: queryToJson<WithMetadata<ScannedMold>>(docs.snapshot), nextPageToken: docs.nextPageToken};
   } catch (error) {
     devLog(error);
     return null;
@@ -58,9 +57,9 @@ export const retrieveAllScannedMolds = async (
 
 export const retrieveScannedMoldById = async (id: string): Promise<WithMetadata<ScannedMold> | null> => {
   try {
-    const doc: QuerySnapshot | null = await findScannedMoldById(id);
+    const doc: DocumentSnapshot | null = await findScannedMoldById(id);
     if (!doc) throw new Error("No scanned mold found.");
-    return queryToJson<WithMetadata<ScannedMold>>(doc)[0];
+    return documentToJson<WithMetadata<ScannedMold>>(doc);
   } catch (error) {
     devLog(error);
     return null;

@@ -5,42 +5,43 @@ import {
   updateDocument,
   deleteDocument,
   softDeleteDocument,
-  getFirestore,
+  getPaginatedDocuments,
+  getDocumentById,
 } from "../lib/firestore";
 import { MoldFolder } from "../types/types";
 import { devLog } from "../utils/dev";
+import { FirestoreCollection, getCollectionName } from '../types/models/firestoreCollections';
 
-const collection: string = "mold_folders";
+const collection: string = getCollectionName(FirestoreCollection.MOLD_FOLDERS);
 
 export const addMoldFolder = async (data: MoldFolder) =>
   addDocument(collection, data);
 export const findMoldFolderById = async (id: string) =>
-  getDocumentsByField(collection, "id", id);
+  getDocumentById(collection, id);
 export const findMoldFolderByName = async (name: string) =>
   getDocumentsByField(collection, "name", name);
 export const findAllMoldFolders = async (
   uid: string,
   limit: number,
-  offset: number,
-  isArchived: boolean
-) => {
+  isArchived: boolean,
+  token?: string
+): Promise<{ snapshot: FirebaseFirestore.QuerySnapshot; nextPageToken: string | null } | null> => {
   try {
-    let query = await getFirestore()
-      .collection(collection)
-      .where("user_id", "==", uid)
-      .where("is_archived", "==", isArchived)
-      .orderBy(FieldPath.documentId());
-    if (offset && offset > 0) {
-      query = query.offset(offset);
-    }
-    if (limit && limit > 0) {
-      query = query.limit(limit);
-    }
-    const querySnap = await query.get();
-    if (querySnap.empty) throw new Error("No documents found");
-    return querySnap;
-  } catch (error) {
-    devLog(error);
+    // queryModifier applies your filters before ordering is applied in getPaginatedDocuments
+    const queryModifier = (q: FirebaseFirestore.Query) =>
+      q.where("user_id", "==", uid).where("is_archived", "==", isArchived);
+
+    const paged = await getPaginatedDocuments(
+      collection,
+      limit,
+      token,
+      ["metadata.created_at", FieldPath.documentId()], // deterministic ordering by documentId
+      { queryModifier }
+    );
+
+    return paged;
+  } catch (err) {
+    devLog(err);
     return null;
   }
 };

@@ -1,8 +1,5 @@
 export type FlagReportStatus = "unresolved" | "resolved";
 
-
-import { WithMetadata } from "./utilityTypes";
-
 export interface FlagReportBase {
   content_id: string;
   content_type: string; // e.g., "mold", "moldipedia", etc.
@@ -11,5 +8,3 @@ export interface FlagReportBase {
   details?: string;
   status: FlagReportStatus;
 }
-
-export type FlagReport = WithMetadata<FlagReportBase>;

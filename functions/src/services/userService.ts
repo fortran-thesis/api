@@ -1,5 +1,4 @@
-import { QuerySnapshot } from "firebase-admin/firestore";
-import { APIUser, User, WithId } from "../types/types";
+import { APIUser, User, WithId, PaginatedResult } from "../types/types";
 import {
   findAllUsers,
   findAuthUserByEmail,
@@ -11,12 +10,13 @@ import { queryToJson } from "../lib/firestore";
 
 export const retrieveAllUsers = async (
   limit: number,
-  offset: number
-): Promise<APIUser[] | null> => {
+  token?: string
+): Promise<PaginatedResult<APIUser[]> | null> => {
   try {
-    const users: QuerySnapshot | null = await findAllUsers(limit, offset);
-    if (!users) throw new Error("No users found.");
-    const firestoreList: WithId<User>[] = queryToJson<User>(users);
+    // Use cursor-based pagination
+    const result = await findAllUsers(limit, token, ["created_at", "username"]);
+    if (!result || !result.snapshot) throw new Error("No users found.");
+    const firestoreList: WithId<User>[] = queryToJson<User>(result.snapshot);
     const identifiers = firestoreList.map((user) => ({ uid: user.id }));
     const authUsers = await getAuth().getUsers(identifiers);
 
@@ -38,7 +38,7 @@ export const retrieveAllUsers = async (
       };
     });
 
-    return userList;
+    return { snapshot: userList, nextPageToken: result.nextPageToken };
   } catch (error) {
     devLog(error);
     return null;

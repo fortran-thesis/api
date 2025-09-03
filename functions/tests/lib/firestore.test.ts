@@ -1,22 +1,148 @@
 import * as firestoreLib from '../../src/lib/firestore';
-import { describe, it, expect } from '@jest/globals';
+import {
+  addDocument,
+  updateDocument,
+  deleteDocument,
+  getDocumentsByField,
+  getDocumentIdByField,
+  getDocumentByFieldId,
+  getDocumentById,
+  getPaginatedDocuments,
+  deleteCollection,
+  softDeleteDocument,
+  queryToJson,
+  documentToJson
+} from '../../src/lib/firestore';
+import { describe, it, expect, afterAll, beforeAll } from '@jest/globals';
 
 const isEmulator = process.env.FIRESTORE_EMULATOR_HOST || process.env.FIREBASE_AUTH_EMULATOR_HOST || process.env.FIREBASE_STORAGE_EMULATOR_HOST;
+const TEST_COLLECTION = 'test_collection';
 
 describe('firestore lib (integration)', () => {
-  if (!isEmulator) {
-    it('skipped: requires Firebase emulator', () => {
-      expect(true).toBe(true);
+  describe('handle CRUD operations', () => {
+    it('should add and retrieve a document by ID', async () => {
+      const testData = { name: 'testuser', value: 42 };
+      const addRes = await addDocument(TEST_COLLECTION, testData);
+      expect(addRes && addRes.id).toBeDefined();
+      const found = await getDocumentById(TEST_COLLECTION, addRes!.id);
+      expect(found && found.exists).toBe(true);
+      expect(found!.data()?.name).toBe('testuser');
     });
-    return;
-  }
-  it('should export addDocument, updateDocument, deleteDocument, getDocumentById, getAllDocuments', () => {
-    expect(firestoreLib.addDocument).toBeDefined();
-    expect(firestoreLib.updateDocument).toBeDefined();
-    expect(firestoreLib.deleteDocument).toBeDefined();
-    expect(firestoreLib.getDocumentById).toBeDefined();
-    expect(firestoreLib.getAllDocuments).toBeDefined();
+
+    describe('handle retrieval of data', () => {
+        it('should get documents by field', async () => {
+          const testData = { name: 'fielduser', value: 123 };
+          await addDocument(TEST_COLLECTION, testData);
+          const querySnap = await getDocumentsByField(TEST_COLLECTION, 'name', 'fielduser');
+          expect(querySnap && !querySnap.empty).toBe(true);
+          expect(querySnap!.docs[0].data().value).toBe(123);
+        });
+
+        it('should get document ID by field', async () => {
+          const testData = { name: 'idbyfielduser', value: 456 };
+          const addRes = await addDocument(TEST_COLLECTION, testData);
+          const docId = await getDocumentIdByField(TEST_COLLECTION, 'name', 'idbyfielduser');
+          expect(docId).toBe(addRes!.id);
+        });
+
+        it('should get document snapshot by field', async () => {
+          const testData = { name: 'snapbyfielduser', value: 789 };
+          await addDocument(TEST_COLLECTION, testData);
+          const docSnap = await getDocumentByFieldId(TEST_COLLECTION, 'name', 'snapbyfielduser');
+          expect(docSnap && docSnap.exists).toBe(true);
+          expect(docSnap!.data()?.value).toBe(789);
+        });
+
+        it('should get document by id using getDocumentById', async () => {
+          const testData = { name: 'byiduser', value: 321 };
+          const addRes = await addDocument(TEST_COLLECTION, testData);
+          const querySnap = await getDocumentById(TEST_COLLECTION, addRes!.id);
+          expect(querySnap && querySnap.exists).toBe(true);
+          expect(querySnap!.data()?.name).toBe('byiduser');
+        });
+
+        describe('pagination', () => {
+          const PAGINATE_COLLECTION = 'paginate_test_collection';
+          const PAGE_SIZE = 5;
+          const testRecords = Array.from({ length: 10 }, (_, i) => ({ name: `user${i+1}`, value: i+1 }));
+
+          let nextPageToken: string | undefined = undefined;
+
+          beforeAll(async () => {
+            await firestoreLib.deleteCollection(PAGINATE_COLLECTION);
+            for (const rec of testRecords) {
+              await addDocument(PAGINATE_COLLECTION, rec);
+            }
+          });
+
+          it('should retrieve first page of paginated documents', async () => {
+            const result = await getPaginatedDocuments(PAGINATE_COLLECTION, PAGE_SIZE, undefined, ["value"]);
+            expect(result && result.snapshot.size).toBe(PAGE_SIZE);
+            const names = result!.snapshot.docs.map(doc => doc.data().name);
+            expect(names).toEqual(testRecords.slice(0, PAGE_SIZE).map(r => r.name));
+            nextPageToken = result!.nextPageToken ?? undefined;
+          });
+
+          it('should retrieve second page of paginated documents', async () => {
+            const result = await getPaginatedDocuments(PAGINATE_COLLECTION, PAGE_SIZE, nextPageToken, ["value"]);
+            expect(result && result.snapshot.size).toBe(PAGE_SIZE);
+            const names = result!.snapshot.docs.map(doc => doc.data().name);
+            expect(names).toEqual(testRecords.slice(PAGE_SIZE, PAGE_SIZE * 2).map(r => r.name));
+          });
+
+          afterAll(async () => {
+            await firestoreLib.deleteCollection(PAGINATE_COLLECTION);
+          });
+        });
+    });
+
+    it('should update a document and verify the change', async () => {
+      const testData = { name: 'updateuser', value: 1 };
+      const addRes = await addDocument(TEST_COLLECTION, testData);
+      expect(addRes && addRes.id).toBeDefined();
+      await updateDocument(TEST_COLLECTION, addRes!.id, { value: 99 });
+      const updated = await getDocumentById(TEST_COLLECTION, addRes!.id);
+      expect(updated!.data()?.value).toBe(99);
+    });
+ 
+    it('should delete a document', async () => {
+      const testData = { name: 'deleteuser', value: 555 };
+      const addRes = await addDocument(TEST_COLLECTION, testData);
+      expect(addRes && addRes.id).toBeDefined();
+      await deleteDocument(TEST_COLLECTION, addRes!.id);
+      const found = await getDocumentById(TEST_COLLECTION, addRes!.id);
+      expect(found && found.exists).toBe(null);
+    });
+
+    it('should soft delete a document', async () => {
+      const testData = { name: 'softdeleteuser', value: 666 };
+      const addRes = await addDocument(TEST_COLLECTION, testData);
+      expect(addRes && addRes.id).toBeDefined();
+      await softDeleteDocument(TEST_COLLECTION, addRes!.id);
+      const found = await getDocumentById(TEST_COLLECTION, addRes!.id);
+      expect(found && found.exists).toBe(true);
+      expect(found!.data()?.metadata?.deleted_at).toBeDefined();
+    });
   });
 
-  // Add more integration tests with Firestore mocking or emulator
+  afterAll(async () => {
+    await deleteCollection(TEST_COLLECTION);
+  });
+});
+
+describe('firebase lib (unit)', () => {
+  it('should convert a query snapshot to JSON array', () => {
+    // Mock QuerySnapshot
+    const mockDoc = { id: 'abc', data: () => ({ foo: 'bar' }) };
+    const mockQuerySnap = { docs: [mockDoc] } as any;
+    const result = queryToJson<{ foo: string }>(mockQuerySnap);
+    expect(result).toEqual([{ id: 'abc', foo: 'bar' }]);
+  });
+
+  it('should convert a document snapshot to JSON object', () => {
+    // Mock DocumentSnapshot
+    const mockDocSnap = { id: 'xyz', data: () => ({ baz: 123 }) } as any;
+    const result = documentToJson<{ baz: number }>(mockDocSnap);
+    expect(result).toEqual({ id: 'xyz', baz: 123 });
+  });
 });

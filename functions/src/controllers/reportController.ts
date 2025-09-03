@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { devLog } from "../utils/dev";
 import { defaultError, sendError, sendSuccess } from "../utils/response";
-import { Report } from "../types/types";
+import { Report, PaginatedResult } from "../types/types";
 import { createLog } from "../utils/logging";
 import { AuditAction } from "../types/enums";
 import {
@@ -68,15 +68,15 @@ export const getAllReports = async (req: Request, res: Response) => {
    *     description: Retrieve all user reports. Requires authentication (Bearer token or session cookie).
    *     parameters:
    *       - in: query
-   *         name: page
-   *         schema:
-   *           type: integer
-   *         description: Page number
-   *       - in: query
    *         name: limit
    *         schema:
    *           type: integer
    *         description: Page size
+   *       - in: query
+   *         name: pageToken
+   *         schema:
+   *           type: string
+   *         description: Cursor token
    *     responses:
    *       200:
    *         description: List of reports
@@ -85,13 +85,12 @@ export const getAllReports = async (req: Request, res: Response) => {
    *       500:
    *         description: Server error
    */
-  const page: number = parseInt(req.query.page as string) || 1;
   const limit: number = parseInt(req.query.limit as string) || 10;
-  const offset: number = (page - 1) * limit;
+  const pageToken: string | undefined = req.query.pageToken as string | undefined;
   try {
-    const reports: Report[] | null = await retrieveAllReports(limit, offset);
-    if (!reports) return sendError(res, "Failed to retrieve reports", 404);
-    return sendSuccess(res, reports);
+    const result: PaginatedResult<Report[]> | null = await retrieveAllReports(limit, pageToken);
+    if (!result) return sendError(res, "Failed to retrieve reports", 404);
+    return sendSuccess(res, result);
   } catch (error) {
     devLog(error);
     return defaultError(res);

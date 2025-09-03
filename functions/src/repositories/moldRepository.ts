@@ -1,22 +1,30 @@
+import { FieldPath } from "firebase-admin/firestore";
 import {
   addDocument,
   deleteDocument,
   getDocumentsByField,
+  getDocumentById,
   getPaginatedDocuments,
   softDeleteDocument,
   updateDocument,
 } from "../lib/firestore";
 import { Mold } from "../types/types";
+import { OrderField } from "../utils/pagination";
+import { getCollectionName, FirestoreCollection } from "../types/models/firestoreCollections";
 
-const collection: string = "molds";
+const collection: string = getCollectionName(FirestoreCollection.MOLDS);
 
 export const addMold = async (data: Mold) => addDocument(collection, data);
 export const findMoldById = async (id: string) =>
-  getDocumentsByField(collection, "id", id);
+  getDocumentById(collection, id);
 export const findMoldByName = async (name: string) =>
   getDocumentsByField(collection, "name", name);
-export const findAllMolds = async (limit: number, offset: number) =>
-  getPaginatedDocuments(collection, limit, offset);
+export const findAllMolds = async (
+  limit: number,
+  token?: string,
+  orderFields: OrderField[] = ["metadata.created_at", "name", FieldPath.documentId()]
+) =>
+  getPaginatedDocuments(collection, limit, token, orderFields);
 export const updateMold = async (uid: string, updatedData: Partial<Mold>) =>
   updateDocument(collection, uid, updatedData);
 export const deleteMold = async (uid: string) =>

@@ -40,15 +40,16 @@ export const getAuditLogs = async (req: Request, res: Response) => {
  *       500:
  *         description: Server error
  */
-  const { action, page = 1, limit = 10 } = req.query;
-  const offset = (Number(page) - 1) * Number(limit);
+  const action: string | undefined = req.query.action as string | undefined;
+  const limit: number = parseInt(req.query.limit as string) || 10;
+  const pageToken: string | undefined = req.query.pageToken as string | undefined;
   try {
     if (action) {
-      const logs = await getAuditLogsByAction(String(action));
+      const logs = await getAuditLogsByAction(action);
       if (!logs) return sendError(res, "No audit logs found", 404);
       return sendSuccess(res, logs);
     } else {
-      const logs = await getAllAuditLogs(Number(limit), offset);
+      const logs = await getAllAuditLogs(limit, pageToken);
       if (!logs) return sendError(res, "No audit logs found", 404);
       return sendSuccess(res, logs);
     }

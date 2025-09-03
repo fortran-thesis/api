@@ -14,7 +14,7 @@ import {
   softDeleteReport,
   updateReport,
 } from "../repositories/reportRepository";
-import { Report, WithMetadata } from "../types/types";
+import { PaginatedResult, Report, WithMetadata } from "../types/types";
 
 export const addReportToFirestore = async (
   details: Report
@@ -39,12 +39,12 @@ export const addReportToFirestore = async (
 
 export const retrieveAllReports = async (
   limit: number,
-  offset: number
-): Promise<Report[] | null> => {
+  token?: string
+): Promise<PaginatedResult<Report[]> | null> => {
   try {
-    const docs: QuerySnapshot | null = await findAllReports(limit, offset);
+    const docs: PaginatedResult<QuerySnapshot> | null = await findAllReports(limit, token);
     if (!docs) throw new Error("No reports found.");
-    return queryToJson<Report>(docs);
+    return { snapshot: queryToJson<Report>(docs.snapshot), nextPageToken: docs.nextPageToken };
   } catch (error) {
     devLog(error);
     return null;
@@ -55,9 +55,9 @@ export const retrieveReportById = async (
   id: string
 ): Promise<Report | null> => {
   try {
-    const doc: QuerySnapshot | null = await findReportById(id);
+    const doc: DocumentSnapshot | null = await findReportById(id);
     if (!doc) throw new Error("No report found.");
-    return queryToJson<Report>(doc)[0];
+    return documentToJson<Report>(doc);
   } catch (error) {
     devLog(error);
     return null;
