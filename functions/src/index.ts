@@ -6,11 +6,10 @@
  *
  * See a full list of supported triggers at https://firebase.google.com/docs/functions
  */
-
+import dotenv from "dotenv";
 import { onRequest } from "firebase-functions/v2/https";
 import * as logger from "firebase-functions/logger";
 import app from "./app";
-import dotenv from "dotenv";
 
 dotenv.config();
 logger.info("Loaded NODE_ENV:", process.env.NODE_ENV);
