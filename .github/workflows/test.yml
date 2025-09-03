@@ -15,6 +15,11 @@ jobs:
         image: redis:7
         ports:
           - 6379:6379
+      mailhog:
+        image: mailhog/mailhog
+        ports:
+          - 1025:1025
+          - 8025:8025
 
     steps:
       - name: Checkout code
@@ -48,6 +53,12 @@ jobs:
         run: |
           echo "REDIS_HOST=localhost" >> $GITHUB_ENV
           echo "REDIS_PORT=6379" >> $GITHUB_ENV
+
+      - name: Set fake encryption key
+        run: echo "ENCRYPTION_KEY=$(openssl rand -hex 32)" >> $GITHUB_ENV
+
+      - name: Set MailHog email env (for CI)
+        run: echo "USE_MAILHOG=true" >> $GITHUB_ENV
 
       - name: Run tests
         run: npm test
