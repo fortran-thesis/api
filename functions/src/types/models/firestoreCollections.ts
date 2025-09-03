@@ -14,5 +14,5 @@ export enum FirestoreCollection {
 }
 
 export function getCollectionName(collection: FirestoreCollection): string {
-  return envOptions.isTest ? `test_${collection}` : collection;
+  return envOptions.isDev ? `test_${collection}` : collection;
 }

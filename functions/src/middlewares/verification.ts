@@ -43,7 +43,7 @@ const verifyUserToken =
       ) {
         const curator = await findFirestoreUserById(user.id);
         if (!curator) throw new Error("Cannot find user.");
-        if (!curator.docs[0].data().is_verified) {
+        if (!curator.data()?.is_verified) {
           sendError(res, "Curator not verified!", 401);
           return;
         }
@@ -95,7 +95,7 @@ const verifyUserCookie =
       ) {
         const curator = await findFirestoreUserById(user.id);
         if (!curator) throw new Error("Cannot find user.");
-        if (!curator.docs[0].data().is_verified) {
+        if (!curator.data()?.is_verified) {
           sendError(res, "Curator not verified!", 401);
           return;
         }

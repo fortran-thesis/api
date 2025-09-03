@@ -1,19 +1,18 @@
 import { createClient, RedisClientType } from "redis";
-import dotenv from "dotenv";
-dotenv.config();
+import { envOptions } from "./environment";
 
 const redisOptions: any = {
   socket: {
-    host: process.env.REDIS_HOST || "localhost",
-    port: Number(process.env.REDIS_PORT) || 6379,
+    host: envOptions.redisHost,
+    port: Number(envOptions.redisPort),
   },
 };
 
-if (process.env.REDIS_USERNAME) {
-  redisOptions.username = process.env.REDIS_USERNAME;
+if (envOptions.redisUsername) {
+  redisOptions.username = envOptions.redisUsername;
 }
-if (process.env.REDIS_PASSWORD) {
-  redisOptions.password = process.env.REDIS_PASSWORD;
+if (envOptions.redisPassword) {
+  redisOptions.password = envOptions.redisPassword;
 }
 
 const redis: RedisClientType = createClient(redisOptions);

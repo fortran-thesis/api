@@ -1,8 +1,9 @@
 import { initializeApp, cert, getApps, getApp } from "firebase-admin/app";
+import { envOptions } from "./environment";
 
 let firebaseConfig: any = {};
 
-if (!process.env.FIRESTORE_EMULATOR_HOST) {
+if (envOptions.isProd) {
   // Only use service account in production
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const serviceAccount = require("./firebase-config.json");

@@ -1,10 +1,11 @@
 import { Resend } from "resend";
 import dotenv from "dotenv";
+import { envOptions } from "../configs/environment";
 dotenv.config();
 
 let sendEmailImpl: (to: string, subject: string, html: string) => Promise<void>;
 
-if (process.env.NODE_ENV === "test" || process.env.USE_MAILHOG === "true") {
+if (envOptions.isTest || envOptions.useMailhog) {
   const transporter = require('nodemailer').createTransport({
     host: 'localhost',
     port: 1025, // MailHog default SMTP port

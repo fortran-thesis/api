@@ -1,6 +1,4 @@
 import swaggerJsdoc from "swagger-jsdoc";
-import swaggerUi from "swagger-ui-express";
-import { Express } from "express";
 
 const options = {
   definition: {
@@ -28,8 +26,4 @@ const options = {
   apis: ["./src/controllers/*.ts"], // Path to your API files
 };
 
-const swaggerSpec = swaggerJsdoc(options);
-
-export const setupSwagger = (app: Express) => {
-  app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-};
+export const swaggerSpec = swaggerJsdoc(options);

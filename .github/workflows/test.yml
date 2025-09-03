@@ -39,26 +39,12 @@ jobs:
 
       - name: Start Firebase Emulator
         run: |
-          nohup firebase emulators:start --only firestore,auth --project demo-project &
+          nohup firebase emulators:start --only firestore,auth,storage --project demo-project &
           sleep 10
         working-directory: functions
 
-      - name: Set Firestore emulator env
-        run: echo "FIRESTORE_EMULATOR_HOST=localhost:8080" >> $GITHUB_ENV
-      
-      - name: Set Google Cloud Project
-        run: echo "GOOGLE_CLOUD_PROJECT=demo-project" >> $GITHUB_ENV
-
-      - name: Set Redis env
-        run: |
-          echo "REDIS_HOST=localhost" >> $GITHUB_ENV
-          echo "REDIS_PORT=6379" >> $GITHUB_ENV
-
-      - name: Set fake encryption key
-        run: echo "ENCRYPTION_KEY=$(openssl rand -hex 32)" >> $GITHUB_ENV
-
-      - name: Set MailHog email env (for CI)
-        run: echo "USE_MAILHOG=true" >> $GITHUB_ENV
+      - name: Load .env.dev
+        run: cat functions/.env.dev >> $GITHUB_ENV
 
       - name: Run tests
         run: npm test
