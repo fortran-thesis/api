@@ -40,6 +40,14 @@ jobs:
 
       - name: Set Firestore emulator env
         run: echo "FIRESTORE_EMULATOR_HOST=localhost:8080" >> $GITHUB_ENV
+      
+      - name: Set Google Cloud Project
+        run: echo "GOOGLE_CLOUD_PROJECT=demo-project" >> $GITHUB_ENV
+
+      - name: Set Redis env
+        run: |
+          echo "REDIS_HOST=localhost" >> $GITHUB_ENV
+          echo "REDIS_PORT=6379" >> $GITHUB_ENV
 
       - name: Run tests
         run: npm test
