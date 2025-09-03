@@ -4,7 +4,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import rateLimit from "express-rate-limit";
 import { corsOptions } from "./configs/cors";
-import swaggerUi from "swagger-ui-express";
+import { setupSwagger } from "./configs/swagger";
 import authRoutes from "./routes/authRoutes";
 import { Router } from "express";
 import userRoutes from "./routes/userRoutes";
@@ -20,7 +20,6 @@ import adminRoutes from "./routes/adminRoutes";
 import reportRoutes from "./routes/reportRoutes";
 import systemRequestRoutes from "./routes/systemRequestRoutes";
 import testRoute from "./routes/testRoute";
-import { swaggerSpec } from "./configs/swagger";
 
 const app = express();
 app.use(helmet());
@@ -28,9 +27,7 @@ app.use(cors(corsOptions));
 app.use(cookieParser());
 app.use(express.json());
 app.use(rateLimit(limitingOptions));
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec, {swaggerOptions: {
-      url: "/thesis-2e701/asia-southeast1/api/api-docs/swagger.json", // full path to your spec
-    }}));
+setupSwagger(app);
 
 const router = Router();
 
