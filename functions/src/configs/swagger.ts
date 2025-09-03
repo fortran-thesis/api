@@ -44,13 +44,10 @@ export const setupSwagger = (app: Express) => {
   if (isRunningInEmulator()) {
     // In Firebase emulator, use default swagger-ui-express behavior
     // This lets swagger-ui-express handle the spec serving automatically
-    app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+    app.use("/api-docs", swaggerUi.serve);
+    app.get("/api-docs", swaggerUi.setup(swaggerSpec))
   } else {
     // In local development, use the custom URL configuration
-    app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
-      swaggerOptions: {
-        url: "/thesis-2e701/asia-southeast1/api/api-docs/swagger.json",
-      }
-    }));
+    app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
   }
 };
