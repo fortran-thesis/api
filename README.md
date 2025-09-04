@@ -4,8 +4,8 @@
 
 ### 1. Clone the Repository
 ```sh
-git clone https://github.com/your-username/thesis.git
-cd thesis/api/functions
+git clone https://github.com/fortran-thesis/api.git
+cd api/functions
 ```
 
 ---
@@ -38,7 +38,7 @@ npm install
 	 ```
 3. Access endpoints at:
 	 ```
-	 http://localhost:5001/<project-id>/<region>/<function-name>/
+	 http://localhost:5001/thesis-2e701/asia-southeast1/api
 	 ```
 
 ---
@@ -66,7 +66,7 @@ docker-compose down
 	```
 - To run tests with coverage:
 	```sh
-	npm run test:coverage
+	npm test:coverage
 	```
 
 ---

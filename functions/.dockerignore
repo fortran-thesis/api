@@ -1,0 +1,14 @@
+node_modules
+npm-debug.log
+.env
+.env.*
+coverage
+.vscode
+.git
+.gitignore
+tests
+*.test.ts
+*.spec.ts
+firebase-debug.log
+firestore-debug.log
+*.md

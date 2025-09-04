@@ -1,7 +1,7 @@
 import { generateCode } from '../../src/utils/code';
 import { describe, it, expect } from '@jest/globals';
 
-describe('code utils', () => {
+describe('code utils (unit)', () => {
   it('should generate a 4-digit code as a string', () => {
     const code = generateCode();
     expect(typeof code).toBe('string');

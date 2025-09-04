@@ -16,7 +16,6 @@ import {
 } from '../../src/lib/firestore';
 import { describe, it, expect, afterAll, beforeAll } from '@jest/globals';
 
-const isEmulator = process.env.FIRESTORE_EMULATOR_HOST || process.env.FIREBASE_AUTH_EMULATOR_HOST || process.env.FIREBASE_STORAGE_EMULATOR_HOST;
 const TEST_COLLECTION = 'test_collection';
 
 describe('firestore lib (integration)', () => {
@@ -29,6 +28,12 @@ describe('firestore lib (integration)', () => {
       expect(found && found.exists).toBe(true);
       expect(found!.data()?.name).toBe('testuser');
     });
+
+    it('should not add duplicates.', async () => {
+      const testData = { name: 'test' };
+      await addDocument(TEST_COLLECTION, testData, "test_id");
+      await expect(addDocument(TEST_COLLECTION, testData, "test_id")).resolves.toBeNull();
+    })
 
     describe('handle retrieval of data', () => {
         it('should get documents by field', async () => {
@@ -105,6 +110,10 @@ describe('firestore lib (integration)', () => {
       const updated = await getDocumentById(TEST_COLLECTION, addRes!.id);
       expect(updated!.data()?.value).toBe(99);
     });
+
+    it('should not update a non-existing user', async () => {
+      await expect(updateDocument(TEST_COLLECTION, "non-existed document", {value: 2})).resolves.toBeNull();
+    });
  
     it('should delete a document', async () => {
       const testData = { name: 'deleteuser', value: 555 };
@@ -113,6 +122,10 @@ describe('firestore lib (integration)', () => {
       await deleteDocument(TEST_COLLECTION, addRes!.id);
       const found = await getDocumentById(TEST_COLLECTION, addRes!.id);
       expect(found && found.exists).toBe(null);
+    });
+
+    it('should not delete a non-existing user', async () => {
+      await expect(deleteDocument(TEST_COLLECTION, "non-existed document")).resolves.toBeNull();
     });
 
     it('should soft delete a document', async () => {
@@ -125,6 +138,10 @@ describe('firestore lib (integration)', () => {
       expect(found!.data()?.metadata?.deleted_at).toBeDefined();
     });
   });
+
+    it('should not soft delete a non-existing user', async () => {
+      await expect(softDeleteDocument(TEST_COLLECTION, "non-existed document")).resolves.toBeNull();
+    });
 
   afterAll(async () => {
     await deleteCollection(TEST_COLLECTION);

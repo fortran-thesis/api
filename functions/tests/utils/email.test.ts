@@ -10,7 +10,7 @@ jest.mock('../../src/utils/email', () => ({
   })
 }));
 
-describe('email utils', () => {
+describe('email utils (unit)', () => {
   it('should send email', async () => {
     const result = await sendEmail('test@test.com', 'subject', 'body');
     expect(result).toBeDefined();

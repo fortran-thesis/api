@@ -16,19 +16,6 @@ const callFirebase = (
 ): FirebaseFirestore.CollectionReference => db.collection(collection);
 
 /**
- * Retrieves the last update time (updateTime) of a Firestore document.
- * @param collection - The name of the Firestore collection
- * @param documentUid - The document ID
- * @returns The update time or undefined if not found
- */
-const getUpdateTime = async (
-  collection: string,
-  documentUid: string
-): Promise<Timestamp | undefined> => {
-  return (await callFirebase(collection).doc(documentUid).get()).updateTime;
-};
-
-/**
  * Adds a new document to a Firestore collection.
  * @template T
  * @param collection - The name of the Firestore collection
@@ -49,8 +36,9 @@ export const addDocument = async <T extends object>(
     };
     if (uid) {
       const ref = callFirebase(collection).doc(uid);
+      if((await ref.get()).exists) throw new Error('User already exists');
       await ref.set(withMetadata);
-      return ref.get();
+      return await ref.get();
     }
 
     return (await callFirebase(collection).add(withMetadata)).get();
@@ -84,9 +72,7 @@ export const updateDocument = async <T extends object>(
     };
     return await callFirebase(collection)
       .doc(documentUid)
-      .update(withMetadata, {
-        lastUpdateTime: await getUpdateTime(collection, documentUid)
-      });
+      .update(withMetadata);
   } catch (error) {
     devLog(error);
     return null;

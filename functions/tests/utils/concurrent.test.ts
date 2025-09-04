@@ -1,7 +1,7 @@
 import { concurrent } from '../../src/utils/concurrent';
 import { describe, it, expect } from '@jest/globals';
 
-describe('concurrent utils', () => {
+describe('concurrent utils (unit)', () => {
   it('should run concurrent tasks', async () => {
     const tasks = [async () => 1, async () => 2];
     const results = await concurrent(...tasks.map(fn => fn()));

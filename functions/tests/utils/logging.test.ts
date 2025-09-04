@@ -1,7 +1,7 @@
 import { computeDiff } from '../../src/utils/logging';
 import { describe, it, expect } from '@jest/globals';
 
-describe('logging utils', () => {
+describe('logging utils (unit)', () => {
   it('should compute diff between objects', () => {
     const oldObj = { a: 1, b: 2 };
     const newObj = { a: 1, b: 3 };
