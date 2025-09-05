@@ -1,7 +1,7 @@
 import { getAuth, UserRecord } from "firebase-admin/auth";
 import { firebase } from "../configs/firebase";
 import { User, WithId } from "../types/types";
-import { getDocumentById } from "./firestore";
+import { findFirestoreUserById } from "../repositories/userRepository";
 import { concurrent } from "../utils/concurrent";
 import { devLog } from "../utils/dev";
 import { envOptions } from "../configs/environment";
@@ -16,9 +16,9 @@ const auth = getAuth(firebase);
  */
 export const getAuthUserById = async (uid: string): Promise<WithId<APIUser> | null> => {
   try {
-    const result = await concurrent(auth.getUser(uid), getFirestoreUser(uid));
+    const result = await concurrent(auth.getUser(uid), findFirestoreUserById(uid));
     const user = result[0] as UserRecord;
-    const firestoreUser = result[1] as User | null;
+    const firestoreUser = result[1].data() as User | null;
     if (!user || !firestoreUser)
       throw new Error("User does not exist in Firebase Authentication.");
     return {
@@ -44,9 +44,9 @@ export const getAuthUserById = async (uid: string): Promise<WithId<APIUser> | nu
 export const getAuthUserByEmail = async (email: string): Promise<WithId<APIUser> | null> => {
   try {
     const user = await auth.getUserByEmail(email);
-    const firestoreUser = await getFirestoreUser(user.uid);
-    if (!user || !firestoreUser)
-      throw new Error("User does not exist in Firebase Authentication.");
+    const firestoreUserDocs = await findFirestoreUserById(user.uid);
+    if (!user || !firestoreUserDocs) throw new Error("User does not exist in Firebase Authentication.");
+    const firestoreUser = firestoreUserDocs.data() as User;
     return {
       id: user.uid,
       user: {
@@ -68,24 +68,6 @@ export const getAuthUserByEmail = async (email: string): Promise<WithId<APIUser>
 }
 
 /**
- * Retrieves the user's role from the Firestore users collection.
- * @param uid - The user's UID
- * @returns The user's role or null if not found
- */
-const getFirestoreUser = async (uid: string): Promise<User | null> => {
-  try {
-    const snap = await getDocumentById("users", uid);
-    if (snap && snap.exists) {
-      return snap.data() as User;
-    }
-    return null;
-  } catch (error) {
-    devLog(error);
-    return null;
-  }
-};
-
-/**
  * Verifies a Firebase ID token and optionally checks for a required user role.
  * @param token - The Firebase ID token
  * @param requiredRole - (Optional) The required user role
@@ -93,7 +75,8 @@ const getFirestoreUser = async (uid: string): Promise<User | null> => {
  */
 export const verifyToken = async (token: string): Promise<WithId<APIUser> | null> => {
   try {
-    const { uid } = await auth.verifyIdToken(token);
+    const uid = (await auth.verifyIdToken(token)).uid;
+    if(!uid) throw new Error('Invalid token.')
     const user = await getAuthUserById(uid);
     if (uid !== user?.id) throw new Error("User UID mismatch.");
     return user
@@ -113,7 +96,8 @@ export const verifyCookie = async (
   sessionCookie: string
 ): Promise<WithId<APIUser>  | null> => {
   try {
-    const { uid } = await auth.verifySessionCookie(sessionCookie, true);
+    const uid = (await auth.verifySessionCookie(sessionCookie, true)).uid;
+    if(!uid) throw new Error('Invalid token.')
     const user = await getAuthUserById(uid);
     if (uid !== user?.id) throw new Error("User UID mismatch.");
     return user

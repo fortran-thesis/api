@@ -29,16 +29,11 @@ jest.mock('../../src/lib/auth', () => ({
   }),
 }));
 
-describe('verification middleware', () => {
-  it('should be a function', () => {
-    expect(typeof verifyUser).toBe('function');
-  });
-
-  it('should call next for valid token/cookie (mocked)', async () => {
+describe('verification middleware (unit)', () => {
+  it('should call next for valid token/cookie', async () => {
     const req = { headers: { authorization: 'Bearer validtoken' }, cookies: { session: 'validcookie' } };
     const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
     const next = jest.fn();
-    // You should mock verifyToken/verifyCookie for real integration
     await verifyUser()(req as any, res as any, next);
     expect(next).toHaveBeenCalled();
   });

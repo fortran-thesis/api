@@ -14,7 +14,7 @@ export const retrieveAllUsers = async (
 ): Promise<PaginatedResult<APIUser[]> | null> => {
   try {
     // Use cursor-based pagination
-    const result = await findAllUsers(limit, token, ["created_at", "username"]);
+    const result = await findAllUsers(limit, token, ["metadata.created_at", "username"]);
     if (!result || !result.snapshot) throw new Error("No users found.");
     const firestoreList: WithId<User>[] = queryToJson<User>(result.snapshot);
     const identifiers = firestoreList.map((user) => ({ uid: user.id }));

@@ -71,8 +71,8 @@ export const approveCurator = async (
 ): Promise<ApiResponse<string>> => {
   try {
     const userSnap = await findFirestoreUserById(id);
-    if (!userSnap || userSnap.empty) throw new Error("User not found");
-    const user = userSnap.docs[0].data();
+    if (!userSnap || !userSnap.exists) throw new Error("User not found");
+    const user = userSnap.data();
     const process = await updateFirestoreUser(id, {
       is_verified: true,
     } as Partial<IsCurator<User>>);
@@ -84,7 +84,7 @@ export const approveCurator = async (
       <p>You now have access to curator features and responsibilities.</p>
       <p>Thanks,<br/>The Moldify Team</p>
     `;
-    await sendEmail(user.email, "Curator Application Approved", html);
+    await sendEmail(user?.email, "Curator Application Approved", html);
     return { success: true, data: "Successfully approved curator" };
   } catch (error) {
     devLog(error);
@@ -98,8 +98,8 @@ export const rejectCurator = async (
 ): Promise<ApiResponse<string>> => {
   try {
     const userSnap = await findFirestoreUserById(id);
-    if (!userSnap || userSnap.empty) throw new Error("User not found");
-    const user = userSnap.docs[0].data();
+    if (!userSnap || !userSnap.exists) throw new Error("User not found");
+    const user = userSnap.data();
     const process = await updateFirestoreUser(id, {
       is_verified: false,
     } as Partial<IsCurator<User>>);
@@ -111,7 +111,7 @@ export const rejectCurator = async (
       <p>If you have questions or would like to reapply, please contact support.</p>
       <p>Thanks,<br/>The Moldify Team</p>
     `; //TODO: idk process after rejecting curator
-    await sendEmail(user.email, "Curator Application Rejected", html);
+    await sendEmail(user?.email, "Curator Application Rejected", html);
     return { success: true, data: "Successfully rejected curator" };
   } catch (error) {
     devLog(error);

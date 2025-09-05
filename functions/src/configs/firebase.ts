@@ -1,9 +1,16 @@
 import { initializeApp, cert, getApps, getApp } from "firebase-admin/app";
-import serviceAccount from "./firebase-config.json";
+import { envOptions } from "./environment";
+
+let firebaseConfig: any = {};
+
+if (envOptions.isProd) {
+  // Only use service account in production
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const serviceAccount = require("./firebase-config.json");
+  firebaseConfig.credential = cert(serviceAccount);
+}
 
 // Initialize Firebase Admin SDK with service account
 export const firebase = !getApps().length
-  ? initializeApp({
-      credential: cert(serviceAccount as any),
-    })
+  ? initializeApp(firebaseConfig)
   : getApp();

@@ -1,15 +1,21 @@
 import { createClient, RedisClientType } from "redis";
-import dotenv from "dotenv";
-dotenv.config();
+import { envOptions } from "./environment";
 
-const redis: RedisClientType = createClient({
-  username: process.env.REDIS_USERNAME,
-  password: process.env.REDIS_PASSWORD,
+const redisOptions: any = {
   socket: {
-    host: process.env.REDIS_HOST,
-    port: Number(process.env.REDIS_PORT),
+    host: envOptions.redisHost,
+    port: Number(envOptions.redisPort),
   },
-});
+};
+
+if (envOptions.redisUsername) {
+  redisOptions.username = envOptions.redisUsername;
+}
+if (envOptions.redisPassword) {
+  redisOptions.password = envOptions.redisPassword;
+}
+
+const redis: RedisClientType = createClient(redisOptions);
 
 redis.on("error", (err: Error) => console.log("Redis Client Error", err));
 

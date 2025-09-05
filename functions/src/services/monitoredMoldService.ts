@@ -48,11 +48,11 @@ export const retrieveAllMonitoredMolds = async (
     const queryModifier = (q: FirebaseFirestore.Query) => q.where("folder_id", "==", id)
 
     const molds: PaginatedResult<QuerySnapshot> | null = await findAllMonitoredMolds(
-      id,
       limit,
+      token,
       ["metadata.created_at", "user_id", FieldPath.documentId()],
       { queryModifier },
-      token
+      
     );
     if (!molds) throw new Error("No monitored molds found.");
     return {snapshot: queryToJson<MonitoredMold>(molds.snapshot), nextPageToken: molds.nextPageToken};
