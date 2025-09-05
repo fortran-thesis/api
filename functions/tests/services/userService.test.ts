@@ -1,5 +1,5 @@
 import { getAuth } from "firebase-admin/auth";
-import { retrieveAllUsers } from "../../src/services/userService";
+import { retrieveAllUsers, retrieveUserByEmail, retrieveUserById } from "../../src/services/userService";
 import { describe, it, expect, beforeAll, afterAll } from "@jest/globals";
 import { addUser, deleteFirestoreUser } from "../../src/repositories/userRepository";
 import { Role } from "../../src/types/enums";
@@ -37,4 +37,16 @@ describe("userService (integration)", () => {
     expect(found).toBeDefined();
     expect(found &&found.user.username).toBe("integration_test");
   });
+
+  it("should retrieve a user by id", async () => {
+    const result = await retrieveUserById('integration_test_uid');
+    expect(result).toBeDefined();
+    expect(result && result.user.username).toBe('integration_test');
+  })
+
+  it("should retrieve a user by id", async () => {
+    const result = await retrieveUserByEmail('integration_test@example.com')
+    expect(result).toBeDefined()
+    expect(result && result.user.username).toBe('integration_test')
+  })
 });

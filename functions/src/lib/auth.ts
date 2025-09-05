@@ -18,7 +18,7 @@ export const getAuthUserById = async (uid: string): Promise<WithId<APIUser> | nu
   try {
     const result = await concurrent(auth.getUser(uid), findFirestoreUserById(uid));
     const user = result[0] as UserRecord;
-    const firestoreUser = result[1] as User | null;
+    const firestoreUser = result[1].data() as User | null;
     if (!user || !firestoreUser)
       throw new Error("User does not exist in Firebase Authentication.");
     return {
@@ -76,6 +76,7 @@ export const getAuthUserByEmail = async (email: string): Promise<WithId<APIUser>
 export const verifyToken = async (token: string): Promise<WithId<APIUser> | null> => {
   try {
     const uid = (await auth.verifyIdToken(token)).uid;
+    if(!uid) throw new Error('Invalid token.')
     const user = await getAuthUserById(uid);
     if (uid !== user?.id) throw new Error("User UID mismatch.");
     return user
@@ -95,7 +96,8 @@ export const verifyCookie = async (
   sessionCookie: string
 ): Promise<WithId<APIUser>  | null> => {
   try {
-    const { uid } = await auth.verifySessionCookie(sessionCookie, true);
+    const uid = (await auth.verifySessionCookie(sessionCookie, true)).uid;
+    if(!uid) throw new Error('Invalid token.')
     const user = await getAuthUserById(uid);
     if (uid !== user?.id) throw new Error("User UID mismatch.");
     return user

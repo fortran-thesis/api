@@ -3,7 +3,7 @@ import { describe, it, expect } from '@jest/globals';
 import { User, WithMetadata } from '../../src/types/types';
 import { Role } from '../../src/types/enums';
 
-const testUser: WithMetadata<User> = { username: 'testuser', role: Role.USER, is_banned: false, metadata: {} };
+const testUser: User = { username: 'testuser', role: Role.USER, is_banned: false };
 
 describe('userRepository (integration)', () => {
   it('should add the test user', async () => {
@@ -19,7 +19,10 @@ describe('userRepository (integration)', () => {
 
   it('should find the test user', async () => {
     const found = await userRepo.findFirestoreUserById('testuid');
-    expect(found && found.exists).toBe(true);
+    expect(found && found.exists).toBeTruthy();
+    expect(found && found.data()?.username).toBe(testUser.username);
+    expect(found && found.data()?.is_banned).toBe(testUser.is_banned);
+    expect(found && found.data()?.role).toBe(testUser.role);
   });
 
   it('should not find a non-existent user', async () => {

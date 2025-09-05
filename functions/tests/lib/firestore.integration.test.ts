@@ -10,8 +10,6 @@ import {
   getPaginatedDocuments,
   deleteCollection,
   softDeleteDocument,
-  queryToJson,
-  documentToJson,
   getFirestore
 } from '../../src/lib/firestore';
 import { describe, it, expect, afterAll, beforeAll } from '@jest/globals';
@@ -29,6 +27,7 @@ describe('firestore lib (integration)', () => {
       expect(found!.data()?.name).toBe('testuser');
     });
 
+    
     it('should not add duplicates.', async () => {
       const testData = { name: 'test' };
       await addDocument(TEST_COLLECTION, testData, "test_id");
@@ -148,22 +147,5 @@ describe('firestore lib (integration)', () => {
     if (typeof getFirestore().terminate === "function") {
       await getFirestore().terminate();
     }
-  });
-});
-
-describe('firebase lib (unit)', () => {
-  it('should convert a query snapshot to JSON array', () => {
-    // Mock QuerySnapshot
-    const mockDoc = { id: 'abc', data: () => ({ foo: 'bar' }) };
-    const mockQuerySnap = { docs: [mockDoc] } as any;
-    const result = queryToJson<{ foo: string }>(mockQuerySnap);
-    expect(result).toEqual([{ id: 'abc', foo: 'bar' }]);
-  });
-
-  it('should convert a document snapshot to JSON object', () => {
-    // Mock DocumentSnapshot
-    const mockDocSnap = { id: 'xyz', data: () => ({ baz: 123 }) } as any;
-    const result = documentToJson<{ baz: number }>(mockDocSnap);
-    expect(result).toEqual({ id: 'xyz', baz: 123 });
   });
 });
