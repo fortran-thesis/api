@@ -294,7 +294,7 @@ describe('moldController (unit)', () => {
       await moldController.patchMold(mockReq as Request, mockRes as Response);
 
       expect(mockMoldService.updateMoldInFirestore).toHaveBeenCalledWith(moldId, updateData);
-      expect(mockResponseUtils.sendSuccess).toHaveBeenCalledWith(mockRes, updatedMold);
+      expect(mockResponseUtils.sendSuccess).toHaveBeenCalledWith(mockRes, 'Successfully updated mold.');
     });
 
     it('should return error when update fails', async () => {
@@ -310,7 +310,8 @@ describe('moldController (unit)', () => {
       expect(mockMoldService.updateMoldInFirestore).toHaveBeenCalledWith(moldId, updateData);
       expect(mockResponseUtils.sendError).toHaveBeenCalledWith(
         mockRes,
-        'Failed to update mold'
+        'Failed to update mold',
+        404
       );
     });
   });

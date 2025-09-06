@@ -186,7 +186,7 @@ describe('adminService (unit)', () => {
       expect(result.success).toBe(true);
       expect(result.data).toBe('Successfully approved curator');
       expect(mockUserRepository.findFirestoreUserById).toHaveBeenCalledWith(userId);
-      expect(mockUserRepository.updateFirestoreUser).toHaveBeenCalledWith(userId, { is_curator: isApproved });
+      expect(mockUserRepository.updateFirestoreUser).toHaveBeenCalledWith(userId, { is_verified: true });
     });
 
     it('should handle curator update failure', async () => {
