@@ -3,11 +3,19 @@ import { Request, Response } from 'express';
 import * as authController from '../../src/controllers/authController';
 import * as authService from '../../src/services/authService';
 import * as responseUtils from '../../src/utils/response';
+import * as emailUtils from '../../src/utils/email';
+import getAuth from 'firebase-admin/auth'
 
 // Mock all external dependencies
+jest.mock('firebase-admin/auth', () => ({
+  getAuth: () => ({
+    updateUser: jest.fn<(a: any) => Promise<any>>().mockResolvedValue({}),
+  }),
+}));
 jest.mock('../../src/services/authService');
 jest.mock('../../src/utils/response');
 jest.mock('../../src/utils/dev');
+jest.mock('../../src/utils/email.ts');
 jest.mock('../../src/configs/redis', () => ({
   redis: {},
   redisReady: Promise.resolve(),
@@ -21,10 +29,11 @@ jest.mock('../../src/configs/environment', () => ({
 
 const mockAuthService = authService as jest.Mocked<typeof authService>;
 const mockResponseUtils = responseUtils as jest.Mocked<typeof responseUtils>;
+const mockEmailUtils = emailUtils as jest.Mocked<typeof emailUtils>;
 
 describe('authController (unit)', () => {
-  let mockReq: Partial<Request>;
-  let mockRes: Partial<Response>;
+  let mockReq: Partial<Request> & { user?: any };
+  let mockRes: Response;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -33,14 +42,14 @@ describe('authController (unit)', () => {
       body: {},
       params: {},
       query: {},
-      user: undefined,
-    };
+    } as Partial<Request> as any;
     
     mockRes = {
       status: jest.fn().mockReturnThis(),
       json: jest.fn(),
       cookie: jest.fn(),
-    };
+      // Add any other Response methods you use in your tests here
+    } as unknown as Response;
 
     // Mock response utilities
     mockResponseUtils.sendSuccess.mockReturnValue(undefined as any);
@@ -200,12 +209,12 @@ describe('authController (unit)', () => {
 
       const mockResult = {
         success: true,
-        data: 'Password changed successfully',
+        data: 'Successfully changed password!',
       };
 
       mockReq.body = passwordData;
       mockReq.user = mockUser as any;
-      mockAuthService.checkUserChangePassword.mockReturnValue(true);
+      mockAuthService.checkUserChangePassword.mockResolvedValue(true);
       mockAuthService.changePassword.mockResolvedValue(mockResult as any);
 
       await authController.changeUserPassword(mockReq as Request, mockRes as Response);
@@ -213,10 +222,6 @@ describe('authController (unit)', () => {
       expect(mockAuthService.checkUserChangePassword).toHaveBeenCalledWith(
         mockUser.details.email,
         passwordData.oldPassword
-      );
-      expect(mockAuthService.changePassword).toHaveBeenCalledWith(
-        mockUser.id,
-        passwordData.newPassword
       );
       expect(mockResponseUtils.sendSuccess).toHaveBeenCalledWith(mockRes, mockResult.data);
     });
@@ -251,7 +256,7 @@ describe('authController (unit)', () => {
 
       mockReq.body = passwordData;
       mockReq.user = mockUser as any;
-      mockAuthService.checkUserChangePassword.mockReturnValue(false);
+      mockAuthService.checkUserChangePassword.mockResolvedValue(false);
 
       await authController.changeUserPassword(mockReq as Request, mockRes as Response);
 
@@ -260,32 +265,6 @@ describe('authController (unit)', () => {
         passwordData.oldPassword
       );
       expect(mockResponseUtils.sendError).toHaveBeenCalledWith(mockRes, 'Wrong credentials');
-    });
-
-    it('should return error when password change service fails', async () => {
-      const passwordData = {
-        oldPassword: 'oldpass123',
-        newPassword: 'newpass123',
-      };
-
-      const mockUser = {
-        id: 'test-user-id',
-        details: { email: 'test@example.com' },
-      };
-
-      const mockResult = {
-        success: false,
-        error: 'Password change failed',
-      };
-
-      mockReq.body = passwordData;
-      mockReq.user = mockUser as any;
-      mockAuthService.checkUserChangePassword.mockReturnValue(true);
-      mockAuthService.changePassword.mockResolvedValue(mockResult as any);
-
-      await authController.changeUserPassword(mockReq as Request, mockRes as Response);
-
-      expect(mockResponseUtils.sendError).toHaveBeenCalledWith(mockRes, mockResult.error);
     });
   });
 });

@@ -437,7 +437,7 @@ export const changeUserPassword = async (req: Request, res: Response) => {
 
     if (!email || !uid)
       return sendError(res, "User not authenticated properly.");
-    const correctAuth = checkUserChangePassword(email, oldPassword);
+    const correctAuth = await checkUserChangePassword(email, oldPassword);
     if (!correctAuth) return sendError(res, "Wrong credentials");
     await getAuth().updateUser(uid, { password: newPassword });
     return sendSuccess(res, "Successfully changed password!");

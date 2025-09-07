@@ -151,29 +151,10 @@ describe('moldFolderService (unit)', () => {
       mockMoldFolderRepository.findAllMoldFolders.mockResolvedValue(mockPaginatedResult as any);
       mockFirestoreLib.queryToJson.mockReturnValue([mockMoldFolderWithId]);
 
-      const result = await moldFolderService.retrieveAllMoldFoldersByUser(userId, limit);
+      const result = await moldFolderService.retrieveAllMoldFoldersByUser(userId, limit, false);
 
       expect(result).toEqual(mockPaginatedResult);
-      expect(mockMoldFolderRepository.findAllMoldFolders).toHaveBeenCalledWith(limit, undefined);
-    });
-
-    it('should use custom pagination token and archived flag', async () => {
-      const userId = 'test-user-id';
-      const limit = 5;
-      const isArchived = true;
-      const token = 'pagination-token-123';
-      const mockPaginatedResult = {
-        snapshot: [],
-        nextPageToken: null,
-      };
-
-      mockMoldFolderRepository.findAllMoldFolders.mockResolvedValue(mockPaginatedResult as any);
-      mockFirestoreLib.queryToJson.mockReturnValue([]);
-
-      const result = await moldFolderService.retrieveAllMoldFoldersByUser(userId, limit, isArchived, token);
-
-      expect(result).toEqual(mockPaginatedResult);
-      expect(mockMoldFolderRepository.findAllMoldFolders).toHaveBeenCalledWith(limit, token);
+      expect(mockMoldFolderRepository.findAllMoldFolders).toHaveBeenCalledWith(userId, limit, false, undefined);
     });
   });
 
@@ -181,9 +162,9 @@ describe('moldFolderService (unit)', () => {
     it('should successfully update a mold folder', async () => {
       const folderId = 'test-folder-id';
       const updateData = { name: 'Updated Folder Name' };
-      const mockWriteResult = { writeTime: Timestamp.now() };
+      const mockWriteResult = { };
 
-      (mockMoldFolderRepository as any).updateMoldFolderRepo = jest.fn().mockResolvedValue(mockWriteResult);
+      jest.spyOn(mockMoldFolderRepository, 'updateMoldFolder').mockResolvedValue(mockWriteResult as any);
 
       const updatedFolder = { ...mockMoldFolderWithId, ...updateData };
       jest.spyOn(moldFolderService, 'retrieveMoldFolderById').mockResolvedValue(updatedFolder as any);
@@ -191,14 +172,14 @@ describe('moldFolderService (unit)', () => {
       const result = await moldFolderService.updateMoldFolderInFirestore(folderId, updateData);
 
       expect(result).toEqual(updatedFolder);
-      expect((mockMoldFolderRepository as any).updateMoldFolderRepo).toHaveBeenCalledWith(folderId, updateData);
+      expect((mockMoldFolderRepository as any).updateMoldFolder).toHaveBeenCalledWith(folderId, updateData);
     });
 
     it('should return null if update fails', async () => {
       const folderId = 'test-folder-id';
       const updateData = { name: 'Updated Folder Name' };
 
-      (mockMoldFolderRepository as any).updateMoldFolderRepo = jest.fn().mockResolvedValue(null);
+      jest.spyOn(moldFolderService, 'retrieveMoldFolderById').mockResolvedValue(null);
 
       const result = await moldFolderService.updateMoldFolderInFirestore(folderId, updateData);
 

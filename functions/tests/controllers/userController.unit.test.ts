@@ -34,8 +34,8 @@ describe('userController (unit)', () => {
     };
     
     mockRes = {
-      status: jest.fn().mockReturnThis(),
-      json: jest.fn(),
+      status: jest.fn().mockReturnThis() as unknown as (code: number) => Response,
+      json: jest.fn() as unknown as Response['json'],
     };
 
     // Mock response utilities to return values
@@ -66,7 +66,7 @@ describe('userController (unit)', () => {
       await userController.getUserById(mockReq as Request, mockRes as Response);
 
       expect(mockUserService.retrieveUserById).toHaveBeenCalledWith(userId);
-      expect(mockResponseUtils.sendSuccess).toHaveBeenCalledWith(mockRes, mockUser);
+      expect(mockResponseUtils.sendSuccess).toHaveBeenCalledWith(mockRes as any, mockUser);
     });
 
     it('should return 404 when user not found', async () => {
@@ -77,7 +77,7 @@ describe('userController (unit)', () => {
       await userController.getUserById(mockReq as Request, mockRes as Response);
 
       expect(mockUserService.retrieveUserById).toHaveBeenCalledWith(userId);
-      expect(mockResponseUtils.sendError).toHaveBeenCalledWith(mockRes, 'Failed to retrieve user', 404);
+      expect(mockResponseUtils.sendError).toHaveBeenCalledWith(mockRes as any, 'Failed to retrieve user', 404);
     });
 
     it('should handle service errors', async () => {
@@ -87,7 +87,7 @@ describe('userController (unit)', () => {
 
       await userController.getUserById(mockReq as Request, mockRes as Response);
 
-      expect(mockResponseUtils.defaultError).toHaveBeenCalledWith(mockRes);
+      expect(mockResponseUtils.defaultError).toHaveBeenCalledWith(mockRes as any);
     });
   });
 
@@ -113,7 +113,7 @@ describe('userController (unit)', () => {
       await userController.getUserByEmail(mockReq as Request, mockRes as Response);
 
       expect(mockUserService.retrieveUserByEmail).toHaveBeenCalledWith(email);
-      expect(mockResponseUtils.sendSuccess).toHaveBeenCalledWith(mockRes, mockUser);
+      expect(mockResponseUtils.sendSuccess).toHaveBeenCalledWith(mockRes as any, mockUser);
     });
 
     it('should return 404 when user not found by email', async () => {
@@ -124,7 +124,7 @@ describe('userController (unit)', () => {
       await userController.getUserByEmail(mockReq as Request, mockRes as Response);
 
       expect(mockUserService.retrieveUserByEmail).toHaveBeenCalledWith(email);
-      expect(mockResponseUtils.sendError).toHaveBeenCalledWith(mockRes, 'Failed to retrieve user', 404);
+      expect(mockResponseUtils.sendError).toHaveBeenCalledWith(mockRes as any, 'Failed to retrieve user', 404);
     });
   });
 
@@ -152,7 +152,7 @@ describe('userController (unit)', () => {
       await userController.getAllUsers(mockReq as Request, mockRes as Response);
 
       expect(mockUserService.retrieveAllUsers).toHaveBeenCalledWith(10, undefined);
-      expect(mockResponseUtils.sendSuccess).toHaveBeenCalledWith(mockRes, mockPaginatedResult);
+      expect(mockResponseUtils.sendSuccess).toHaveBeenCalledWith(mockRes as any, mockPaginatedResult);
     });
 
     it('should use custom limit and pageToken', async () => {
@@ -167,7 +167,7 @@ describe('userController (unit)', () => {
       await userController.getAllUsers(mockReq as Request, mockRes as Response);
 
       expect(mockUserService.retrieveAllUsers).toHaveBeenCalledWith(5, 'token123');
-      expect(mockResponseUtils.sendSuccess).toHaveBeenCalledWith(mockRes, mockPaginatedResult);
+      expect(mockResponseUtils.sendSuccess).toHaveBeenCalledWith(mockRes as any, mockPaginatedResult);
     });
 
     it('should return 404 when no users found', async () => {
@@ -176,7 +176,7 @@ describe('userController (unit)', () => {
 
       await userController.getAllUsers(mockReq as Request, mockRes as Response);
 
-      expect(mockResponseUtils.sendError).toHaveBeenCalledWith(mockRes, 'Failed to retrieve users', 500);
+      expect(mockResponseUtils.sendError).toHaveBeenCalledWith(mockRes as any, 'Failed to retrieve users', 500);
     });
   });
 
@@ -191,8 +191,8 @@ describe('userController (unit)', () => {
 
       await userController.patchUser(mockReq as Request, mockRes as Response);
 
-      expect(mockAuthService.updateUser).toHaveBeenCalledWith(userId, updateData);
-      expect(mockResponseUtils.sendSuccess).toHaveBeenCalledWith(mockRes, 'Successfully updated user.');
+      expect(mockAuthService.updateUser).toHaveBeenCalledWith(userId, updateData as any);
+      expect(mockResponseUtils.sendSuccess).toHaveBeenCalledWith(mockRes as any, 'Successfully updated user.');
     });
 
     it('should return error when update fails', async () => {
@@ -205,8 +205,8 @@ describe('userController (unit)', () => {
 
       await userController.patchUser(mockReq as Request, mockRes as Response);
 
-      expect(mockAuthService.updateUser).toHaveBeenCalledWith(userId, updateData);
-      expect(mockResponseUtils.sendError).toHaveBeenCalledWith(mockRes, 'Failed to update user. Try again later');
+      expect(mockAuthService.updateUser).toHaveBeenCalledWith(userId, updateData as any);
+      expect(mockResponseUtils.sendError).toHaveBeenCalledWith(mockRes as any, 'Failed to update user. Try again later');
     });
   });
 
@@ -220,7 +220,7 @@ describe('userController (unit)', () => {
       await userController.softDeleteUser(mockReq as Request, mockRes as Response);
 
       expect(mockAuthService.softRemoveUser).toHaveBeenCalledWith(userId);
-      expect(mockResponseUtils.sendSuccess).toHaveBeenCalledWith(mockRes, 'Successfully soft deleted user.');
+      expect(mockResponseUtils.sendSuccess).toHaveBeenCalledWith(mockRes as any, 'Successfully soft deleted user.');
     });
 
     it('should handle soft delete errors', async () => {
@@ -232,7 +232,7 @@ describe('userController (unit)', () => {
       await userController.softDeleteUser(mockReq as Request, mockRes as Response);
 
       expect(mockAuthService.softRemoveUser).toHaveBeenCalledWith(userId);
-      expect(mockResponseUtils.defaultError).toHaveBeenCalledWith(mockRes);
+      expect(mockResponseUtils.defaultError).toHaveBeenCalledWith(mockRes as any);
     });
   });
 
@@ -246,7 +246,7 @@ describe('userController (unit)', () => {
       await userController.deleteUser(mockReq as Request, mockRes as Response);
 
       expect(mockAuthService.removeUser).toHaveBeenCalledWith(userId);
-      expect(mockResponseUtils.sendSuccess).toHaveBeenCalledWith(mockRes, 'Successfully deleted user.');
+      expect(mockResponseUtils.sendSuccess).toHaveBeenCalledWith(mockRes as any, 'Successfully deleted user.');
     });
 
     it('should handle delete errors', async () => {
@@ -258,7 +258,7 @@ describe('userController (unit)', () => {
       await userController.deleteUser(mockReq as Request, mockRes as Response);
 
       expect(mockAuthService.removeUser).toHaveBeenCalledWith(userId);
-      expect(mockResponseUtils.defaultError).toHaveBeenCalledWith(mockRes);
+      expect(mockResponseUtils.defaultError).toHaveBeenCalledWith(mockRes as any);
     });
   });
 });

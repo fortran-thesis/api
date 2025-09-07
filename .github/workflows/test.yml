@@ -44,7 +44,7 @@ jobs:
         working-directory: functions
 
       - name: Load .env.dev
-        run: cat functions/.env.dev >> $GITHUB_ENV
+        run: cat functions/.env.test >> $GITHUB_ENV
 
       - name: Run tests
         run: npm test

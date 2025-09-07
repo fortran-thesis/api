@@ -25,7 +25,7 @@ describe('moldService (unit)', () => {
     name: 'Test Mold',
     description: 'A test mold',
     growth_stage: 'Early',
-    photo_url: 'http://example.com/photo.jpg',
+    photo_url: ['http://example.com/photo.jpg'],
   };
 
   const mockMoldWithId = {
