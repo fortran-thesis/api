@@ -1,5 +1,5 @@
 import dotenv from "dotenv";
-dotenv.config();
+dotenv.config({quiet: process.env.NODE_ENV === 'test' ? true : false});
 
 export const envOptions = {
   env: process.env.NODE_ENV || "development",
@@ -20,6 +20,5 @@ export const envOptions = {
   redisHost: process.env.REDIS_HOST || "localhost",
   redisPort: Number(process.env.REDIS_PORT) || 6379,
   encryptionKey: process.env.ENCRYPTION_KEY,
-  useMailhog: process.env.IS_TESTING,
   maxSessionAge: 60 * 60 * 24 * 5 * 1000, // 5 days
 };

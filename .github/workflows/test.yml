@@ -30,20 +30,18 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Install Firebase CLI
-        run: npm install -g firebase-tools
-
       - name: Install dependencies
         run: npm ci
         working-directory: functions
 
-      - name: Start Firebase Emulator
+      - name: Install Firebase CLI and start Firebase Emulators
+        run: npm install -g firebase-tools
         run: |
           nohup firebase emulators:start --only firestore,auth,storage --project demo-project &
           sleep 10
         working-directory: functions
 
-      - name: Load .env.dev
+      - name: Load .env.test
         run: cat functions/.env.test >> $GITHUB_ENV
 
       - name: Run tests
