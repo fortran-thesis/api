@@ -20,9 +20,10 @@ const mockFirestoreLib = firestoreLib as jest.Mocked<typeof firestoreLib>;
 describe('moldFolderService (unit)', () => {
   const mockMoldFolder: MoldFolder = {
     name: 'Test Folder',
-    description: 'A test folder',
     user_id: 'test-user-id',
     is_archived: false,
+    photo_url: '',
+    identified_mold: null
   };
 
   const mockMoldFolderWithId = {
