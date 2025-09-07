@@ -1,10 +1,8 @@
 import express from "express";
 import app from "./app";
-import dotenv from "dotenv";
+import { envOptions } from "./configs/environment";
 
-dotenv.config();
-
-const PORT = process.env.PORT || 5001;
+const PORT = envOptions.port || 5001;
 
 const localApp = express();
 localApp.use("/thesis-2e701/asia-southeast1/api", app);

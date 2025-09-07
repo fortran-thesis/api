@@ -73,7 +73,7 @@ docker-compose down
 
 ### Notes
 
-- Use `.env.dev` for development and testing. Copy or rename it to `.env` as needed.
+- For `.env`, use `.env.dev` for development or use `.env.test` for testing.
 - For Docker, environment variables from `.env.dev` are loaded automatically if specified in `docker-compose.yml`.
 - Endpoints and Swagger UI are available at the Firebase emulator URLs (see emulator logs for exact paths).
 

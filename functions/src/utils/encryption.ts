@@ -1,11 +1,9 @@
 import { createCipheriv, createDecipheriv, randomBytes } from "crypto";
-import dotenv from "dotenv";
-dotenv.config();
-
+import { envOptions } from "../configs/environment";
 const algorithm = "aes-256-cbc";
 
 // Validate ENCRYPTION_KEY existence and length
-const encryptionKey = process.env.ENCRYPTION_KEY;
+const encryptionKey = envOptions.encryptionKey;
 if (!encryptionKey) {
   throw new Error("ENCRYPTION_KEY environment variable is not set.");
 }

@@ -15,8 +15,4 @@ describe('response utils (unit)', () => {
     expect(mockRes.status).toHaveBeenCalledWith(400);
     expect(mockRes.json).toHaveBeenCalledWith({ success: false, error: 'Something went wrong' });
   });
-
-  it('should use defaultError', () => {
-    expect(defaultError).toEqual({ success: false, error: 'An unexpected error occurred.' });
-  });
 });

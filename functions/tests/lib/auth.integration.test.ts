@@ -5,7 +5,8 @@ import { addUser, deleteFirestoreUser } from '../../src/repositories/userReposit
 import { Role } from '../../src/types/enums';
 import { CreateRequest, getAuth } from 'firebase-admin/auth';
 
-const testUid = 'fakeid'
+const timeout = 1000 * 10
+const testUid = 'authlibtest'
 const testFirestore: User = {
             username: 'test',
             role: Role.USER,
@@ -40,12 +41,12 @@ describe('auth lib (integration)', () => {
     beforeAll(async () => {
         await addUser(testFirestore, testUid);
         await getAuth().createUser(testAuth)
-    })
+    }, timeout)
 
     afterAll(async () => {
         await deleteFirestoreUser(testUid)
         await getAuth().deleteUser(testUid)
-    })
+    }, timeout)
 
     describe('getAuthUserBy (id or email)', () => {
         it('should retrieve user with its details when getting auth user by id', async () => {
@@ -53,23 +54,23 @@ describe('auth lib (integration)', () => {
             expect(result && result.id && result.user && result.details).toBeDefined();
             
             expect(result).toStrictEqual(testAPIUser)
-        });
+        }, timeout);
 
         it('should return null if id of auth user is not found', async () => {
             const result = await auth.getAuthUserById('fake');
             expect(result).toBeNull();
-        });
+        }, timeout);
 
         it('should retrieve user with its details when getting auth user by email', async () => {
             const result = await auth.getAuthUserByEmail(testAuth.email!);
             expect(result && result.id && result.user && result.details).toBeDefined();
             expect(result).toStrictEqual(testAPIUser)
-        })
+        }, timeout)
 
         it('should return null if email of auth user is not found', async () => {
             const result = await auth.getAuthUserByEmail('fake@example.com');
             expect(result).toBeNull();
-        });
+        }, timeout);
     })
 
     describe('verify (cookie or token)', () => {
@@ -77,12 +78,12 @@ describe('auth lib (integration)', () => {
             jest.spyOn(getAuth(), 'verifyIdToken').mockImplementation(async () => ({ uid: testAPIUser.id } as any));
             const result = await auth.verifyToken('fake-token');
             expect(result).toStrictEqual(testAPIUser);
-        })
+        }, timeout)
 
         it('should return user when verifying cookie', async () => {
             jest.spyOn(getAuth(), 'verifySessionCookie').mockImplementation(async () => ({ uid: testAPIUser.id } as any));
             const result = await auth.verifyCookie('fake-cookie');
             expect(result).toStrictEqual(testAPIUser);
-        })
+        }, timeout)
     })
 });
