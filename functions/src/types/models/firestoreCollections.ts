@@ -1,5 +1,3 @@
-import { envOptions } from "../../configs/environment";
-
 export enum FirestoreCollection {
   USERS = "users",
   AUDIT_LOGS = "audit_logs",
@@ -14,5 +12,5 @@ export enum FirestoreCollection {
 }
 
 export function getCollectionName(collection: FirestoreCollection): string {
-  return envOptions.isDev ? `test_${collection}` : collection;
+  return collection
 }

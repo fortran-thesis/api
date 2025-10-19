@@ -1,3 +1,6 @@
+/**
+@deprecated Use the firebase emulators equivalent
+*/
 import express from "express";
 import app from "./app";
 import { envOptions } from "./configs/environment";
@@ -11,4 +14,4 @@ localApp.listen(PORT, () => {
   console.log(
     `Local server running on http://localhost:${PORT}/thesis-2e701/asia-southeast1/api`
   );
-});
+}); 

@@ -25,14 +25,18 @@ export const getAuthUserById = async (uid: string): Promise<WithId<APIUser> | nu
       id: user.uid,
       user: {
         username: firestoreUser.username,
+        first_name: firestoreUser.first_name,
+        last_name: firestoreUser.last_name,
+        address: firestoreUser.address,
         role: firestoreUser.role,
-        is_banned: firestoreUser.is_banned
+        is_banned: firestoreUser.is_banned,
       },
       details: {
         email: user.email,
         displayName: user.displayName,
         photo_url: user.photoURL ?? "",
-        disabled: user.disabled
+        disabled: user.disabled,
+        phone_number: user.phoneNumber
       }
     };
   } catch (error) {
@@ -51,6 +55,9 @@ export const getAuthUserByEmail = async (email: string): Promise<WithId<APIUser>
       id: user.uid,
       user: {
         username: firestoreUser.username,
+        first_name: firestoreUser.first_name,
+        last_name: firestoreUser.last_name,
+        address: firestoreUser.address,
         role: firestoreUser.role,
         is_banned: firestoreUser.is_banned
       },
@@ -58,7 +65,8 @@ export const getAuthUserByEmail = async (email: string): Promise<WithId<APIUser>
         email: user.email,
         displayName: user.displayName,
         photo_url: user.photoURL ?? "",
-        disabled: user.disabled
+        disabled: user.disabled,
+        phone_number: user.phoneNumber
       }
     };
   } catch (error) {

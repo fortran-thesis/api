@@ -32,7 +32,11 @@ import { v4 as uuidv4 } from "uuid";
 export const registerUser = async (
   username: string,
   email: string,
-  password: string
+  password: string,
+  firstName: string,
+  lastName: string,
+  address: string,
+  phoneNumber?: string,
 ): Promise<ApiResponse<string>> => {
   try {
     let userExists = false;
@@ -48,13 +52,17 @@ export const registerUser = async (
       email: email,
       emailVerified: false,
       password: password,
+      phoneNumber: phoneNumber,
+      displayName: firstName + ' ' + lastName,
     });
 
     const userId = userRecord.uid;
     if (!userId) throw new Error("ID does not exist!");
-
     const user: WithMetadata<User> = {
       username: username,
+      first_name: firstName,
+      last_name: lastName,
+      address: address,
       role: Role.USER,
       is_banned: false,
       metadata: {
@@ -94,6 +102,9 @@ export const registerOAuthUser = async (
 
     const user: WithMetadata<User> = {
       username: "",
+      first_name: "",
+      last_name: "",
+      address: "",
       role: Role.USER,
       is_banned: false,
       metadata: {
@@ -131,7 +142,9 @@ export const identifyUser = async (
     if (!uid) throw new Error("UID not found in Firebase Firestore.");
     const user = await getAuthUserById(uid);
     if (!user) throw new Error("User not found in Firebase Authentication");
-    const result = await fetch(process.env.FIREBASE_AUTH_API as string, {
+    const result = await fetch(
+      (process.env.FIREBASE_AUTH_API ?? "http://localhost:9099/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=AIzaSyALLixtCRzZYHtnsaCF74Z_PDzj51zN6SY"),
+    {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -139,7 +152,8 @@ export const identifyUser = async (
         password: password,
         returnSecureToken: true,
       }),
-    });
+    }
+  );
     if (!result.ok) throw new Error("Firebase Auth API doesn't recognize user");
     const obtainedUser = await result.json();
     return obtainedUser.idToken;

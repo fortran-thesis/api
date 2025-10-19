@@ -30,26 +30,41 @@ export const createUser = async (req: Request, res: Response) => {
    *   post:
    *     summary: Register a new user
    *     tags: [Auth]
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             required:
-   *               - username
-   *               - email
-   *               - password
-   *             properties:
-   *               username:
-   *                 type: string
-   *                 format: string
-   *               email:
-   *                 type: string
-   *                 format: email
-   *               password:
-   *                 type: string
-   *                 format: password
+  *     requestBody:
+  *       required: true
+  *       content:
+  *         application/json:
+  *           schema:
+  *             type: object
+  *             required:
+  *               - username
+  *               - email
+  *               - password
+  *               - firstName
+  *               - lastName
+  *               - address
+  *             properties:
+  *               username:
+  *                 type: string
+  *                 format: string
+  *               email:
+  *                 type: string
+  *                 format: email
+  *               password:
+  *                 type: string
+  *                 format: password
+  *               firstName:
+  *                 type: string
+  *                 description: Given name of the user
+  *               lastName:
+  *                 type: string
+  *                 description: Family name of the user
+  *               address:
+  *                 type: string
+  *                 description: Mailing or residential address
+  *               phoneNumber:
+  *                 type: string
+  *                 description: Contact phone number (optional)
    *     responses:
    *       200:
    *         description: Successfully created user
@@ -63,16 +78,24 @@ export const createUser = async (req: Request, res: Response) => {
       username,
       email,
       password,
-    }: { username: string; email: string; password: string } = req.body;
+      firstName,
+      lastName,
+      address,
+      phoneNumber
+    }: { username: string; email: string; password: string, firstName: string, lastName: string, address: string, phoneNumber?: string } = req.body;
     const process: ApiResponse<string> = await registerUser(
       username,
       email,
-      password
+      password,
+      firstName,
+      lastName,
+      address,
+      phoneNumber
     );
-    if (!process.success) return sendError(res, process.error);
+    if (!process.success) throw Error(process.error)
     return sendSuccess(res, process.data);
   } catch (error) {
-    devLog(error);
+    devLog(error, "REGISTER_USER");
     return defaultError(res);
   }
 };

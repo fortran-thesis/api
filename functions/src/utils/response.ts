@@ -1,5 +1,6 @@
 import { Response } from "express";
 import { ApiResponse } from "../types/types";
+import { devLog } from "./dev";
 
 export const sendError = <T>(
   res: Response,
@@ -7,6 +8,7 @@ export const sendError = <T>(
   status: number = 400
 ): Response => {
   const response: ApiResponse<T> = { success: false, error };
+  devLog(response)
   return res.status(status).json(response);
 };
 

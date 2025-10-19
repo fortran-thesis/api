@@ -22,6 +22,18 @@ export const RegisterSchema = z.object({
     .regex(/[^A-Za-z0-9]/, {
       message: "Password must contain at least one special character",
     }),
+  firstName: z
+    .string({ required_error: "First name is required" })
+    .nonempty({ message: "First name is required" }),
+  lastName: z
+    .string({ required_error: "Last name is required" })
+    .nonempty({ message: "Last name is required" }),
+  address: z
+    .string({ required_error: "Address is required" })
+    .nonempty({ message: "Address is required" }),
+  phoneNumber: z
+    .string()
+    .optional(),
 });
 
 export const LoginSchema = z.object({

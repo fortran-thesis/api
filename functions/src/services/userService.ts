@@ -26,6 +26,9 @@ export const retrieveAllUsers = async (
         id: firestoreUser.id,
         user: {
           username: firestoreUser.username,
+          first_name: firestoreUser.first_name,
+          last_name: firestoreUser.last_name,
+          address: firestoreUser.address,
           role: firestoreUser.role,
           is_banned: firestoreUser.is_banned,
         },
@@ -34,6 +37,7 @@ export const retrieveAllUsers = async (
           displayName: authUser?.displayName ?? "",
           photo_url: authUser?.photoURL ?? "",
           disabled: !!authUser?.disabled,
+          phone_number: authUser?.phoneNumber
         },
       };
     });
