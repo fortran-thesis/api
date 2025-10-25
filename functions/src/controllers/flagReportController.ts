@@ -1,6 +1,6 @@
-import { Request, Response } from "express";
-import { devLog } from "../utils/dev";
-import { defaultError, sendError, sendSuccess } from "../utils/response";
+import {Request, Response} from "express";
+import {devLog} from "../utils/dev";
+import {defaultError, sendError, sendSuccess} from "../utils/response";
 import {
   addFlagReportToFirestore,
   retrieveAllFlagReports,
@@ -9,9 +9,9 @@ import {
   removeFlagReport,
   softRemoveFlagReport,
 } from "../services/flagReportService";
-import { createLog } from "../utils/logging";
-import { AuditAction } from "../types/enums";
-import { FlagReportBase, PaginatedResult } from "../types/types";
+import {createLog} from "../utils/logging";
+import {AuditAction} from "../types/enums";
+import {FlagReportBase, PaginatedResult} from "../types/types";
 
 export const createFlagReport = async (req: Request, res: Response) => {
   /**
@@ -42,7 +42,7 @@ export const createFlagReport = async (req: Request, res: Response) => {
     const details = req.body;
     const reporter_id = req.user?.id;
     if (!reporter_id) return sendError(res, "Missing reporter id", 400);
-    const report = await addFlagReportToFirestore({ ...details, reporter_id, status: "unresolved" });
+    const report = await addFlagReportToFirestore({...details, reporter_id, status: "unresolved"});
     if (!report) return sendError(res, "Failed to create flag report");
     if (req.user) {
       createLog(reporter_id, req.user.user.role, AuditAction.CORRECT_FLAG_REPORT, `Flagged content ${details.content_id}`, details.content_id);

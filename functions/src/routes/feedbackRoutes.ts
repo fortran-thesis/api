@@ -1,5 +1,5 @@
-import { Request, Response, Router } from "express";
-import { verifyUser } from "../middlewares/verification";
+import {Request, Response, Router} from "express";
+import {verifyUser} from "../middlewares/verification";
 
 const router = Router();
 

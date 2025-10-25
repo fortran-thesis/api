@@ -1,7 +1,7 @@
-import { Router, Request, Response } from "express";
-import { verifyUser } from "../middlewares/verification";
-import { getAuditLogs } from "../controllers/auditLogController";
-import { Role } from "../types/enums";
+import {Router, Request, Response} from "express";
+import {verifyUser} from "../middlewares/verification";
+import {getAuditLogs} from "../controllers/auditLogController";
+import {Role} from "../types/enums";
 
 const router = Router();
 

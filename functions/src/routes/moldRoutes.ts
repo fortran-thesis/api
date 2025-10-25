@@ -1,5 +1,5 @@
-import { Request, Response, Router } from "express";
-import { verifyUser } from "../middlewares/verification";
+import {Request, Response, Router} from "express";
+import {verifyUser} from "../middlewares/verification";
 import {
   createMold,
   deleteMold,
@@ -9,16 +9,16 @@ import {
   patchMold,
   softDeleteMold,
 } from "../controllers/moldController";
-import { sanitizeBody, sanitizeParams } from "../middlewares/sanitation";
-import { validateBody, validateParams } from "../middlewares/validation";
+import {sanitizeBody, sanitizeParams} from "../middlewares/sanitation";
+import {validateBody, validateParams} from "../middlewares/validation";
 import {
   MoldIdSchema,
   MoldSchema,
   MoldUpdateSchema,
   NameParamSchema,
 } from "../dto/moldDTO";
-import { Role } from "../types/enums";
-import { upload } from "../middlewares/upload";
+import {Role} from "../types/enums";
+import {upload} from "../middlewares/upload";
 
 const router = Router();
 

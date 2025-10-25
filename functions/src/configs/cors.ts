@@ -1,7 +1,7 @@
-import { envOptions } from "./environment";
+import {envOptions} from "./environment";
 
 export const corsOptions = {
-  origin: envOptions.isProd ? [""] : ["*"],
+  origin: envOptions.isProd ? ["*"] : ["*"],
   credentials: true,
   optionsSuccessStatus: 200, // For legacy browser support
   methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],

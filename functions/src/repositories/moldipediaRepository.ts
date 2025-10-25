@@ -1,4 +1,4 @@
-import { FieldPath } from "firebase-admin/firestore";
+import {FieldPath} from "firebase-admin/firestore";
 import {
   addDocument,
   getDocumentById,
@@ -7,9 +7,9 @@ import {
   deleteDocument,
   softDeleteDocument,
 } from "../lib/firestore";
-import { Moldipedia } from "../types/types";
-import { OrderField } from "../utils/pagination";
-import { getCollectionName, FirestoreCollection } from "../types/models/firestoreCollections";
+import {Moldipedia} from "../types/types";
+import {OrderField} from "../utils/pagination";
+import {getCollectionName, FirestoreCollection} from "../types/models/firestoreCollections";
 
 const collection = getCollectionName(FirestoreCollection.MOLDIPEDIA);
 
@@ -18,7 +18,7 @@ export const addMoldipedia = async (data: Moldipedia) =>
 export const findMoldipediaById = async (id: string) =>
   getDocumentById(collection, id);
 export const findAllMoldipedia = async (
-  limit: number, 
+  limit: number,
   token?: string,
   orderFields: OrderField[] = ["metadata.created_at", "author_id", FieldPath.documentId()]
 ) =>

@@ -1,3 +1,8 @@
+/**
+ *
+ * @param promises
+ * @returns
+ */
 export async function concurrent<T extends any[]>(
   ...promises: Promise<T[number]>[]
 ) {

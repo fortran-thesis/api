@@ -1,6 +1,6 @@
 import multer from "multer";
-import type { FileFilterCallback } from "multer";
-import { Request } from "express";
+import type {FileFilterCallback} from "multer";
+import {Request} from "express";
 
 const allowedTypes = ["image/jpeg", "image/png"];
 
@@ -15,6 +15,6 @@ export const fileFilter = (
 
 export const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: {fileSize: 5 * 1024 * 1024},
   fileFilter,
 });

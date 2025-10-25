@@ -1,4 +1,4 @@
-import { Role } from "../enums";
+import {Role} from "../enums";
 
 export interface User {
   username: string;
@@ -20,4 +20,11 @@ export interface UserDetails {
 export interface APIUser {
   user: User;
   details: UserDetails;
+  mycologist_details?: MycologistDetails | null
+}
+
+export interface MycologistDetails {
+  user_id: string
+  resume: string
+  links: Array<string>
 }

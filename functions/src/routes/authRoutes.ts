@@ -1,4 +1,4 @@
-import { Request, Response, Router } from "express";
+import {Request, Response, Router} from "express";
 import {
   changeUserPassword,
   checkVerificationCodeEmail,
@@ -9,21 +9,21 @@ import {
   verifiedChangePassword,
   verifiedForgetUsername,
 } from "../controllers/authController";
-import { validateBody } from "../middlewares/validation";
+import {validateBody} from "../middlewares/validation";
 import {
   RegisterSchema,
   LoginSchema,
   EmailSchema,
   ChangePasswordSchema,
 } from "../dto/dto";
-import { sanitizeBody } from "../middlewares/sanitation";
+import {sanitizeBody} from "../middlewares/sanitation";
 import {
   finalActionLimiter,
   sendCodeLimiter,
   verifyCodeLimiter,
 } from "../configs/limit";
 import rateLimit from "express-rate-limit";
-import { verifyUser } from "../middlewares/verification";
+import {verifyUser} from "../middlewares/verification";
 
 const router = Router();
 
@@ -52,7 +52,7 @@ router.post(
   }
 );
 
-//TODO: endpoints
+// TODO: endpoints
 router.post(
   "/verify-code",
   rateLimit(verifyCodeLimiter),

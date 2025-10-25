@@ -1,6 +1,6 @@
-import { Request, Response, Router } from "express";
-import { verifyUser } from "../middlewares/verification";
-import { Role } from "../types/enums";
+import {Request, Response, Router} from "express";
+import {verifyUser} from "../middlewares/verification";
+import {Role} from "../types/enums";
 import {
   deleteUser,
   getAllUsers,
@@ -10,24 +10,20 @@ import {
   patchUser,
   softDeleteUser,
 } from "../controllers/userController";
-import { EmailSchema, UserDetailsUpdateSchema, UserIdSchema } from "../dto/dto";
+import {EmailSchema, UserDetailsUpdateSchema, UserIdSchema} from "../dto/dto";
 import {
   validateBody,
   validateParams,
   validateQuery,
 } from "../middlewares/validation";
-import { PaginationQuerySchema } from "../dto/paginationDTO";
-import { sanitizeBody, sanitizeParams } from "../middlewares/sanitation";
+import {PaginationQuerySchema} from "../dto/paginationDTO";
+import {sanitizeBody, sanitizeParams} from "../middlewares/sanitation";
 
 const router = Router();
 
-router.get(
-  "/profile",
-  verifyUser(),
-  async (req: Request, res: Response) => {
-    getUserProfile(req, res);
-  }
-);
+router.get("/profile", verifyUser(), async (req: Request, res: Response) => {
+  getUserProfile(req, res);
+});
 
 router.get(
   "/",

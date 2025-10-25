@@ -1,6 +1,11 @@
-import { DocumentSnapshot, QuerySnapshot, Timestamp, WriteResult } from "firebase-admin/firestore";
-import { documentToJson, queryToJson } from "../lib/firestore";
-import { devLog } from "../utils/dev";
+import {
+  DocumentSnapshot,
+  QuerySnapshot,
+  Timestamp,
+  WriteResult,
+} from "firebase-admin/firestore";
+import {documentToJson, queryToJson} from "../lib/firestore";
+import {devLog} from "../utils/dev";
 import {
   addFlagReport,
   deleteFlagReport,
@@ -9,7 +14,7 @@ import {
   softDeleteFlagReport,
   updateFlagReport,
 } from "../repositories/flagReportRepository";
-import { FlagReportBase, PaginatedResult, WithMetadata } from "../types/types";
+import {FlagReportBase, PaginatedResult, WithMetadata} from "../types/types";
 
 export const addFlagReportToFirestore = async (
   details: FlagReportBase
@@ -23,7 +28,8 @@ export const addFlagReportToFirestore = async (
         deleted_at: null,
       },
     };
-    const doc: DocumentSnapshot | null = await addFlagReport(detailsWithTimestamp);
+    const doc: DocumentSnapshot | null =
+      await addFlagReport(detailsWithTimestamp);
     if (!doc) throw new Error("Cannot add flag report.");
     return documentToJson<FlagReportBase>(doc);
   } catch (error) {
@@ -32,11 +38,18 @@ export const addFlagReportToFirestore = async (
   }
 };
 
-export const retrieveAllFlagReports = async (limit: number, token?: string): Promise<PaginatedResult<FlagReportBase[]> | null> => {
+export const retrieveAllFlagReports = async (
+  limit: number,
+  token?: string
+): Promise<PaginatedResult<FlagReportBase[]> | null> => {
   try {
-    const querySnap: PaginatedResult<QuerySnapshot> | null = await findAllFlagReports(limit, token);
+    const querySnap: PaginatedResult<QuerySnapshot> | null =
+      await findAllFlagReports(limit, token);
     if (!querySnap) throw new Error("No flag reports found.");
-    return {snapshot: queryToJson<FlagReportBase>(querySnap.snapshot), nextPageToken: querySnap.nextPageToken};
+    return {
+      snapshot: queryToJson<FlagReportBase>(querySnap.snapshot),
+      nextPageToken: querySnap.nextPageToken,
+    };
   } catch (error) {
     devLog(error);
     return null;
@@ -54,7 +67,10 @@ export const retrieveFlagReportById = async (id: string) => {
   }
 };
 
-export const updateFlagReportInFirestore = async (id: string, details: Partial<FlagReportBase>) => {
+export const updateFlagReportInFirestore = async (
+  id: string,
+  details: Partial<FlagReportBase>
+) => {
   try {
     const result: WriteResult | null = await updateFlagReport(id, details);
     return !!result;

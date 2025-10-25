@@ -1,7 +1,7 @@
-import { Request, Response } from "express";
-import { devLog } from "../utils/dev";
-import { defaultError, sendError, sendSuccess } from "../utils/response";
-import { MonitoredMold, PaginatedResult } from "../types/types";
+import {Request, Response} from "express";
+import {devLog} from "../utils/dev";
+import {defaultError, sendError, sendSuccess} from "../utils/response";
+import {MonitoredMold, PaginatedResult} from "../types/types";
 import {
   addMonitoredMoldToFirestore,
   retrieveAllMonitoredMolds,
@@ -10,7 +10,7 @@ import {
   removeMonitoredMold,
   softRemoveMonitoredMold,
 } from "../services/monitoredMoldService";
-import { uploadFile } from "../lib/storage";
+import {uploadFile} from "../lib/storage";
 
 export const createMonitoredMold = async (req: Request, res: Response) => {
   /**
@@ -68,12 +68,13 @@ export const createMonitoredMold = async (req: Request, res: Response) => {
       photo.buffer,
       photo.mimetype
     );
-    if (!url)
+    if (!url) {
       return sendError(
         res,
         "Invalid photo, please upload a different image.",
         400
       );
+    }
     const mold: MonitoredMold | null = await addMonitoredMoldToFirestore({
       ...details,
       image_url: url,
@@ -135,8 +136,9 @@ export const getAllMonitoredMoldsByFolderId = async (
       limit,
       pageToken
     );
-    if (!molds)
+    if (!molds) {
       return sendError(res, "Failed to retrieve monitored molds", 404);
+    }
     return sendSuccess(res, molds);
   } catch (error) {
     devLog(error);

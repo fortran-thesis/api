@@ -1,4 +1,4 @@
-import { Timestamp } from "firebase-admin/firestore";
+import {Timestamp} from "firebase-admin/firestore";
 
 export type WithMetadataAndId<T> = WithId<T> & { metadata: Metadata };
 export type WithMetadata<T> = T & { metadata: Metadata };

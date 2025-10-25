@@ -1,4 +1,4 @@
-import { Router } from "express";
+import {Router} from "express";
 import {
   createFlagReport,
   getAllFlagReports,
@@ -7,15 +7,15 @@ import {
   deleteFlagReport,
   softDeleteFlagReport,
 } from "../controllers/flagReportController";
-import { verifyUser } from "../middlewares/verification";
-import { Role } from "../types/enums";
+import {verifyUser} from "../middlewares/verification";
+import {Role} from "../types/enums";
 import {
   validateBody,
   validateParams,
   validateQuery,
 } from "../middlewares/validation";
-import { PaginationQuerySchema } from "../dto/paginationDTO";
-import { CreateFlagReportSchema, FlagReportIdSchema } from "../dto/flagReportDTO";
+import {PaginationQuerySchema} from "../dto/paginationDTO";
+import {CreateFlagReportSchema, FlagReportIdSchema} from "../dto/flagReportDTO";
 
 const router = Router();
 

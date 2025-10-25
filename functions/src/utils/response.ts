@@ -1,23 +1,23 @@
-import { Response } from "express";
-import { ApiResponse } from "../types/types";
-import { devLog } from "./dev";
+import {Response} from "express";
+import {ApiResponse} from "../types/types";
+import {devLog} from "./dev";
 
 export const sendError = <T>(
   res: Response,
   error: T,
-  status: number = 400
+  status = 400
 ): Response => {
-  const response: ApiResponse<T> = { success: false, error };
-  devLog(response)
+  const response: ApiResponse<T> = {success: false, error};
+  devLog(response);
   return res.status(status).json(response);
 };
 
 export const sendSuccess = <T>(
   res: Response,
   data: T,
-  status: number = 200
+  status = 200
 ): Response => {
-  const response: ApiResponse<T> = { success: true, data };
+  const response: ApiResponse<T> = {success: true, data};
   return res.status(status).json(response);
 };
 

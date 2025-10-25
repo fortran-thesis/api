@@ -4,8 +4,8 @@ import {
   Timestamp,
   WriteResult,
 } from "firebase-admin/firestore";
-import { documentToJson, queryToJson } from "../lib/firestore";
-import { devLog } from "../utils/dev";
+import {documentToJson, queryToJson} from "../lib/firestore";
+import {devLog} from "../utils/dev";
 import {
   addMold,
   deleteMold,
@@ -15,8 +15,13 @@ import {
   softDeleteMold,
   updateMold,
 } from "../repositories/moldRepository";
-import { Mold, PaginatedResult, WithId, WithMetadata } from "../types/types";
-import { getCache, setCache, deleteCache, deleteCachePattern } from '../utils/redis';
+import {Mold, PaginatedResult, WithId, WithMetadata} from "../types/types";
+import {
+  getCache,
+  setCache,
+  deleteCache,
+  deleteCachePattern,
+} from "../utils/redis";
 
 export const addMoldToFirestore = async (
   details: Mold
@@ -33,7 +38,7 @@ export const addMoldToFirestore = async (
     const mold: DocumentSnapshot | null = await addMold(detailsWithMetadata);
     if (!mold) throw new Error("Cannot add mold.");
     // Invalidate all list caches
-    await deleteCachePattern('molds:list:*');
+    await deleteCachePattern("molds:list:*");
     return documentToJson<WithId<Mold>>(mold);
   } catch (error) {
     devLog(error);
@@ -46,7 +51,7 @@ export const retrieveAllMolds = async (
   token?: string
 ): Promise<PaginatedResult<Mold[]> | null> => {
   // Build a short, safe cache key based on limit + token hash (or 'start' for the first page)
-  const tokenKey = token
+  const tokenKey = token;
   const cacheKey = `molds:list:${limit}:${tokenKey}`;
 
   try {
@@ -60,7 +65,10 @@ export const retrieveAllMolds = async (
       throw new Error("Failed to fetch molds.");
     }
 
-    const items: PaginatedResult<Mold[]> = {snapshot: queryToJson<Mold>(paged.snapshot), nextPageToken: paged.nextPageToken};
+    const items: PaginatedResult<Mold[]> = {
+      snapshot: queryToJson<Mold>(paged.snapshot),
+      nextPageToken: paged.nextPageToken,
+    };
 
     // Cache the entire page (items + nextPageToken) for a short TTL (5 minutes)
     await setCache(cacheKey, items, 300);
@@ -116,7 +124,7 @@ export const updateMoldInFirestore = async (
     if (!result) throw new Error("Failed to update mold.");
     // Invalidate cache for this mold and all lists
     await deleteCache(`mold:${id}`);
-    await deleteCachePattern('molds:list:*');
+    await deleteCachePattern("molds:list:*");
     const updatedMold = await retrieveMoldById(id);
     return updatedMold;
   } catch (error) {
@@ -131,7 +139,7 @@ export const softRemoveMold = async (id: string): Promise<void> => {
     if (!result) throw new Error("Failed to delete mold");
     // Invalidate cache for this mold and all lists
     await deleteCache(`mold:${id}`);
-    await deleteCachePattern('molds:list:*');
+    await deleteCachePattern("molds:list:*");
   } catch (error) {
     devLog(error);
   }
@@ -143,7 +151,7 @@ export const removeMold = async (id: string): Promise<void> => {
     if (!result) throw new Error("Failed to delete mold");
     // Invalidate cache for this mold and all lists
     await deleteCache(`mold:${id}`);
-    await deleteCachePattern('molds:list:*');
+    await deleteCachePattern("molds:list:*");
   } catch (error) {
     devLog(error);
   }

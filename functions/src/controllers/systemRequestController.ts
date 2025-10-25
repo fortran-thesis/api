@@ -1,9 +1,9 @@
-import { Request, Response } from "express";
-import { devLog } from "../utils/dev";
-import { defaultError, sendError, sendSuccess } from "../utils/response";
-import { PaginatedResult, SystemRequest, WithId } from "../types/types";
-import { createLog } from "../utils/logging";
-import { AuditAction } from "../types/enums";
+import {Request, Response} from "express";
+import {devLog} from "../utils/dev";
+import {defaultError, sendError, sendSuccess} from "../utils/response";
+import {PaginatedResult, SystemRequest, WithId} from "../types/types";
+import {createLog} from "../utils/logging";
+import {AuditAction} from "../types/enums";
 import {
   addSystemRequestToFirestore,
   retrieveAllSystemRequests,
@@ -44,8 +44,8 @@ export const createSystemRequest = async (req: Request, res: Response) => {
     if (!request) return sendError(res, "Failed to create system request", 400);
     // Audit log
     if (req.user) {
-      const { id, user: { role } } = req.user;
-      createLog(id, role, AuditAction.PROFILE_UPDATE, `Created system request`, request.id || "unknown");
+      const {id, user: {role}} = req.user;
+      createLog(id, role, AuditAction.PROFILE_UPDATE, "Created system request", request.id || "unknown");
     }
     return sendSuccess(res, request);
   } catch (error) {
@@ -185,7 +185,7 @@ export const patchSystemRequest = async (req: Request, res: Response) => {
     if (!updated) return sendError(res, "Failed to update system request", 404);
     // Audit log
     if (req.user) {
-      const { id: actorId, user: { role } } = req.user;
+      const {id: actorId, user: {role}} = req.user;
       createLog(actorId, role, AuditAction.PROFILE_UPDATE, `Updated system request ${id}`, id);
     }
     return sendSuccess(res, updated);
@@ -224,7 +224,7 @@ export const deleteSystemRequest = async (req: Request, res: Response) => {
     await removeSystemRequest(id);
     // Audit log
     if (req.user) {
-      const { id: actorId, user: { role } } = req.user;
+      const {id: actorId, user: {role}} = req.user;
       createLog(actorId, role, AuditAction.PROFILE_UPDATE, `Hard deleted system request ${id}`, id);
     }
     return sendSuccess(res, "Successfully deleted system request");
@@ -263,7 +263,7 @@ export const softDeleteSystemRequest = async (req: Request, res: Response) => {
     await softRemoveSystemRequest(id);
     // Audit log
     if (req.user) {
-      const { id: actorId, user: { role } } = req.user;
+      const {id: actorId, user: {role}} = req.user;
       createLog(actorId, role, AuditAction.PROFILE_UPDATE, `Soft deleted system request ${id}`, id);
     }
     return sendSuccess(res, "Successfully soft deleted system request.");

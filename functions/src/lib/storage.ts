@@ -1,8 +1,8 @@
-import { firebase } from "../configs/firebase";
-import { getStorage } from "firebase-admin/storage";
-import { Bucket, File } from "@google-cloud/storage";
-import { Readable } from "stream";
-import { devLog } from "../utils/dev";
+import {firebase} from "../configs/firebase";
+import {getStorage} from "firebase-admin/storage";
+import {Bucket, File} from "@google-cloud/storage";
+import {Readable} from "stream";
+import {devLog} from "../utils/dev";
 
 const storage = getStorage(firebase);
 
@@ -31,7 +31,7 @@ export const uploadFile = async (
   try {
     const file = getFileRef(bucketName, filePath);
     const options: any = {};
-    if (contentType) options.metadata = { contentType };
+    if (contentType) options.metadata = {contentType};
     await file.save(data, options);
     return filePath;
   } catch (error) {
@@ -44,7 +44,7 @@ export const uploadFiles = async (
   files: Express.Multer.File[],
   bucketName: string
 ): Promise<string[]> => {
-  let filePaths: string[] = [];
+  const filePaths: string[] = [];
   for (const file of files) {
     const filePath = `molds/${Date.now()}_${file.originalname}`;
     const uploadedPath = await uploadFile(
@@ -56,12 +56,12 @@ export const uploadFiles = async (
     if (uploadedPath) filePaths.push(uploadedPath);
   }
   return filePaths;
-}
+};
 
 /**
  * Downloads a file from the bucket as a buffer.
  * @param filePath - The path to the file in the bucket
- * @returns The file contents as a Buffer
+ * @return The file contents as a Buffer
  */
 export const downloadFile = async (
   bucketName: string,
@@ -98,7 +98,7 @@ export const deleteFile = async (
  * Gets a signed URL for a file (for temporary public access).
  * @param filePath - The path to the file in the bucket
  * @param expiresInSeconds - How long the URL should be valid (default: 1 hour)
- * @returns The signed URL as a string
+ * @return The signed URL as a string
  */
 export const getSignedUrl = async (
   bucketName: string,

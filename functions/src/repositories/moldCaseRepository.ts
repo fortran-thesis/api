@@ -1,4 +1,7 @@
-import { FieldPath } from "firebase-admin/firestore";
+// All references to moldFolderService and moldFolderRespository should now use moldCaseService and moldCaseRepository.
+
+// ...existing code...
+import {FieldPath} from "firebase-admin/firestore";
 import {
   addDocument,
   getDocumentsByField,
@@ -8,19 +11,19 @@ import {
   getPaginatedDocuments,
   getDocumentById,
 } from "../lib/firestore";
-import { MoldFolder } from "../types/types";
-import { devLog } from "../utils/dev";
-import { FirestoreCollection, getCollectionName } from '../types/models/firestoreCollections';
+import {MoldCase} from "../types/types";
+import {devLog} from "../utils/dev";
+import {FirestoreCollection, getCollectionName} from "../types/models/firestoreCollections";
 
-const collection: string = getCollectionName(FirestoreCollection.MOLD_FOLDERS);
+const collection: string = getCollectionName(FirestoreCollection.MOLD_CASES);
 
-export const addMoldFolder = async (data: MoldFolder) =>
+export const addMoldCase = async (data: MoldCase) =>
   addDocument(collection, data);
-export const findMoldFolderById = async (id: string) =>
+export const findMoldCaseById = async (id: string) =>
   getDocumentById(collection, id);
-export const findMoldFolderByName = async (name: string) =>
+export const findMoldCaseByName = async (name: string) =>
   getDocumentsByField(collection, "name", name);
-export const findAllMoldFolders = async (
+export const findAllMoldCases = async (
   uid: string,
   limit: number,
   isArchived: boolean,
@@ -36,7 +39,7 @@ export const findAllMoldFolders = async (
       limit,
       token,
       ["metadata.created_at", FieldPath.documentId()], // deterministic ordering by documentId
-      { queryModifier }
+      {queryModifier}
     );
 
     return paged;
@@ -45,11 +48,11 @@ export const findAllMoldFolders = async (
     return null;
   }
 };
-export const updateMoldFolder = async (
+export const updateMoldCase = async (
   uid: string,
-  updatedData: Partial<MoldFolder>
+  updatedData: Partial<MoldCase>
 ) => updateDocument(collection, uid, updatedData);
-export const deleteMoldFolder = async (uid: string) =>
+export const deleteMoldCase = async (uid: string) =>
   deleteDocument(collection, uid);
-export const softDeleteMoldFolder = async (uid: string) =>
+export const softDeleteMoldCase = async (uid: string) =>
   softDeleteDocument(collection, uid);

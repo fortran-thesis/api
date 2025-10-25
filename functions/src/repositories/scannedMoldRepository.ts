@@ -1,15 +1,15 @@
-import { FieldPath } from "firebase-admin/firestore";
+import {FieldPath} from "firebase-admin/firestore";
 import {
   addDocument,
   getDocumentById,
   getPaginatedDocuments,
   updateDocument,
   deleteDocument,
-  softDeleteDocument
+  softDeleteDocument,
 } from "../lib/firestore";
-import { ScannedMold } from "../types/types";
-import { OrderField } from "../utils/pagination";
-import { getCollectionName, FirestoreCollection } from "../types/models/firestoreCollections";
+import {ScannedMold} from "../types/types";
+import {OrderField} from "../utils/pagination";
+import {getCollectionName, FirestoreCollection} from "../types/models/firestoreCollections";
 
 const collection = getCollectionName(FirestoreCollection.SCANNED_MOLDS);
 

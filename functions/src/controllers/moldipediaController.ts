@@ -1,10 +1,10 @@
-import { Request, Response } from "express";
-import { devLog } from "../utils/dev";
-import { defaultError, sendError, sendSuccess } from "../utils/response";
-import { Moldipedia, PaginatedResult, WithId } from "../types/types";
-import { createLog } from "../utils/logging";
-import { AuditAction } from "../types/enums";
-import { uploadFile } from "../lib/storage";
+import {Request, Response} from "express";
+import {devLog} from "../utils/dev";
+import {defaultError, sendError, sendSuccess} from "../utils/response";
+import {Moldipedia, PaginatedResult, WithId} from "../types/types";
+import {createLog} from "../utils/logging";
+import {AuditAction} from "../types/enums";
+import {uploadFile} from "../lib/storage";
 import {
   addMoldipediaToFirestore,
   retrieveAllMoldipedia,
@@ -59,7 +59,7 @@ export const createMoldipedia = async (req: Request, res: Response) => {
     const photo: Express.Multer.File = req.file as Express.Multer.File;
     const url = await uploadFile("moldipedia", photo.originalname, photo.buffer, photo.mimetype);
     if (!url) return sendError(res, "Invalid cover photo, please upload a different image.", 400);
-    const article: WithId<Moldipedia> | null = await addMoldipediaToFirestore({ ...details, cover_photo: url });
+    const article: WithId<Moldipedia> | null = await addMoldipediaToFirestore({...details, cover_photo: url});
     if (!article) return sendError(res, "Failed to create moldipedia article", 400);
     // Audit log
     if (req.user) {

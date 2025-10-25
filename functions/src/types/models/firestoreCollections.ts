@@ -2,7 +2,9 @@ export enum FirestoreCollection {
   USERS = "users",
   AUDIT_LOGS = "audit_logs",
   FLAG_REPORTS = "flag_reports",
-  MOLD_FOLDERS = "mold_folders",
+  MOLD_CASES = "mold_cases",
+  MOLD_REPORTS = "mold_reports",
+  INVESTIGATIONS = "investigations",
   MOLDIPEDIA = "moldipedia",
   MOLDS = "molds",
   MONITORED_MOLDS = "monitored_molds",
@@ -12,5 +14,5 @@ export enum FirestoreCollection {
 }
 
 export function getCollectionName(collection: FirestoreCollection): string {
-  return collection
+  return collection;
 }

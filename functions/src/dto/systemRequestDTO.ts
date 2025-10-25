@@ -1,4 +1,4 @@
-import { z } from "zod";
+import {z} from "zod";
 
 export const SystemRequestCreateSchema = z.object({
   type: z.enum(["feedback", "bug"]),

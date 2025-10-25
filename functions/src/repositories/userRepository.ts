@@ -1,5 +1,5 @@
-import { FieldPath } from "firebase-admin/firestore";
-import { getAuthUserByEmail, getAuthUserById } from "../lib/auth";
+import {FieldPath} from "firebase-admin/firestore";
+import {getAuthUserByEmail, getAuthUserById} from "../lib/auth";
 import {
   addDocument,
   deleteDocument,
@@ -8,9 +8,9 @@ import {
   softDeleteDocument,
   updateDocument,
 } from "../lib/firestore";
-import { IsCurator, User } from "../types/types";
-import { OrderField } from "../utils/pagination";
-import { FirestoreCollection, getCollectionName } from '../types/models/firestoreCollections';
+import {IsCurator, User} from "../types/types";
+import {OrderField} from "../utils/pagination";
+import {FirestoreCollection, getCollectionName} from "../types/models/firestoreCollections";
 
 const collection: string = getCollectionName(FirestoreCollection.USERS);
 

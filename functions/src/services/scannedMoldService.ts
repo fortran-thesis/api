@@ -4,8 +4,8 @@ import {
   Timestamp,
   WriteResult,
 } from "firebase-admin/firestore";
-import { documentToJson, queryToJson } from "../lib/firestore";
-import { devLog } from "../utils/dev";
+import {documentToJson, queryToJson} from "../lib/firestore";
+import {devLog} from "../utils/dev";
 import {
   addScannedMold,
   deleteScannedMold,
@@ -15,7 +15,12 @@ import {
   updateScannedMold,
 } from "../repositories/scannedMoldRepository";
 
-import { ScannedMold, WithMetadata, WithId, PaginatedResult } from "../types/types";
+import {
+  ScannedMold,
+  WithMetadata,
+  WithId,
+  PaginatedResult,
+} from "../types/types";
 
 export const addScannedMoldToFirestore = async (
   details: Omit<ScannedMold, "image_url">,
@@ -28,8 +33,8 @@ export const addScannedMoldToFirestore = async (
       metadata: {
         created_at: Timestamp.now(),
         updated_at: null,
-        deleted_at: null
-      }
+        deleted_at: null,
+      },
     };
     const doc: DocumentSnapshot | null = await addScannedMold(detailsWithMeta);
     if (!doc) throw new Error("Cannot add scanned mold.");
@@ -40,22 +45,27 @@ export const addScannedMoldToFirestore = async (
   }
 };
 
-
 export const retrieveAllScannedMolds = async (
   limit: number,
   token?: string
 ): Promise<PaginatedResult<WithMetadata<ScannedMold>[]> | null> => {
   try {
-    const docs: PaginatedResult<QuerySnapshot> | null = await findAllScannedMolds(limit, token);
+    const docs: PaginatedResult<QuerySnapshot> | null =
+      await findAllScannedMolds(limit, token);
     if (!docs) throw new Error("No scanned molds found.");
-    return {snapshot: queryToJson<WithMetadata<ScannedMold>>(docs.snapshot), nextPageToken: docs.nextPageToken};
+    return {
+      snapshot: queryToJson<WithMetadata<ScannedMold>>(docs.snapshot),
+      nextPageToken: docs.nextPageToken,
+    };
   } catch (error) {
     devLog(error);
     return null;
   }
 };
 
-export const retrieveScannedMoldById = async (id: string): Promise<WithMetadata<ScannedMold> | null> => {
+export const retrieveScannedMoldById = async (
+  id: string
+): Promise<WithMetadata<ScannedMold> | null> => {
   try {
     const doc: DocumentSnapshot | null = await findScannedMoldById(id);
     if (!doc) throw new Error("No scanned mold found.");

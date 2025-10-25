@@ -4,8 +4,8 @@ import {
   Timestamp,
   WriteResult,
 } from "firebase-admin/firestore";
-import { documentToJson, queryToJson } from "../lib/firestore";
-import { devLog } from "../utils/dev";
+import {documentToJson, queryToJson} from "../lib/firestore";
+import {devLog} from "../utils/dev";
 import {
   addMoldipedia,
   deleteMoldipedia,
@@ -14,7 +14,12 @@ import {
   softDeleteMoldipedia,
   updateMoldipedia,
 } from "../repositories/moldipediaRepository";
-import { Moldipedia, WithMetadata, WithId, PaginatedResult } from "../types/types";
+import {
+  Moldipedia,
+  WithMetadata,
+  WithId,
+  PaginatedResult,
+} from "../types/types";
 
 export const addMoldipediaToFirestore = async (
   details: Moldipedia
@@ -43,9 +48,15 @@ export const retrieveAllMoldipedia = async (
   token?: string
 ): Promise<PaginatedResult<Moldipedia[]> | null> => {
   try {
-    const docs: PaginatedResult<QuerySnapshot> | null = await findAllMoldipedia(limit, token);
+    const docs: PaginatedResult<QuerySnapshot> | null = await findAllMoldipedia(
+      limit,
+      token
+    );
     if (!docs) throw new Error("No moldipedia entries found.");
-    return {snapshot: queryToJson<Moldipedia>(docs.snapshot), nextPageToken: docs.nextPageToken};
+    return {
+      snapshot: queryToJson<Moldipedia>(docs.snapshot),
+      nextPageToken: docs.nextPageToken,
+    };
   } catch (error) {
     devLog(error);
     return null;

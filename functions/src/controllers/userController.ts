@@ -1,17 +1,17 @@
-import { Request, Response } from "express";
+import {Request, Response} from "express";
 import {
   removeUser,
   softRemoveUser,
   updateUser,
 } from "../services/authService";
-import { devLog } from "../utils/dev";
-import { defaultError, sendError, sendSuccess } from "../utils/response";
+import {devLog} from "../utils/dev";
+import {defaultError, sendError, sendSuccess} from "../utils/response";
 import {
   retrieveAllUsers,
   retrieveUserByEmail,
   retrieveUserById,
 } from "../services/userService";
-import { APIUser, PaginatedResult, UserDetails } from "../types/types";
+import {APIUser, PaginatedResult, UserDetails} from "../types/types";
 
 /**
  * Get user by ID
@@ -178,7 +178,7 @@ export const getUserProfile = async (req: Request, res: Response) => {
    */
   try {
     const id = req.user?.id;
-    if(!id) return sendError(res, "Unauthenticated", 401);
+    if (!id) return sendError(res, "Unauthenticated", 401);
     const user = await retrieveUserById(id);
     if (!user) return sendError(res, "Failed to retrieve user", 404);
     return sendSuccess(res, user);
@@ -241,8 +241,9 @@ export const patchUser = async (req: Request, res: Response) => {
     const id: string = req.params.id;
     const details: UserDetails = req.body.details;
     const updated = await updateUser(id, details);
-    if (!updated)
+    if (!updated) {
       return sendError(res, "Failed to update user. Try again later");
+    }
     return sendSuccess(res, "Successfully updated user.");
   } catch (error) {
     devLog(error);

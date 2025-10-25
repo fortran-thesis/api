@@ -4,8 +4,8 @@ import {
   Timestamp,
   WriteResult,
 } from "firebase-admin/firestore";
-import { documentToJson, queryToJson } from "../lib/firestore";
-import { devLog } from "../utils/dev";
+import {documentToJson, queryToJson} from "../lib/firestore";
+import {devLog} from "../utils/dev";
 import {
   addReport,
   deleteReport,
@@ -14,7 +14,7 @@ import {
   softDeleteReport,
   updateReport,
 } from "../repositories/reportRepository";
-import { PaginatedResult, Report, WithMetadata } from "../types/types";
+import {PaginatedResult, Report, WithMetadata} from "../types/types";
 
 export const addReportToFirestore = async (
   details: Report
@@ -42,9 +42,15 @@ export const retrieveAllReports = async (
   token?: string
 ): Promise<PaginatedResult<Report[]> | null> => {
   try {
-    const docs: PaginatedResult<QuerySnapshot> | null = await findAllReports(limit, token);
+    const docs: PaginatedResult<QuerySnapshot> | null = await findAllReports(
+      limit,
+      token
+    );
     if (!docs) throw new Error("No reports found.");
-    return { snapshot: queryToJson<Report>(docs.snapshot), nextPageToken: docs.nextPageToken };
+    return {
+      snapshot: queryToJson<Report>(docs.snapshot),
+      nextPageToken: docs.nextPageToken,
+    };
   } catch (error) {
     devLog(error);
     return null;

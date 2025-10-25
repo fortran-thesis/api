@@ -1,5 +1,5 @@
-import { FieldPath, Timestamp } from "firebase-admin/firestore";
-import { devLog } from "./dev";
+import {FieldPath, Timestamp} from "firebase-admin/firestore";
+import {devLog} from "./dev";
 
 /**
  * OrderField describes how the query is ordered; use FieldPath.documentId() as the last tiebreaker.
@@ -28,7 +28,7 @@ function makePageToken(
     if (v instanceof Timestamp) return v.toMillis();
     return v;
   });
-  const payload = { vals };
+  const payload = {vals};
   return Buffer.from(JSON.stringify(payload)).toString("base64");
 }
 
@@ -59,7 +59,10 @@ export async function paginateQuery(
   limit: number,
   token?: string,
   orderFields: OrderField[] = [FieldPath.documentId()]
-): Promise<{ snapshot: FirebaseFirestore.QuerySnapshot; nextPageToken: string | null } | null> {
+): Promise<{
+  snapshot: FirebaseFirestore.QuerySnapshot;
+  nextPageToken: string | null;
+} | null> {
   try {
     let q = query.limit(limit);
     const vals = parsePageToken(token);
@@ -69,13 +72,13 @@ export async function paginateQuery(
     }
     const snap = await q.get();
     if (snap.empty) {
-      return { snapshot: snap, nextPageToken: null };
+      return {snapshot: snap, nextPageToken: null};
     }
     const last = snap.docs[snap.docs.length - 1];
     // If the query returned fewer than limit items, we still return a token if there is a last doc;
     // caller can inspect nextPageToken===null vs not to disable "load more".
     const nextPageToken = makePageToken(last, orderFields);
-    return { snapshot: snap, nextPageToken };
+    return {snapshot: snap, nextPageToken};
   } catch (err) {
     // log/handle as you prefer
     devLog("paginateQuery error: " + err);

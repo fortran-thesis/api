@@ -1,20 +1,21 @@
 import auditLogRoutes from "./routes/auditLogRoutes";
-import express from "express";
+import express, {Router} from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import rateLimit from "express-rate-limit";
-import { corsOptions } from "./configs/cors";
-import { setupSwagger } from "./configs/swagger";
+import {corsOptions} from "./configs/cors";
+import {setupSwagger} from "./configs/swagger";
 import authRoutes from "./routes/authRoutes";
-import { Router } from "express";
+
 import userRoutes from "./routes/userRoutes";
-import { limitingOptions } from "./configs/limit";
+import {limitingOptions} from "./configs/limit";
 import helmet from "helmet";
 import scanRoutes from "./routes/scannedMoldRoutes";
 import monitorRoutes from "./routes/monitoredMoldRoutes";
 import moldRoutes from "./routes/moldRoutes";
 import moldipediaRoutes from "./routes/moldipediaRoutes";
-import moldFolderRoutes from "./routes/moldFolderRoutes";
+import moldCaseRoutes from "./routes/moldCaseRoutes";
+import moldReportRoutes from "./routes/moldReportRoutes";
 import curatorRoutes from "./routes/curatorRoutes";
 import adminRoutes from "./routes/adminRoutes";
 import reportRoutes from "./routes/reportRoutes";
@@ -37,7 +38,8 @@ router.use("/v1/mold", moldRoutes);
 router.use("/v1/scan", scanRoutes);
 router.use("/v1/monitor", monitorRoutes);
 router.use("/v1/moldipedia", moldipediaRoutes);
-router.use("/v1/mold-folder", moldFolderRoutes);
+router.use("/v1/mold-case", moldCaseRoutes);
+router.use("/v1/mold-report", moldReportRoutes)
 router.use("/v1/curator", curatorRoutes);
 router.use("/v1/admin", adminRoutes);
 router.use("/v1/report", reportRoutes);

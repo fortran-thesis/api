@@ -1,9 +1,9 @@
-import { Request, Response } from "express";
-import { devLog } from "../utils/dev";
-import { defaultError, sendError, sendSuccess } from "../utils/response";
-import { Report, PaginatedResult } from "../types/types";
-import { createLog } from "../utils/logging";
-import { AuditAction } from "../types/enums";
+import {Request, Response} from "express";
+import {devLog} from "../utils/dev";
+import {defaultError, sendError, sendSuccess} from "../utils/response";
+import {Report, PaginatedResult} from "../types/types";
+import {createLog} from "../utils/logging";
+import {AuditAction} from "../types/enums";
 import {
   addReportToFirestore,
   retrieveAllReports,
@@ -44,9 +44,9 @@ export const createReport = async (req: Request, res: Response) => {
     if (!report) return sendError(res, "Failed to create report", 400);
     // Audit log
     if (req.user) {
-      const { id, user: { role } } = req.user;
+      const {id, user: {role}} = req.user;
       const targetId = report.reported_user_id || "unknown";
-      createLog(id, role, AuditAction.CORRECT_FLAG_REPORT, `Created report`, targetId); //TODO: wrong audit action
+      createLog(id, role, AuditAction.CORRECT_FLAG_REPORT, "Created report", targetId); // TODO: wrong audit action
     }
     return sendSuccess(res, report);
   } catch (error) {
@@ -179,8 +179,8 @@ export const patchReport = async (req: Request, res: Response) => {
     if (!updated) return sendError(res, "Failed to update report", 404);
     // Audit log
     if (req.user) {
-      const { id: actorId, user: { role } } = req.user;
-      createLog(actorId, role, AuditAction.RESOLVE_REPORT, `Updated report ${id}`, id); //todo: wrong audit action
+      const {id: actorId, user: {role}} = req.user;
+      createLog(actorId, role, AuditAction.RESOLVE_REPORT, `Updated report ${id}`, id); // todo: wrong audit action
     }
     return sendSuccess(res, updated);
   } catch (error) {
@@ -218,7 +218,7 @@ export const deleteReport = async (req: Request, res: Response) => {
     await removeReport(id);
     // Audit log
     if (req.user) {
-      const { id: actorId, user: { role } } = req.user;
+      const {id: actorId, user: {role}} = req.user;
       createLog(actorId, role, AuditAction.RESOLVE_REPORT, `Hard deleted report ${id}`, id);
     }
     return sendSuccess(res, "Successfully deleted report");
@@ -257,8 +257,8 @@ export const softDeleteReport = async (req: Request, res: Response) => {
     await softRemoveReport(id);
     // Audit log
     if (req.user) {
-      const { id: actorId, user: { role } } = req.user;
-      createLog(actorId, role, AuditAction.RESOLVE_REPORT, `Soft deleted report ${id}`, id); //todo: wrong audit action
+      const {id: actorId, user: {role}} = req.user;
+      createLog(actorId, role, AuditAction.RESOLVE_REPORT, `Soft deleted report ${id}`, id); // todo: wrong audit action
     }
     return sendSuccess(res, "Successfully soft deleted report.");
   } catch (error) {

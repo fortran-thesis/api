@@ -1,15 +1,15 @@
-import { firebase } from "../configs/firebase";
-import { FieldPath, getFirestore, QuerySnapshot, Timestamp } from "firebase-admin/firestore";
-import { devLog } from "../utils/dev";
-import { PaginatedResult, WithId, WithMetadata } from "../types/types";
-import { GetPaginatedOptions, OrderField, paginateQuery } from '../utils/pagination';
+import {firebase} from "../configs/firebase";
+import {FieldPath, getFirestore, QuerySnapshot, Timestamp} from "firebase-admin/firestore";
+import {devLog} from "../utils/dev";
+import {PaginatedResult, WithId, WithMetadata} from "../types/types";
+import {GetPaginatedOptions, OrderField, paginateQuery} from "../utils/pagination";
 
 const db = getFirestore(firebase);
 
 /**
  * Returns a Firestore collection reference for the given collection name.
  * @param collection - The name of the Firestore collection
- * @returns The collection reference
+ * @return The collection reference
  */
 const callFirebase = (
   collection: string
@@ -20,7 +20,7 @@ const callFirebase = (
  * @template T
  * @param collection - The name of the Firestore collection
  * @param document - The document data to add
- * @returns The document reference or null on error
+ * @return The document reference or null on error
  */
 export const addDocument = async <T extends object>(
   collection: string,
@@ -36,7 +36,7 @@ export const addDocument = async <T extends object>(
     };
     if (uid) {
       const ref = callFirebase(collection).doc(uid);
-      if((await ref.get()).exists) throw new Error('User already exists');
+      if ((await ref.get()).exists) throw new Error("User already exists");
       await ref.set(withMetadata);
       return await ref.get();
     }
@@ -55,7 +55,7 @@ export const addDocument = async <T extends object>(
  * @param collection - The name of the Firestore collection
  * @param documentUid - The document ID
  * @param updateData - The partial data to update
- * @returns The write result or null on error
+ * @return The write result or null on error
  */
 export const updateDocument = async <T extends object>(
   collection: string,
@@ -84,7 +84,7 @@ export const updateDocument = async <T extends object>(
  * Uses preconditions to ensure the document exists and has not changed since last read.
  * @param collection - The name of the Firestore collection
  * @param documentUid - The document ID
- * @returns The write result or null on error
+ * @return The write result or null on error
  */
 export const deleteDocument = async (
   collection: string,
@@ -94,7 +94,7 @@ export const deleteDocument = async (
     return await callFirebase(collection)
       .doc(documentUid)
       .delete({
-        exists: true
+        exists: true,
       });
   } catch (error) {
     devLog(error);
@@ -140,7 +140,7 @@ export const getDocumentsByField = async (
  * @param collection - The name of the Firestore collection
  * @param field - The field name to match
  * @param value - The value to match
- * @returns The document ID or null if not found/error
+ * @return The document ID or null if not found/error
  */
 export const getDocumentIdByField = async (
   collection: string,
@@ -165,7 +165,7 @@ export const getDocumentIdByField = async (
  * @param collection - The name of the Firestore collection
  * @param field - The field name to match
  * @param value - The value to match
- * @returns The document snapshot or null if not found/error
+ * @return The document snapshot or null if not found/error
  */
 export const getDocumentByFieldId = async (
   collection: string,
@@ -189,7 +189,7 @@ export const getDocumentByFieldId = async (
  * Retrieves a single Firestore document by its document ID.
  * @param collection - The name of the Firestore collection
  * @param documentUid - The document ID
- * @returns The document snapshot or null if not found/error
+ * @return The document snapshot or null if not found/error
  */
 export const getDocumentById = async (
   collection: string,
@@ -198,12 +198,12 @@ export const getDocumentById = async (
   try {
     const docSnap = await callFirebase(collection).doc(uid).get();
     if (!docSnap.exists) throw new Error("Document does not exist");
-    return docSnap
+    return docSnap;
   } catch (error) {
     devLog(error);
     return null;
   }
-}
+};
 
 export const getPaginatedDocuments = async (
   collection: string,
@@ -255,10 +255,10 @@ export const documentToJson = <T>(
 export const deleteCollection = async (collection: string) => {
   const querySnap = await callFirebase(collection).get();
   const batch = db.batch();
-  querySnap.docs.forEach(doc => {
+  querySnap.docs.forEach((doc) => {
     batch.delete(doc.ref);
   });
   await batch.commit();
 };
 
-export { getFirestore };
+export {getFirestore};

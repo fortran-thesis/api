@@ -1,12 +1,12 @@
-import { APIUser, User, WithId, PaginatedResult } from "../types/types";
+import {APIUser, User, WithId, PaginatedResult} from "../types/types";
 import {
   findAllUsers,
   findAuthUserByEmail,
   findAuthUserById,
 } from "../repositories/userRepository";
-import { devLog } from "../utils/dev";
-import { getAuth } from "firebase-admin/auth";
-import { queryToJson } from "../lib/firestore";
+import {devLog} from "../utils/dev";
+import {getAuth} from "firebase-admin/auth";
+import {queryToJson} from "../lib/firestore";
 
 export const retrieveAllUsers = async (
   limit: number,
@@ -17,7 +17,7 @@ export const retrieveAllUsers = async (
     const result = await findAllUsers(limit, token, ["metadata.created_at", "username"]);
     if (!result || !result.snapshot) throw new Error("No users found.");
     const firestoreList: WithId<User>[] = queryToJson<User>(result.snapshot);
-    const identifiers = firestoreList.map((user) => ({ uid: user.id }));
+    const identifiers = firestoreList.map((user) => ({uid: user.id}));
     const authUsers = await getAuth().getUsers(identifiers);
 
     const userList: APIUser[] = firestoreList.map((firestoreUser) => {
@@ -37,12 +37,12 @@ export const retrieveAllUsers = async (
           displayName: authUser?.displayName ?? "",
           photo_url: authUser?.photoURL ?? "",
           disabled: !!authUser?.disabled,
-          phone_number: authUser?.phoneNumber
+          phone_number: authUser?.phoneNumber,
         },
       };
     });
 
-    return { snapshot: userList, nextPageToken: result.nextPageToken };
+    return {snapshot: userList, nextPageToken: result.nextPageToken};
   } catch (error) {
     devLog(error);
     return null;

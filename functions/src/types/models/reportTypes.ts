@@ -1,5 +1,5 @@
-import { ReportReason, Role, AuditAction } from "../enums";
-import { Timestamp } from "firebase-admin/firestore";
+import {ReportReason, Role, AuditAction} from "../enums";
+import {Timestamp} from "firebase-admin/firestore";
 
 export interface Report {
   reporter_id: string;
@@ -16,4 +16,19 @@ export interface AuditLogEntry {
   description: string;
   timestamp: Timestamp;
   target_id?: string;
+}
+
+export interface MoldReport {
+  user_id: string;
+  assigned_mycologist_id: string | null
+  case_details: Array<MoldReportDetails>
+  host: string
+  location: string
+  status: string
+  is_archived: boolean
+}
+
+export interface MoldReportDetails {
+  cover_photo: Array<string>
+  description: string
 }

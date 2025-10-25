@@ -1,7 +1,7 @@
-import { Request, Response } from "express";
-import { devLog } from "../utils/dev";
-import { defaultError, sendError, sendSuccess } from "../utils/response";
-import { getAuditLogsByAction, getAllAuditLogs } from "../services/auditLogService";
+import {Request, Response} from "express";
+import {devLog} from "../utils/dev";
+import {defaultError, sendError, sendSuccess} from "../utils/response";
+import {getAuditLogsByAction, getAllAuditLogs} from "../services/auditLogService";
 
 export const getAuditLogs = async (req: Request, res: Response) => {
 /**
@@ -24,13 +24,13 @@ export const getAuditLogs = async (req: Request, res: Response) => {
  *         name: page
  *         schema:
  *           type: integer
- *         description: 
+ *         description:
  *              Page number (default: 1)
  *       - in: query
  *         name: limit
  *         schema:
  *           type: integer
- *         description: 
+ *         description:
  *              Page size (default: 10)
  *     responses:
  *       200:

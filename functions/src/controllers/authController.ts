@@ -1,5 +1,5 @@
-import { Request, Response } from "express";
-import { envOptions } from "../configs/environment";
+import {Request, Response} from "express";
+import {envOptions} from "../configs/environment";
 import {
   registerUser,
   authenticateUser,
@@ -12,10 +12,10 @@ import {
   forgetUsername,
   checkUserChangePassword,
 } from "../services/authService";
-import { devLog } from "../utils/dev";
-import { sendError, sendSuccess, defaultError } from "../utils/response";
-import { ApiResponse } from "../types/types";
-import { getAuth } from "firebase-admin/auth";
+import {devLog} from "../utils/dev";
+import {sendError, sendSuccess, defaultError} from "../utils/response";
+import {ApiResponse} from "../types/types";
+import {getAuth} from "firebase-admin/auth";
 
 /**
  * Register a new user
@@ -81,7 +81,7 @@ export const createUser = async (req: Request, res: Response) => {
       firstName,
       lastName,
       address,
-      phoneNumber
+      phoneNumber,
     }: { username: string; email: string; password: string, firstName: string, lastName: string, address: string, phoneNumber?: string } = req.body;
     const process: ApiResponse<string> = await registerUser(
       username,
@@ -92,7 +92,7 @@ export const createUser = async (req: Request, res: Response) => {
       address,
       phoneNumber
     );
-    if (!process.success) throw Error(process.error)
+    if (!process.success) throw Error(process.error);
     return sendSuccess(res, process.data);
   } catch (error) {
     devLog(error, "REGISTER_USER");
@@ -458,11 +458,12 @@ export const changeUserPassword = async (req: Request, res: Response) => {
     const oldPassword: string = req.body.oldPassword;
     const newPassword: string = req.body.newPassword;
 
-    if (!email || !uid)
+    if (!email || !uid) {
       return sendError(res, "User not authenticated properly.");
+    }
     const correctAuth = await checkUserChangePassword(email, oldPassword);
     if (!correctAuth) return sendError(res, "Wrong credentials");
-    await getAuth().updateUser(uid, { password: newPassword });
+    await getAuth().updateUser(uid, {password: newPassword});
     return sendSuccess(res, "Successfully changed password!");
   } catch (error) {
     devLog(error);

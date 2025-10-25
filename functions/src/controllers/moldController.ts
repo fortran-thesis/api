@@ -1,6 +1,6 @@
-import { Request, Response } from "express";
-import { devLog } from "../utils/dev";
-import { defaultError, sendError, sendSuccess } from "../utils/response";
+import {Request, Response} from "express";
+import {devLog} from "../utils/dev";
+import {defaultError, sendError, sendSuccess} from "../utils/response";
 import {
   addMoldToFirestore,
   removeMold,
@@ -10,10 +10,9 @@ import {
   softRemoveMold,
   updateMoldInFirestore,
 } from "../services/moldService";
-import { Mold, PaginatedResult, WithId } from "../types/types";
-import { createLog } from "../utils/logging";
-import { AuditAction } from "../types/enums";
-import { uploadFiles } from "../lib/storage";
+import {Mold, MoldDetails, PaginatedResult, WithId} from "../types/types";
+import {createLog} from "../utils/logging";
+import {AuditAction} from "../types/enums";
 
 export const createMold = async (req: Request, res: Response) => {
   /**
@@ -58,17 +57,13 @@ export const createMold = async (req: Request, res: Response) => {
    *         description: Server error
    */
   try {
-    const details: Omit<Mold, "photo_url"> = req.body.details;
-    const photos: Express.Multer.File[] = req.files as Express.Multer.File[];
-    const urls = await uploadFiles(photos, details.name);
-    const mold: WithId<Mold> | null = await addMoldToFirestore({
-      ...details,
-      photo_url: urls,
-    });
+    const moldName: string = req.body.moldName
+    const details: MoldDetails = req.body.details;
+    const mold: WithId<Mold> | null = await addMoldToFirestore({name: moldName, mold_details: details});
     if (!mold) return sendError(res, "Failed to retrieve mold", 404);
     // Audit log
     if (req.user) {
-      createLog(req.user.id, req.user.user.role, AuditAction.ADD_MOLD, `Created mold: ${details.name}`, mold.id || "");
+      createLog(req.user.id, req.user.user.role, AuditAction.ADD_MOLD, `Created mold: ${moldName}`, mold.id || "");
     }
     return sendSuccess(res, mold);
   } catch (error) {

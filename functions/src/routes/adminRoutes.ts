@@ -1,6 +1,6 @@
-import { Request, Response, Router } from "express";
-import { verifyUser } from "../middlewares/verification";
-import { Role } from "../types/enums";
+import {Request, Response, Router} from "express";
+import {verifyUser} from "../middlewares/verification";
+import {Role} from "../types/enums";
 
 const router = Router();
 
