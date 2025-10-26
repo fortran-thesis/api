@@ -19,16 +19,17 @@ export interface AuditLogEntry {
 }
 
 export interface MoldReport {
+  case_name: string
+  date_observed: Timestamp
   user_id: string;
   assigned_mycologist_id: string | null
   case_details: Array<MoldReportDetails>
   host: string
-  location: string
   status: string
   is_archived: boolean
 }
 
 export interface MoldReportDetails {
-  cover_photo: Array<string>
+  cover_photo?: Array<string>
   description: string
 }

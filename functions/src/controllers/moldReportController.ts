@@ -2,7 +2,7 @@ import {Request, Response} from "express";
 import {devLog} from "../utils/dev";
 import {defaultError, sendError, sendSuccess} from "../utils/response";
 import {MoldReport, MoldReportDetails, PaginatedResult} from "../types/types";
-import {uploadFile} from "../lib/storage";
+import {uploadFiles} from "../lib/storage";
 import {
   addMoldReportToFirestore,
   retrieveAllMoldReportsByUser,
@@ -15,7 +15,7 @@ import {
   addCaseDetailToReport,
 } from "../services/moldReportService";
 import {createLog} from "../utils/logging";
-import {AuditAction, Role} from "../types/enums";
+import {AuditAction} from "../types/enums";
 
 export const createMoldReport = async (req: Request, res: Response) => {
   /**
@@ -33,14 +33,43 @@ export const createMoldReport = async (req: Request, res: Response) => {
    *       content:
    *         multipart/form-data:
    *           schema:
-   *             type: object
-   *             properties:
-   *               details:
-   *                 type: object
-   *                 description: MoldReport DTO
-   *               cover_photo:
-   *                 type: string
-   *                 format: binary
+  *             type: object
+  *             properties:
+  *               details:
+  *                 type: object
+  *                 properties:
+  *                  date_observed:
+  *                    type: string
+  *                    format: date-time
+  *                   case_name:
+  *                     type: string
+  *                   user_id:
+  *                     type: string
+  *                   host:
+  *                     type: string
+  *                   case_details:
+  *                     type: array
+  *                     items:
+  *                       type: object
+  *                       properties:
+  *                         cover_photo:
+  *                           type: array
+  *                           items:
+  *                             type: string
+  *                         description:
+  *                           type: string
+  *                   description:
+  *                     type: string
+  *                   assigned_mycologist_id:
+  *                     type: string
+  *                   status:
+  *                     type: string
+  *                   is_archived:
+  *                     type: boolean
+  *                 description: MoldReport DTO (location omitted)
+  *               cover_photo:
+  *                 type: string
+  *                 format: binary
    *     responses:
    *       200:
    *         description: Successfully created mold report
@@ -50,23 +79,25 @@ export const createMoldReport = async (req: Request, res: Response) => {
    *         description: Server error
    */
   try {
-    const details: Omit<MoldReport, "cover_photo" | "is_archived" | "status" | "assigned_mycologist_id"> = req.body.details;
-    const photo: Express.Multer.File | undefined = req.file as Express.Multer.File | undefined;
-  let url: string | undefined = undefined;
-    if (photo) {
-      const uploaded = await uploadFile(
-        "mold_reports",
-        photo.originalname,
-        photo.buffer,
-        photo.mimetype
+    const details: Omit<MoldReport, "description" | "case_details" | "cover_photo" | "is_archived" | "status" | "assigned_mycologist_id"> = req.body.details;
+    const description = req.body.description
+    const photos: Express.Multer.File[] | undefined = req.files as Express.Multer.File[] | undefined;
+  let urls: string[] | undefined = undefined;
+    if (photos) {
+      const uploaded = await uploadFiles(
+        photos,
+        "mold_reports"
       );
       if (!uploaded) return sendError(res, "Invalid photo, please upload a different image.", 400);
-      url = uploaded;
+      urls = uploaded;
     }
     const moldReport: MoldReport | null = await addMoldReportToFirestore({
       ...details,
       assigned_mycologist_id: null,
-      cover_photo: url || "",
+      case_details: [{
+        cover_photo: urls,
+        description: description
+      }],
       is_archived: false,
       status: "pending"
     } as MoldReport);

@@ -2,6 +2,7 @@ import {Request, Response, Router} from "express";
 import {upload} from "../middlewares/upload";
 import {verifyUser} from "../middlewares/verification";
 import {sanitizeBody} from "../middlewares/sanitation";
+import {parseMultipartJson} from "../middlewares/parseMultipartJson";
 import {validateBody, validateParams, validateQuery} from "../middlewares/validation";
 import {PaginationQuerySchema} from "../dto/paginationDTO";
 import {ReportIdSchema, MoldReportSchema, MoldReportUpdateSchema} from "../dto/reportDTO";
@@ -26,7 +27,8 @@ router.post(
   "/",
   sanitizeBody,
   verifyUser(),
-  upload.single("cover_photo"),
+  upload.array("cover_photos"),
+  parseMultipartJson(["details"]),
   validateBody(MoldReportSchema),
   async (req: Request, res: Response) => {
     await createMoldReport(req, res);

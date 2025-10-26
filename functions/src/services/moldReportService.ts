@@ -14,6 +14,21 @@ import {
 } from "../repositories/moldReportRepository";
 import {MoldReport, MoldReportDetails, PaginatedResult, WithMetadata} from "../types/types";
 
+// Helper: convert date_observed Timestamp to ISO string for client responses
+const normalizeDateObserved = <T extends any>(obj: T): T => {
+  if (!obj || typeof obj !== "object") return obj;
+  const copy: any = { ...obj };
+  const v = copy.date_observed;
+  if (v && typeof v === "object" && (v as any).toDate instanceof Function) {
+    try {
+      copy.date_observed = (v as any).toDate().toISOString();
+    } catch (e) {
+      // leave as-is if conversion fails
+    }
+  }
+  return copy as T;
+};
+
 export const addMoldReportToFirestore = async (
   details: MoldReport
 ): Promise<MoldReport | null> => {
@@ -34,8 +49,14 @@ export const addMoldReportToFirestore = async (
       })
     );
 
+    // convert date_observed (string from DTO) to Firestore Timestamp
+    const rawDate = details.date_observed;
+    const parsedDate = typeof rawDate === "string" ? new Date(rawDate) : rawDate;
+    const dateObservedTimestamp = parsedDate instanceof Date && !isNaN(parsedDate.getTime()) ? Timestamp.fromDate(parsedDate) : Timestamp.now();
+
     const detailsWithMetadata: WithMetadata<MoldReport> = {
       ...details,
+      date_observed: dateObservedTimestamp,
       case_details: caseDetailsWithMeta,
       metadata: {
         created_at: Timestamp.now(),
@@ -66,8 +87,10 @@ export const retrieveAllMoldReportsByUser = async (
       token
     );
     if (!docs) throw new Error("No mold reports found.");
+    const raw = queryToJson<MoldReport>(docs.snapshot);
+    const normalized = raw.map((r) => normalizeDateObserved(r) as unknown as WithMetadata<MoldReport>);
     return {
-      snapshot: queryToJson<MoldReport>(docs.snapshot),
+      snapshot: normalized,
       nextPageToken: docs.nextPageToken,
     };
   } catch (error) {
@@ -80,7 +103,8 @@ export const retrieveMoldReportById = async (id: string): Promise<MoldReport | n
   try {
     const doc: DocumentSnapshot | null = await findMoldReportById(id);
     if (!doc) throw new Error("No mold report found.");
-    return documentToJson<MoldReport>(doc);
+    const raw = documentToJson<MoldReport>(doc);
+    return normalizeDateObserved(raw) as unknown as MoldReport;
   } catch (error) {
     devLog(error);
     return null;
@@ -97,8 +121,10 @@ export const retrieveUnassignedMoldReports = async (
       token
     );
     if (!docs) throw new Error("No mold reports found.");
+    const raw = queryToJson<MoldReport>(docs.snapshot);
+    const normalized = raw.map((r) => normalizeDateObserved(r) as unknown as WithMetadata<MoldReport>);
     return {
-      snapshot: queryToJson<MoldReport>(docs.snapshot),
+      snapshot: normalized,
       nextPageToken: docs.nextPageToken,
     };
   } catch (error) {
@@ -119,8 +145,10 @@ export const retrieveAssignedMoldReports = async (
       token
     );
     if (!docs) throw new Error("No mold reports found.");
+    const raw = queryToJson<MoldReport>(docs.snapshot);
+    const normalized = raw.map((r) => normalizeDateObserved(r) as unknown as WithMetadata<MoldReport>);
     return {
-      snapshot: queryToJson<MoldReport>(docs.snapshot),
+      snapshot: normalized,
       nextPageToken: docs.nextPageToken,
     };
   } catch (error) {
@@ -157,7 +185,15 @@ export const updateMoldReportInFirestore = async (
   details: Partial<MoldReport>
 ): Promise<MoldReport | null> => {
   try {
-    const result: WriteResult | null = await updateMoldReportRepo(id, details);
+    // convert date_observed string to Timestamp if present
+    const updatedDetails: any = { ...details };
+    if (updatedDetails.date_observed) {
+      const raw = updatedDetails.date_observed;
+      const parsed = typeof raw === "string" ? new Date(raw) : raw;
+      updatedDetails.date_observed = parsed instanceof Date && !isNaN(parsed.getTime()) ? Timestamp.fromDate(parsed) : updatedDetails.date_observed;
+    }
+
+    const result: WriteResult | null = await updateMoldReportRepo(id, updatedDetails);
     if (!result) throw new Error("Failed to update mold report.");
     const updated = await retrieveMoldReportById(id);
     return updated;

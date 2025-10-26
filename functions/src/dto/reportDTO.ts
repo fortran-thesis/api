@@ -20,19 +20,11 @@ export const ReportIdSchema = z.object({
 });
 
 export const MoldReportSchema = z.object({
+  case_name: z.string({required_error: "Case name is required."}).min(1, {message: "Case name is required."}),
+  date_observed: z.string({required_error: "Date observed is required."}).min(1, {message: "Date observed is required."}),
   user_id: z.string({required_error: "User ID is required."}).min(1, {message: "User ID is required."}),
   host: z.string({required_error: "Host is required."}).min(1, {message: "Host is required."}),
-  location: z.string({required_error: "Location is required."}).min(1, {message: "Location is required."}),
-  case_details: z.array(
-    z.object({
-      cover_photo: z.array(z.string()).optional(),
-      description: z.string({required_error: "Description is required."}).min(1, {message: "Description is required."}),
-    })
-  ).min(1, {message: "At least one case detail is required."}),
-  description: z.string().optional(),
-  assigned_mycologist_id: z.string().nullable().optional(),
-  status: z.string().optional(),
-  is_archived: z.boolean().optional(),
+  description: z.string({required_error: "Description is required."}).min(1, {message: "Description is required."})
 });
 
 export const MoldReportUpdateSchema = MoldReportSchema.partial();
