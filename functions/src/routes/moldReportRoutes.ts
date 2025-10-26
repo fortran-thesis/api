@@ -1,5 +1,4 @@
 import {Request, Response, Router} from "express";
-import {upload} from "../middlewares/upload";
 import {verifyUser} from "../middlewares/verification";
 import {sanitizeBody} from "../middlewares/sanitation";
 import {parseMultipartJson} from "../middlewares/parseMultipartJson";
@@ -23,12 +22,27 @@ import {CaseDetailCreateSchema} from "../dto/reportDTO";
 
 const router = Router();
 
+// Debug middleware to log request info before multer
+const debugMultipart = (req: Request, res: Response, next: any) => {
+  console.log("[DEBUG] Request received:", {
+    method: req.method,
+    url: req.url,
+    headers: {
+      "content-type": req.headers["content-type"],
+      "content-length": req.headers["content-length"],
+      "transfer-encoding": req.headers["transfer-encoding"],
+    },
+  });
+  next();
+};
+
 router.post(
   "/",
-  sanitizeBody,
+  debugMultipart,
   verifyUser(),
-  upload.array("cover_photos"),
+  // lenientMulter removed - cloudRunMultipartFix in app.ts handles multipart parsing
   parseMultipartJson(["details"]),
+  sanitizeBody,
   validateBody(MoldReportSchema),
   async (req: Request, res: Response) => {
     await createMoldReport(req, res);

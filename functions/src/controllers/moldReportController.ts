@@ -79,10 +79,10 @@ export const createMoldReport = async (req: Request, res: Response) => {
    *         description: Server error
    */
   try {
-    const details: Omit<MoldReport, "description" | "case_details" | "cover_photo" | "is_archived" | "status" | "assigned_mycologist_id"> = req.body.details;
-    const description = req.body.description
+    // After parseMultipartJson, details fields are promoted to root body
+    const {description, ...details} = req.body;
     const photos: Express.Multer.File[] | undefined = req.files as Express.Multer.File[] | undefined;
-  let urls: string[] | undefined = undefined;
+    let urls: string[] | null = null;
     if (photos) {
       const uploaded = await uploadFiles(
         photos,
