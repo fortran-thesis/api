@@ -4,6 +4,7 @@ import {
   checkVerificationCodeEmail,
   createUser,
   loginUser,
+  logoutUser,
   oAuth,
   sendVerificationCodeEmail,
   verifiedChangePassword,
@@ -52,7 +53,6 @@ router.post(
   }
 );
 
-// TODO: endpoints
 router.post(
   "/verify-code",
   rateLimit(verifyCodeLimiter),
@@ -104,6 +104,13 @@ router.post(
   verifyUser(),
   async (req: Request, res: Response) => {
     changeUserPassword(req, res);
+  }
+);
+
+router.post(
+  "/logout",
+  async (req: Request, res: Response) => {
+    logoutUser(req, res);
   }
 );
 

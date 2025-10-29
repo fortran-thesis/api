@@ -11,6 +11,7 @@ import {
   checkVerificationCode,
   forgetUsername,
   checkUserChangePassword,
+  logoutUserSession,
 } from "../services/authService";
 import {devLog} from "../utils/dev";
 import {sendError, sendSuccess, defaultError} from "../utils/response";
@@ -150,7 +151,7 @@ export const loginUser = async (req: Request, res: Response) => {
     res.cookie("session", cookie, {
       httpOnly: true,
       secure: envOptions.isProd ? true : false,
-      sameSite: "strict",
+      sameSite: "lax",
       maxAge: envOptions.maxSessionAge,
     });
     return sendSuccess(res, "Successfully logged in!");
@@ -205,12 +206,44 @@ export const oAuth = async (req: Request, res: Response) => {
     res.cookie("session", cookie, {
       httpOnly: true,
       secure: envOptions.isProd ? true : false,
-      sameSite: "strict",
+      sameSite: "lax",
       maxAge: envOptions.maxSessionAge,
     });
     return sendSuccess(res, "Successfully logged in!");
   } catch (error) {
     devLog(error);
+    return defaultError(res);
+  }
+};
+
+/**
+ * Logout user — clears the session cookie and revokes refresh tokens if possible
+ *
+ * @route POST /api/v1/auth/logout
+ * @access Public (clears cookie even if user not authenticated)
+ */
+export const logoutUser = async (req: Request, res: Response) => {
+  try {
+    const sessionCookie: string | undefined = req.cookies?.session;
+    let idToken: string | undefined;
+    if(req.headers.authorization && req.headers.authorization.startsWith("Bearer ")) {
+      idToken = req.headers.authorization.split(" ")[1];
+    }
+    
+    const process = logoutUserSession(sessionCookie, idToken)
+    if(!process) throw new Error("Unable to verify token")
+
+    // Clear cookie on client
+    res.clearCookie("session", {
+      httpOnly: true,
+      secure: envOptions.isProd ? true : false,
+      sameSite: "lax",
+      path: "/",
+    });
+
+    return sendSuccess(res, "Successfully logged out!");
+  } catch (error) {
+    devLog(error, "LOGOUT_USER");
     return defaultError(res);
   }
 };

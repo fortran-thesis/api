@@ -38,6 +38,25 @@ export const registerUser = async (
   phoneNumber?: string
 ): Promise<ApiResponse<string>> => {
   try {
+    // Normalize Philippine phone numbers to E.164 (+63...) expected by Firebase
+    const normalizePH = (raw?: string): string | undefined => {
+      if (!raw) return undefined;
+      let p = raw.trim();
+      // remove common separators
+      p = p.replace(/[^0-9+]/g, "");
+      // If already in E.164 and starts with +63, accept
+      if (p.startsWith("+63")) return p;
+      // If starts with + but not +63, leave as-is (assume user provided full international)
+      if (p.startsWith("+")) return p;
+      // If starts with 63 (no plus), add +
+      if (p.startsWith("63")) return `+${p}`;
+      // If starts with 0 (local Philippine), replace leading 0 with +63
+      if (p.startsWith("0")) return `+63${p.slice(1)}`;
+      // Otherwise assume it's a local number without 0/prefix; prepend +63
+      return `+63${p}`;
+    };
+
+    const normalizedPhone = normalizePH(phoneNumber);
     let userExists = false;
     try {
       await getAuth().getUserByEmail(email);
@@ -51,7 +70,7 @@ export const registerUser = async (
       email: email,
       emailVerified: false,
       password: password,
-      phoneNumber: phoneNumber,
+      phoneNumber: normalizedPhone,
       displayName: firstName + " " + lastName,
     });
 
@@ -362,6 +381,51 @@ export const checkUserChangePassword = async (
     return true;
   } catch (error) {
     devLog(error);
+    return false;
+  }
+};
+
+/**
+ * Logout helper: verifies either a Firebase session cookie or an ID token
+ * and revokes refresh tokens for the corresponding user to force sign-out
+ * across clients. Returns true if revocation was attempted successfully or
+ * false otherwise.
+ */
+export const logoutUserSession = async (
+  sessionCookie?: string,
+  idToken?: string
+): Promise<boolean> => {
+  try {
+    // Prefer session cookie verification if provided
+    if (sessionCookie) {
+      try {
+        const decoded = await getAuth().verifySessionCookie(sessionCookie, true);
+        if (decoded?.uid) {
+          await getAuth().revokeRefreshTokens(decoded.uid);
+          return true;
+        }
+      } catch (err) {
+        devLog(err, "logoutUserSession:verifySessionCookie");
+        // fallthrough to try idToken if provided
+      }
+    }
+
+    if (idToken) {
+      try {
+        const decoded = await getAuth().verifyIdToken(idToken);
+        if (decoded?.uid) {
+          await getAuth().revokeRefreshTokens(decoded.uid);
+          return true;
+        }
+      } catch (err) {
+        devLog(err, "logoutUserSession:verifyIdToken");
+      }
+    }
+
+    // Nothing to revoke or attempts failed
+    return false;
+  } catch (error) {
+    devLog(error, "logoutUserSession");
     return false;
   }
 };
