@@ -240,7 +240,7 @@ export const logoutUser = async (req: Request, res: Response) => {
       sameSite: "lax",
       path: "/",
     });
-
+    
     return sendSuccess(res, "Successfully logged out!");
   } catch (error) {
     devLog(error, "LOGOUT_USER");

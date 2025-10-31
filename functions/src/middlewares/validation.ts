@@ -74,7 +74,8 @@ export const validateQuery =
           sendError(res, messages);
           return;
         }
-        req.query = result.data;
+        // req.query is read-only; use Object.assign to merge validated data
+        Object.assign(req.query, result.data);
         next();
       } catch (error) {
         devLog(error);

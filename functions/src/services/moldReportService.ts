@@ -11,8 +11,14 @@ import {
   softDeleteMoldReport,
   updateMoldReport as updateMoldReportRepo,
   appendCaseDetail as appendCaseDetailRepo,
+  countReportsByStatuses,
+  countTotalReports,
+  findAllMoldReportsByUser,
+  countReportsByAssignedMycologist,
 } from "../repositories/moldReportRepository";
-import {MoldReport, MoldReportDetails, PaginatedResult, WithMetadata} from "../types/types";
+import {APIUser, MoldReport, MoldReportDetails, PaginatedResult, WithId, WithMetadata} from "../types/types";
+import { getAuthUserById } from "../lib/auth";
+import { retrieveMoldCaseByReportId } from "./moldCaseService";
 
 // Helper: convert date_observed Timestamp to ISO string for client responses
 const normalizeDateObserved = <T extends any>(obj: T): T => {
@@ -73,24 +79,85 @@ export const addMoldReportToFirestore = async (
   }
 };
 
-export const retrieveAllMoldReportsByUser = async (
-  uid: string,
+export const retrieveAllMoldReports = async (
   limit: number,
   isArchived: boolean,
   token?: string
 ): Promise<PaginatedResult<MoldReport[]> | null> => {
   try {
     const docs: PaginatedResult<QuerySnapshot> | null = await findAllMoldReports(
+      limit,
+      token
+    );
+    if (!docs) throw new Error("No mold reports found.");
+    console.log('[DEBUG] retrieveAllMoldReports - raw snapshot size:', docs.snapshot.size);
+    const raw = queryToJson<MoldReport>(docs.snapshot);
+    console.log('[DEBUG] retrieveAllMoldReports - parsed count:', raw.length);
+    console.log('[DEBUG] retrieveAllMoldReports - report IDs:', raw.map(r => r.id));
+    // Normalize date_observed and enrich each report with reporter info in parallel
+    const enriched = await Promise.all(
+      raw.map(async (r) => {
+        const nr = normalizeDateObserved(r) as unknown as MoldReport & any;
+        try {
+          const authUser = await getAuthUserById(nr.user_id);
+          if (authUser) {
+            nr.reporter = {
+              id: authUser.id,
+              name: authUser.details.displayName || authUser.user.first_name + ' ' + authUser.user.last_name,
+            }
+          }
+        } catch (e) {
+          devLog(e, "ENRICH_REPORT_USER");
+        }
+        // Enrich with mold case if available
+        try {
+          const moldCase = await retrieveMoldCaseByReportId(nr.id);
+          if (moldCase) {
+            nr.mold_case = {
+              priority: moldCase.priority
+            } ;
+          }
+        } catch (e) {
+          devLog(e, "ENRICH_REPORT_CASE");
+        }
+        return nr as MoldReport;
+      })
+    );
+
+    // Apply archive filter (documents with metadata.deleted_at are considered archived)
+    const filtered = enriched.filter((r) => {
+      const deletedAt = (r as any)?.metadata?.deleted_at;
+      const isDeleted = !!deletedAt;
+      return isArchived ? isDeleted : !isDeleted;
+    });
+
+    return {
+      snapshot: filtered,
+      nextPageToken: docs.nextPageToken,
+    };
+  } catch (error) {
+    devLog(error);
+    return null;
+  }
+};
+
+export const retrieveAllMoldReportsByUser = async (
+  uid: string,
+  limit: number,
+  isArchived: boolean,
+  token?: string
+): Promise<PaginatedResult<Omit<MoldReport, "user_id">[]> | null> => {
+  try {
+    const docs: PaginatedResult<QuerySnapshot> | null = await findAllMoldReportsByUser(
       uid,
       limit,
       isArchived,
       token
     );
     if (!docs) throw new Error("No mold reports found.");
-    const raw = queryToJson<MoldReport>(docs.snapshot);
-    const normalized = raw.map((r) => normalizeDateObserved(r) as unknown as WithMetadata<MoldReport>);
+    const raw = queryToJson<Omit<MoldReport, "user_id">>(docs.snapshot);
     return {
-      snapshot: normalized,
+      snapshot: raw,
       nextPageToken: docs.nextPageToken,
     };
   } catch (error) {
@@ -104,7 +171,20 @@ export const retrieveMoldReportById = async (id: string): Promise<MoldReport | n
     const doc: DocumentSnapshot | null = await findMoldReportById(id);
     if (!doc) throw new Error("No mold report found.");
     const raw = documentToJson<MoldReport>(doc);
-    return normalizeDateObserved(raw) as unknown as MoldReport;
+    const nr = normalizeDateObserved(raw) as unknown as MoldReport & any;
+    try {
+      const authUser = await getAuthUserById(nr.user_id);
+      if (authUser) {
+        nr.reporter = {
+          id: authUser.id,
+          user: authUser.user,
+          details: authUser.details,
+        } as WithId<APIUser>;
+      }
+    } catch (e) {
+      devLog(e, "ENRICH_REPORT_USER");
+    }
+    return nr;
   } catch (error) {
     devLog(error);
     return null;
@@ -122,9 +202,8 @@ export const retrieveUnassignedMoldReports = async (
     );
     if (!docs) throw new Error("No mold reports found.");
     const raw = queryToJson<MoldReport>(docs.snapshot);
-    const normalized = raw.map((r) => normalizeDateObserved(r) as unknown as WithMetadata<MoldReport>);
     return {
-      snapshot: normalized,
+      snapshot: raw,
       nextPageToken: docs.nextPageToken,
     };
   } catch (error) {
@@ -146,9 +225,8 @@ export const retrieveAssignedMoldReports = async (
     );
     if (!docs) throw new Error("No mold reports found.");
     const raw = queryToJson<MoldReport>(docs.snapshot);
-    const normalized = raw.map((r) => normalizeDateObserved(r) as unknown as WithMetadata<MoldReport>);
     return {
-      snapshot: normalized,
+      snapshot: raw,
       nextPageToken: docs.nextPageToken,
     };
   } catch (error) {
@@ -218,5 +296,46 @@ export const removeMoldReport = async (id: string): Promise<void> => {
     if (!result) throw new Error("Failed to delete mold report");
   } catch (error) {
     devLog(error);
+  }
+};
+
+export const getMoldReportStatusCounts = async (): Promise<{ total: number; pending: number; in_progress: number; resolved: number, closed: number } | null> => {
+  try {
+    // Map current canonical status keys to arrays that include legacy/alternate values.
+    // Assumption: older documents might have used variants like 'in_progress' or 'assigned'.
+    const mapping: Record<string, string[]> = {
+      pending: ["pending"],
+      in_progress: ["in progress", "in_progress", "assigned"],
+      resolved: ["resolved", "done"],
+      closed: ["closed"]
+    };
+
+  const total = await countTotalReports();
+
+  const pending = await countReportsByStatuses(mapping.pending);
+  const inProgress = await countReportsByStatuses(mapping.in_progress);
+  const resolved = await countReportsByStatuses(mapping.resolved);
+  const closed = await countReportsByStatuses(mapping.closed);
+
+    return {
+      total: total ?? 0,
+      pending: pending ?? 0,
+      in_progress: inProgress ?? 0,
+      resolved: resolved ?? 0,
+      closed: closed ?? 0
+    };
+  } catch (error) {
+    devLog(error);
+    return null;
+  }
+};
+
+export const getAssignedReportsCount = async (mycologistId: string): Promise<number | null> => {
+  try {
+    const count = await countReportsByAssignedMycologist(mycologistId);
+    return typeof count === "number" ? count : 0;
+  } catch (error) {
+    devLog(error);
+    return null;
   }
 };

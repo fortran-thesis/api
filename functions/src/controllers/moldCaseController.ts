@@ -1,15 +1,16 @@
 import {Request, Response} from "express";
 import {devLog} from "../utils/dev";
 import {defaultError, sendError, sendSuccess} from "../utils/response";
-
 import {MoldCase, PaginatedResult} from "../types/types";
-import {uploadFile} from "../lib/storage";
 import {
   addMoldCaseToFirestore,
   retrieveAllMoldCasesByUser,
+  retrieveMoldCaseByReportId,
   updateMoldCaseInFirestore,
   removeMoldCase,
   softRemoveMoldCase,
+  addCultivationLogToCase,
+  updateCultivationDetailsInCase,
 } from "../services/moldCaseService";
 
 export const createMoldCase = async (req: Request, res: Response) => {
@@ -57,28 +58,14 @@ export const createMoldCase = async (req: Request, res: Response) => {
    *         description: Server error
    */
   try {
-    const details: Omit<MoldCase, "photo_url" | "is_archived"> = req.body.details;
-    const photo: Express.Multer.File = req.file as Express.Multer.File;
-    const url = await uploadFile(
-      "mold_cases",
-      photo.originalname,
-      photo.buffer,
-      photo.mimetype
-    );
-    if (!url) {
-      return sendError(
-        res,
-        "Invalid photo, please upload a different image.",
-        400
-      );
-    }
+    // Accept body directly (no multipart) or from body.details if present
+    const details: Omit<MoldCase, "is_archived"> = req.body.details || req.body;
     const moldCase: MoldCase | null = await addMoldCaseToFirestore({
       ...details,
-      photo_url: url,
       is_archived: false,
     });
     if (!moldCase) return sendError(res, "Failed to create mold case", 400);
-    return sendSuccess(res, "Successfully created mold case.");
+    return sendSuccess(res, moldCase);
   } catch (error) {
     devLog(error);
     return defaultError(res);
@@ -297,6 +284,56 @@ export const softDeleteMoldCase = async (req: Request, res: Response) => {
     const id: string = req.params.id;
     await softRemoveMoldCase(id);
     return sendSuccess(res, "Successfully soft deleted mold case.");
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
+export const getMoldCaseByReportId = async (req: Request, res: Response) => {
+  /**
+   * GET /api/v1/mold-cases/by-report/:id
+   * Retrieve the mold case associated with a given mold report ID
+   */
+  try {
+    const reportId: string = req.params.id;
+    const moldCase = await retrieveMoldCaseByReportId(reportId);
+    if (!moldCase) return sendError(res, "No mold case found for this report", 404);
+    return sendSuccess(res, moldCase);
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
+export const addCultivationLog = async (req: Request, res: Response) => {
+  /**
+   * POST /api/v1/mold-cases/:caseId/logs
+   * Add a cultivation log entry to a mold case
+   */
+  try {
+  const caseId: string = req.params.id;
+    const logData = req.body;
+    const updated = await addCultivationLogToCase(caseId, logData);
+    if (!updated) return sendError(res, "Failed to add cultivation log", 400);
+    return sendSuccess(res, updated);
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
+export const updateCultivationDetails = async (req: Request, res: Response) => {
+  /**
+   * PATCH /api/v1/mold-cases/:caseId/cultivation-details
+   * Update cultivation details (in_vivo and/or in_vitro)
+   */
+  try {
+  const caseId: string = req.params.id;
+    const details = req.body;
+    const updated = await updateCultivationDetailsInCase(caseId, details);
+    if (!updated) return sendError(res, "Failed to update cultivation details", 400);
+    return sendSuccess(res, updated);
   } catch (error) {
     devLog(error);
     return defaultError(res);

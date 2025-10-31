@@ -25,8 +25,7 @@ export interface MoldReport {
   assigned_mycologist_id: string | null
   case_details: Array<MoldReportDetails>
   host: string
-  status: string
-  is_archived: boolean
+  status: "pending" | "in progress" | "resolved" | "closed"
 }
 
 export interface MoldReportDetails {

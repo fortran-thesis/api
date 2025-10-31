@@ -48,3 +48,14 @@ export const NameParamSchema = z.object({
 });
 
 export const MoldUpdateSchema = MoldSchema.partial();
+
+export const CultivationLogSchema = z.object({
+  type: z.enum(["vivo", "vitro"], { required_error: "Type is required (vivo or vitro)" }),
+  characteristics: z.record(z.any()).optional(),
+  additional_info: z.string().optional(),
+});
+
+export const CultivationDetailsSchema = z.object({
+  in_vivo_details: z.record(z.any()).optional(),
+  in_vitro_details: z.record(z.any()).optional(),
+});

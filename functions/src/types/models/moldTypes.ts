@@ -38,7 +38,8 @@ export interface MoldCase {
   mycologist_id: string;
   name: string;
   mold_report_id: string;
-  photo_url: string;
+  photo_url?: string | null;
+  priority: "low" | "medium" | "high";
   start_date: Timestamp;
   end_date: Timestamp;
   cultivation_details: CultivationDetails;

@@ -12,8 +12,11 @@ import {
   findAllMoldCases,
   findMoldCaseById,
   findMoldCaseByName,
+  findMoldCaseByReportId,
   softDeleteMoldCase,
   updateMoldCase as updateMoldCaseRepo,
+  appendCultivationLog,
+  updateCultivationDetails,
 } from "../repositories/moldCaseRepository";
 import {MoldCase, PaginatedResult, WithMetadata} from "../types/types";
 
@@ -21,8 +24,18 @@ export const addMoldCaseToFirestore = async (
   details: MoldCase
 ): Promise<MoldCase | null> => {
   try {
+    // convert start_date/end_date (strings from DTO) to Firestore Timestamp
+    const rawStart = (details as any).start_date;
+    const rawEnd = (details as any).end_date;
+    const parsedStart = typeof rawStart === "string" ? new Date(rawStart) : rawStart;
+    const parsedEnd = typeof rawEnd === "string" ? new Date(rawEnd) : rawEnd;
+    const startTimestamp = parsedStart instanceof Date && !isNaN(parsedStart.getTime()) ? Timestamp.fromDate(parsedStart) : parsedStart;
+    const endTimestamp = parsedEnd instanceof Date && !isNaN(parsedEnd.getTime()) ? Timestamp.fromDate(parsedEnd) : parsedEnd;
+
     const detailsWithMetadata: WithMetadata<MoldCase> = {
       ...details,
+      start_date: startTimestamp as any,
+      end_date: endTimestamp as any,
       metadata: {
         created_at: Timestamp.now(),
         updated_at: null,
@@ -53,8 +66,28 @@ export const retrieveAllMoldCasesByUser = async (
       token
     );
     if (!cases) throw new Error("No cases found.");
+    const raw = queryToJson<MoldCase>(cases.snapshot);
+    const normalized = raw.map((c) => {
+      const copy: any = { ...c };
+      try {
+        if (copy.start_date && typeof copy.start_date === "object" && (copy.start_date as any).toDate instanceof Function) {
+          copy.start_date = (copy.start_date as any).toDate().toISOString();
+        }
+      } catch (e) {
+        /* ignore */
+      }
+      try {
+        if (copy.end_date && typeof copy.end_date === "object" && (copy.end_date as any).toDate instanceof Function) {
+          copy.end_date = (copy.end_date as any).toDate().toISOString();
+        }
+      } catch (e) {
+        /* ignore */
+      }
+      return copy as MoldCase;
+    });
+
     return {
-      snapshot: queryToJson<MoldCase>(cases.snapshot),
+      snapshot: normalized,
       nextPageToken: cases.nextPageToken,
     };
   } catch (error) {
@@ -70,7 +103,22 @@ export const retrieveMoldCaseById = async (
     const moldCase: DocumentSnapshot | null = await findMoldCaseById(id);
     if (!moldCase) throw new Error("No case found.");
     const cases = documentToJson<MoldCase>(moldCase);
-    return cases;
+    const copy: any = { ...cases };
+    try {
+      if (copy.start_date && typeof copy.start_date === "object" && (copy.start_date as any).toDate instanceof Function) {
+        copy.start_date = (copy.start_date as any).toDate().toISOString();
+      }
+    } catch (e) {
+      /* ignore */
+    }
+    try {
+      if (copy.end_date && typeof copy.end_date === "object" && (copy.end_date as any).toDate instanceof Function) {
+        copy.end_date = (copy.end_date as any).toDate().toISOString();
+      }
+    } catch (e) {
+      /* ignore */
+    }
+    return copy as MoldCase;
   } catch (error) {
     devLog(error);
     return null;
@@ -91,12 +139,49 @@ export const retrieveMoldCaseByName = async (
   }
 };
 
+export const retrieveMoldCaseByReportId = async (
+  reportId: string
+): Promise<MoldCase | null> => {
+  try {
+    const moldCaseSnap: QuerySnapshot | null = await findMoldCaseByReportId(reportId);
+    if (!moldCaseSnap) throw new Error("No case found for this report.");
+    const cases = queryToJson<MoldCase>(moldCaseSnap);
+    if (cases.length === 0) return null;
+    // normalize dates
+    const raw = cases[0];
+    const normalized: any = { ...raw };
+    if (raw.start_date && typeof (raw.start_date as any).toDate === "function") {
+      normalized.start_date = (raw.start_date as any).toDate().toISOString();
+    }
+    if (raw.end_date && typeof (raw.end_date as any).toDate === "function") {
+      normalized.end_date = (raw.end_date as any).toDate().toISOString();
+    }
+    return normalized as MoldCase;
+  } catch (error) {
+    devLog(error);
+    return null;
+  }
+};
+
 export const updateMoldCaseInFirestore = async (
   id: string,
   details: Partial<MoldCase>
 ): Promise<MoldCase | null> => {
   try {
-    const result: WriteResult | null = await updateMoldCaseRepo(id, details);
+    // convert start_date/end_date strings to Timestamps if present
+    const updatedDetails: any = { ...details };
+    if (updatedDetails.start_date) {
+      const raw = updatedDetails.start_date;
+      const parsed = typeof raw === "string" ? new Date(raw) : raw;
+      updatedDetails.start_date = parsed instanceof Date && !isNaN(parsed.getTime()) ? Timestamp.fromDate(parsed) : updatedDetails.start_date;
+    }
+    if (updatedDetails.end_date) {
+      const raw = updatedDetails.end_date;
+      const parsed = typeof raw === "string" ? new Date(raw) : raw;
+      updatedDetails.end_date = parsed instanceof Date && !isNaN(parsed.getTime()) ? Timestamp.fromDate(parsed) : updatedDetails.end_date;
+    }
+
+    const result: WriteResult | null = await updateMoldCaseRepo(id, updatedDetails);
     if (!result) throw new Error("Failed to update mold case.");
     const updatedCase = await retrieveMoldCaseById(id);
     return updatedCase;
@@ -121,5 +206,37 @@ export const removeMoldCase = async (id: string): Promise<void> => {
     if (!result) throw new Error("Failed to delete mold case");
   } catch (error) {
     devLog(error);
+  }
+};
+
+export const addCultivationLogToCase = async (
+  caseId: string,
+  log: any
+): Promise<MoldCase | null> => {
+  try {
+    const result = await appendCultivationLog(caseId, log);
+    if (!result) throw new Error("Failed to add cultivation log");
+    // Fetch and return updated case
+    const updated = await retrieveMoldCaseById(caseId);
+    return updated;
+  } catch (error) {
+    devLog(error);
+    return null;
+  }
+};
+
+export const updateCultivationDetailsInCase = async (
+  caseId: string,
+  details: { in_vivo_details?: any; in_vitro_details?: any }
+): Promise<MoldCase | null> => {
+  try {
+    const result = await updateCultivationDetails(caseId, details);
+    if (!result) throw new Error("Failed to update cultivation details");
+    // Fetch and return updated case
+    const updated = await retrieveMoldCaseById(caseId);
+    return updated;
+  } catch (error) {
+    devLog(error);
+    return null;
   }
 };

@@ -1,4 +1,4 @@
-import {FieldPath} from "firebase-admin/firestore";
+import {FieldPath, getFirestore} from "firebase-admin/firestore";
 import {
   addDocument,
   getDocumentById,
@@ -7,6 +7,7 @@ import {
   deleteDocument,
   softDeleteDocument,
 } from "../lib/firestore";
+import {firebase} from "../configs/firebase";
 import {MoldReport} from "../types/types";
 import {devLog} from "../utils/dev";
 import {getCollectionName, FirestoreCollection} from "../types/models/firestoreCollections";
@@ -18,6 +19,27 @@ export const addMoldReport = async (data: MoldReport) =>
 export const findMoldReportById = async (id: string) =>
   getDocumentById(collection, id);
 export const findAllMoldReports = async (
+  limit: number,
+  token?: string
+): Promise<{ snapshot: FirebaseFirestore.QuerySnapshot; nextPageToken: string | null } | null> => {
+  try {
+    const queryModifier = (q: FirebaseFirestore.Query) => q
+
+    const paged = await getPaginatedDocuments(
+      collection,
+      limit,
+      token,
+      ["metadata.created_at", FieldPath.documentId()],
+      { queryModifier }
+    );
+
+    return paged;
+  } catch (err) {
+    devLog(err);
+    return null;
+  }
+};
+export const findAllMoldReportsByUser = async (
   uid: string,
   limit: number,
   isArchived: boolean,
@@ -104,3 +126,36 @@ export const appendCaseDetail = async (id: string, caseDetail: any) => {
 export const deleteMoldReport = async (id: string) => deleteDocument(collection, id);
 export const softDeleteMoldReport = async (id: string) =>
   softDeleteDocument(collection, id);
+
+export const countReportsByStatuses = async (statuses: string[]): Promise<number | null> => {
+  try {
+    const db = getFirestore(firebase);
+    const snap = await db.collection(collection).where("status", "in", statuses).get();
+    return snap.size;
+  } catch (err) {
+    devLog(err);
+    return null;
+  }
+};
+
+export const countTotalReports = async (): Promise<number | null> => {
+  try {
+    const db = getFirestore(firebase);
+    const snap = await db.collection(collection).get();
+    return snap.size;
+  } catch (err) {
+    devLog(err);
+    return null;
+  }
+};
+
+export const countReportsByAssignedMycologist = async (mycologistId: string): Promise<number | null> => {
+  try {
+    const db = getFirestore(firebase);
+    const snap = await db.collection(collection).where("assigned_mycologist_id", "==", mycologistId).where("is_archived", "==", false).get();
+    return snap.size;
+  } catch (err) {
+    devLog(err);
+    return null;
+  }
+};

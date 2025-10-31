@@ -13,6 +13,9 @@ import {
   removeMoldReport,
   softRemoveMoldReport,
   addCaseDetailToReport,
+  getMoldReportStatusCounts,
+  retrieveAllMoldReports,
+  getAssignedReportsCount,
 } from "../services/moldReportService";
 import {createLog} from "../utils/logging";
 import {AuditAction} from "../types/enums";
@@ -109,13 +112,37 @@ export const createMoldReport = async (req: Request, res: Response) => {
   }
 };
 
+export const getMoldReportCountsController = async (req: Request, res: Response) => {
+  try {
+    const counts = await getMoldReportStatusCounts();
+    if (!counts) return sendError(res, "Failed to retrieve mold report counts", 500);
+    return sendSuccess(res, counts);
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
 export const getAllMoldReports = async (req: Request, res: Response) => {
+  const limit: number = parseInt(req.query.limit as string) || 10;
+  const pageToken: string | undefined = req.query.pageToken as string | undefined;
+  try {
+    const result: PaginatedResult<MoldReport[]> | null = await retrieveAllMoldReports(limit, false, pageToken);
+    if (!result) return sendError(res, "Failed to retrieve mold reports", 404);
+    return sendSuccess(res, result);
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
+export const getAllMoldReportsByUser = async (req: Request, res: Response) => {
   const limit: number = parseInt(req.query.limit as string) || 10;
   const pageToken: string | undefined = req.query.pageToken as string | undefined;
   const uid: string | undefined = req.user?.id;
   try {
     if (!uid) return sendError(res, "Unauthorized", 401);
-    const result: PaginatedResult<MoldReport[]> | null = await retrieveAllMoldReportsByUser(uid, limit, false, pageToken);
+    const result: PaginatedResult<Omit<MoldReport, "user_id">[]> | null = await retrieveAllMoldReportsByUser(uid, limit, false, pageToken);
     if (!result) return sendError(res, "Failed to retrieve mold reports", 404);
     return sendSuccess(res, result);
   } catch (error) {
@@ -130,7 +157,7 @@ export const getAllArchivedMoldReports = async (req: Request, res: Response) => 
   const uid: string | undefined = req.user?.id;
   try {
     if (!uid) return sendError(res, "Unauthorized", 401);
-    const result: PaginatedResult<MoldReport[]> | null = await retrieveAllMoldReportsByUser(uid, limit, true, pageToken);
+    const result: PaginatedResult<MoldReport[]> | null = await retrieveAllMoldReports(limit, true, pageToken);
     if (!result) return sendError(res, "Failed to retrieve mold reports", 404);
     return sendSuccess(res, result);
   } catch (error) {
@@ -195,12 +222,33 @@ export const assignReport = async (req: Request, res: Response) => {
     const details: { assigned_mycologist_id: string; status?: string } = req.body;
     const updated = await updateMoldReportInFirestore(id, {
       assigned_mycologist_id: details.assigned_mycologist_id,
-      status: details.status || "assigned",
+      // Cast here because DTO allows arbitrary string; repo enforces allowed statuses
+      status: (details.status as any) || "in progress",
     });
     if (!updated) return sendError(res, "Failed to assign mycologist", 400);
     if (req.user) {
       const {id: actorId, user: {role}} = req.user;
       createLog(actorId, role, AuditAction.APPROVE_CURATOR, `Assigned mycologist ${details.assigned_mycologist_id} to report ${id}`, id);
+    }
+    return sendSuccess(res, updated);
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
+export const rejectReport = async (req: Request, res: Response) => {
+  try {
+    const id: string = req.params.id;
+    // Mark as closed and clear assigned mycologist
+    const updated = await updateMoldReportInFirestore(id, {
+      status: "closed",
+      assigned_mycologist_id: null,
+    });
+    if (!updated) return sendError(res, "Failed to reject/close report", 400);
+    if (req.user) {
+      const {id: actorId, user: {role}} = req.user;
+      createLog(actorId, role, AuditAction.REJECT_CURATOR, `Rejected/closed report ${id}`, id);
     }
     return sendSuccess(res, updated);
   } catch (error) {
@@ -218,6 +266,20 @@ export const getAssignedMoldReports = async (req: Request, res: Response) => {
     const result: PaginatedResult<MoldReport[]> | null = await retrieveAssignedMoldReports(uid, limit, pageToken);
     if (!result) return sendError(res, "Failed to retrieve assigned mold reports", 404);
     return sendSuccess(res, result);
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
+export const getAssignedReportsCountController = async (req: Request, res: Response) => {
+  try {
+    // Admin-only endpoint: expects query param `id` specifying mycologist UID
+    const mycologistId = (req.query.id as string) || undefined;
+    if (!mycologistId) return sendError(res, "Missing mycologist id (query param 'id')", 400);
+    const count = await getAssignedReportsCount(mycologistId);
+    if (count === null) return sendError(res, "Failed to retrieve count", 500);
+    return sendSuccess(res, { total: count });
   } catch (error) {
     devLog(error);
     return defaultError(res);

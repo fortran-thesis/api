@@ -11,7 +11,9 @@ import {
   retrieveUserByEmail,
   retrieveUserById,
 } from "../services/userService";
+import { retrieveUsersByRole } from "../services/userService";
 import {APIUser, PaginatedResult, UserDetails} from "../types/types";
+import { getRoleCounts, getUsersByActiveStatus, getDisabledCounts } from "../services/userService";
 
 /**
  * Get user by ID
@@ -182,6 +184,57 @@ export const getUserProfile = async (req: Request, res: Response) => {
     const user = await retrieveUserById(id);
     if (!user) return sendError(res, "Failed to retrieve user", 404);
     return sendSuccess(res, user);
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
+export const getRoleCountsController = async (req: Request, res: Response) => {
+  try {
+    const counts = await getRoleCounts();
+    if (!counts) return sendError(res, "Failed to retrieve role counts", 500);
+    return sendSuccess(res, counts);
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
+export const getAllMycologists = async (req: Request, res: Response) => {
+  const limit: number = parseInt(req.query.limit as string) || 10;
+  const pageToken: string | undefined = req.query.pageToken as string | undefined;
+  try {
+    const result = await retrieveUsersByRole("mycologist", limit, pageToken);
+    if (!result) return sendError(res, "Failed to retrieve mycologists", 500);
+    return sendSuccess(res, result);
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
+export const getUsersByActiveController = async (req: Request, res: Response) => {
+  try {
+    const activeParam = (req.query.active as string) || "true";
+    const active = activeParam.toLowerCase() !== "false"; // default true
+    const limit = parseInt((req.query.limit as string) || "10", 10);
+    const pageToken = (req.query.pageToken as string) || undefined;
+
+    const result = await getUsersByActiveStatus(limit, pageToken, active);
+    if (!result) return sendError(res, "Failed to retrieve users", 500);
+    return sendSuccess(res, result);
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
+export const getDisabledCountsController = async (req: Request, res: Response) => {
+  try {
+  const counts = await getDisabledCounts();
+    if (!counts) return sendError(res, "Failed to get disabled counts", 500);
+    return sendSuccess(res, counts);
   } catch (error) {
     devLog(error);
     return defaultError(res);

@@ -16,9 +16,15 @@ import {
   softDeleteMoldReport,
   postCaseDetail,
   getAssignedMoldReports,
+  getAssignedReportsCountController,
+  getMoldReportCountsController,
+  getAllMoldReportsByUser,
+  assignReport,
+  rejectReport,
 } from "../controllers/moldReportController";
 import {Role} from "../types/enums";
 import {CaseDetailCreateSchema} from "../dto/reportDTO";
+import {AssignMoldReportSchema} from "../dto/reportDTO";
 
 const router = Router();
 
@@ -58,6 +64,17 @@ router.get(
   }
 );
 
+router.post(
+  "/:id/case-details",
+  sanitizeBody,
+  verifyUser(),
+  validateParams(ReportIdSchema),
+  validateBody(CaseDetailCreateSchema),
+  async (req: Request, res: Response) => {
+    await postCaseDetail(req, res);
+  }
+);
+
 router.get(
   "/unassigned",
   verifyUser(Role.ADMIN),
@@ -76,14 +93,30 @@ router.get(
   }
 );
 
-router.post(
-  "/:id/case-details",
-  sanitizeBody,
-  verifyUser(),
-  validateParams(ReportIdSchema),
-  validateBody(CaseDetailCreateSchema),
+router.get(
+  "/assigned/count",
+  verifyUser(Role.ADMIN),
   async (req: Request, res: Response) => {
-    await postCaseDetail(req, res);
+    await getAssignedReportsCountController(req, res);
+  }
+);
+
+router.patch(
+  "/:id/assign",
+  verifyUser(Role.ADMIN),
+  validateParams(ReportIdSchema),
+  validateBody(AssignMoldReportSchema),
+  async (req: Request, res: Response) => {
+    await assignReport(req, res);
+  }
+);
+
+router.patch(
+  "/:id/reject",
+  verifyUser(Role.ADMIN),
+  validateParams(ReportIdSchema),
+  async (req: Request, res: Response) => {
+    await rejectReport(req, res);
   }
 );
 
@@ -93,6 +126,23 @@ router.get(
   validateQuery(PaginationQuerySchema),
   async (req: Request, res: Response) => {
     await getAllArchivedMoldReports(req, res);
+  }
+);
+
+router.get(
+  "/user",
+  verifyUser(),
+  validateQuery(PaginationQuerySchema),
+  async (req: Request, res: Response) => {
+    await getAllMoldReportsByUser(req, res);
+  }
+);
+
+router.get(
+  "/counts/statuses",
+  verifyUser(Role.ADMIN),
+  async (req: Request, res: Response) => {
+    await getMoldReportCountsController(req, res);
   }
 );
 

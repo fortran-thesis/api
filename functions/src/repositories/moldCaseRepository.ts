@@ -1,7 +1,7 @@
 // All references to moldFolderService and moldFolderRespository should now use moldCaseService and moldCaseRepository.
 
 // ...existing code...
-import {FieldPath} from "firebase-admin/firestore";
+import {FieldPath, FieldValue} from "firebase-admin/firestore";
 import {
   addDocument,
   getDocumentsByField,
@@ -23,6 +23,8 @@ export const findMoldCaseById = async (id: string) =>
   getDocumentById(collection, id);
 export const findMoldCaseByName = async (name: string) =>
   getDocumentsByField(collection, "name", name);
+export const findMoldCaseByReportId = async (reportId: string) =>
+  getDocumentsByField(collection, "mold_report_id", reportId);
 export const findAllMoldCases = async (
   uid: string,
   limit: number,
@@ -56,3 +58,37 @@ export const deleteMoldCase = async (uid: string) =>
   deleteDocument(collection, uid);
 export const softDeleteMoldCase = async (uid: string) =>
   softDeleteDocument(collection, uid);
+
+export const appendCultivationLog = async (
+  caseId: string,
+  log: any
+): Promise<FirebaseFirestore.WriteResult | null> => {
+  try {
+    // Use shared updateDocument helper so metadata is preserved and consistent
+    return await updateDocument(collection, caseId, {
+      cultivation_logs: FieldValue.arrayUnion(log),
+    } as any);
+  } catch (err) {
+    devLog(err);
+    return null;
+  }
+};
+
+export const updateCultivationDetails = async (
+  caseId: string,
+  details: Partial<any>
+): Promise<FirebaseFirestore.WriteResult | null> => {
+  try {
+    const updates: any = {};
+    if (details.in_vivo_details !== undefined) {
+      updates["cultivation_details.in_vivo_details"] = details.in_vivo_details;
+    }
+    if (details.in_vitro_details !== undefined) {
+      updates["cultivation_details.in_vitro_details"] = details.in_vitro_details;
+    }
+    return await updateDocument(collection, caseId, updates);
+  } catch (err) {
+    devLog(err);
+    return null;
+  }
+};

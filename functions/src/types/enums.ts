@@ -8,9 +8,9 @@ export enum ReportReason {
   SOMETHING_ELSE = "something_else",
 }
 export enum Role {
-  USER = "user",
+  USER = "farmer",
   ADMIN = "admin",
-  CURATOR = "curator",
+  CURATOR = "mycologist",
 }
 
 export enum FeedbackStatus {

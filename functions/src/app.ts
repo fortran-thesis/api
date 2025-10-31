@@ -8,6 +8,7 @@ import {setupSwagger} from "./configs/swagger";
 import authRoutes from "./routes/authRoutes";
 
 import userRoutes from "./routes/userRoutes";
+import mycologistRoutes from "./routes/mycologistRoutes";
 import {limitingOptions} from "./configs/limit";
 import helmet from "helmet";
 import scanRoutes from "./routes/scannedMoldRoutes";
@@ -64,6 +65,7 @@ const router = Router();
 
 router.use("/v1/auth", authRoutes);
 router.use("/v1/user", userRoutes);
+router.use("/v1/mycologist", mycologistRoutes);
 router.use("/v1/mold", moldRoutes);
 router.use("/v1/scan", scanRoutes);
 router.use("/v1/monitor", monitorRoutes);
