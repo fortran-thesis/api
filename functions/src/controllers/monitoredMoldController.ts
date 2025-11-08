@@ -13,53 +13,35 @@ import {
 import {uploadFile} from "../lib/storage";
 import {StorageFolder, generateStoragePath} from "../configs/storage";
 
+/**
+ * @swagger
+ * /api/v1/monitor:
+ *   post:
+ *     summary: Create a new monitored mold
+ *     tags: [MonitoredMolds]
+ *     security:
+ *       - bearerAuth: []
+ *       - cookieAuth: []
+ *     description: Create a new monitored mold with image upload. Requires authentication.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               photo:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Successfully created monitored mold
+ *       400:
+ *         description: Invalid photo or validation error
+ *       500:
+ *         description: Server error
+ */
 export const createMonitoredMold = async (req: Request, res: Response) => {
-  /**
-   * @swagger
-   * /api/v1/monitored-molds:
-   *   post:
-   *     summary: Create a new monitored mold
-   *     tags: [MonitoredMolds]
-   *     security:
-   *       - bearerAuth: []
-   *       - cookieAuth: []
-   *     description:
-   *       - Requires authentication (Bearer token or session cookie)
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         multipart/form-data:
-   *           schema:
-   *             type: object
-   *             properties:
-   *               details:
-   *                 type: object
-   *                 description: MonitoredMold DTO. See MonitoredMold interface for properties.
-   *                 properties:
-   *                   user_id:
-   *                     type: string
-   *                   mold_folder_id:
-   *                     type: string
-   *                   image_url:
-   *                     type: string
-   *                   uploaded_at:
-   *                     type: string
-   *                     format: date-time
-   *                   image_format:
-   *                     type: string
-   *                   surface_area:
-   *                     type: number
-   *               photo:
-   *                 type: string
-   *                 format: binary
-   *     responses:
-   *       200:
-   *         description: Successfully created monitored mold
-   *       400:
-   *         description: Validation error
-   *       500:
-   *         description: Server error
-   */
   try {
     const details: MonitoredMold = req.body.details;
     const photo: Express.Multer.File = req.file as Express.Multer.File;
@@ -84,46 +66,45 @@ export const createMonitoredMold = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * @swagger
+ * /api/v1/monitor:
+ *   get:
+ *     summary: Get all monitored molds by folder ID
+ *     tags: [MonitoredMolds]
+ *     security:
+ *       - bearerAuth: []
+ *       - cookieAuth: []
+ *     description: Retrieve all monitored molds for a specific folder with pagination. Requires authentication.
+ *     parameters:
+ *       - in: query
+ *         name: folderId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Folder ID to filter by
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         description: Number of items per page (default 10)
+ *       - in: query
+ *         name: pageToken
+ *         schema:
+ *           type: string
+ *         description: Cursor token for pagination
+ *     responses:
+ *       200:
+ *         description: List of monitored molds
+ *       404:
+ *         description: Failed to retrieve monitored molds
+ *       500:
+ *         description: Server error
+ */
 export const getAllMonitoredMoldsByFolderId = async (
   req: Request,
   res: Response
 ) => {
-  /**
-   * @swagger
-   * /api/v1/monitored-molds/{id}:
-   *   get:
-   *     summary: Get all monitored molds by folder ID
-   *     tags: [MonitoredMolds]
-   *     security:
-   *       - bearerAuth: []
-   *       - cookieAuth: []
-   *     description:
-   *       - Requires authentication (Bearer token or session cookie)
-   *     parameters:
-   *       - in: path
-   *         name: id
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: Folder ID
-   *       - in: query
-   *         name: page
-   *         schema:
-   *           type: string
-   *         description: Page number
-   *       - in: query
-   *         name: limit
-   *         schema:
-   *           type: string
-   *         description: Page size
-   *     responses:
-   *       200:
-   *         description: List of monitored molds
-   *       404:
-   *         description: Not found
-   *       500:
-   *         description: Server error
-   */
   const pageToken: string | undefined = req.query.pageToken as string | undefined;
   const limit: number = parseInt(req.query.limit as string) || 10;
   const id: string = req.params.id;
@@ -143,33 +124,32 @@ export const getAllMonitoredMoldsByFolderId = async (
   }
 };
 
+/**
+ * @swagger
+ * /api/v1/monitor/{id}:
+ *   get:
+ *     summary: Get monitored mold by ID
+ *     tags: [MonitoredMolds]
+ *     security:
+ *       - bearerAuth: []
+ *       - cookieAuth: []
+ *     description: Retrieve a specific monitored mold by its ID. Requires authentication.
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Monitored mold ID
+ *     responses:
+ *       200:
+ *         description: Monitored mold retrieved successfully
+ *       404:
+ *         description: Monitored mold not found
+ *       500:
+ *         description: Server error
+ */
 export const getMonitoredMoldById = async (req: Request, res: Response) => {
-  /**
-   * @swagger
-   * /api/v1/monitored-molds/{id}:
-   *   get:
-   *     summary: Get monitored mold by ID
-   *     tags: [MonitoredMolds]
-   *     security:
-   *       - bearerAuth: []
-   *       - cookieAuth: []
-   *     description:
-   *       - Requires authentication (Bearer token or session cookie)
-   *     parameters:
-   *       - in: path
-   *         name: id
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: Monitored mold ID
-   *     responses:
-   *       200:
-   *         description: Monitored mold
-   *       404:
-   *         description: Not found
-   *       500:
-   *         description: Server error
-   */
   try {
     const id = req.params.id;
     const mold: MonitoredMold | null = await retrieveMonitoredMoldById(id);
@@ -181,45 +161,44 @@ export const getMonitoredMoldById = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * @swagger
+ * /api/v1/monitor/{id}:
+ *   patch:
+ *     summary: Update monitored mold
+ *     tags: [MonitoredMolds]
+ *     security:
+ *       - bearerAuth: []
+ *       - cookieAuth: []
+ *     description: Update a monitored mold's details by ID. Requires authentication.
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Monitored mold ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               details:
+ *                 type: object
+ *                 description: Monitored mold details to update
+ *     responses:
+ *       200:
+ *         description: Successfully updated monitored mold
+ *       400:
+ *         description: Validation error
+ *       404:
+ *         description: Monitored mold not found
+ *       500:
+ *         description: Server error
+ */
 export const patchMonitoredMold = async (req: Request, res: Response) => {
-  /**
-   * @swagger
-   * /api/v1/monitored-molds/{id}:
-   *   patch:
-   *     summary: Update monitored mold
-   *     tags: [MonitoredMolds]
-   *     security:
-   *       - bearerAuth: []
-   *       - cookieAuth: []
-   *     description:
-   *       - Requires authentication (Bearer token or session cookie)
-   *     parameters:
-   *       - in: path
-   *         name: id
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: Monitored mold ID
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             properties:
-   *               details:
-   *                 type: object
-   *                 description: Monitored mold details to update
-   *     responses:
-   *       200:
-   *         description: Successfully updated monitored mold
-   *       400:
-   *         description: Validation error
-   *       404:
-   *         description: Not found
-   *       500:
-   *         description: Server error
-   */
   try {
     const id: string = req.params.id;
     const details: Partial<MonitoredMold> = req.body.details;
@@ -232,31 +211,30 @@ export const patchMonitoredMold = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * @swagger
+ * /api/v1/monitor/hard/{id}:
+ *   delete:
+ *     summary: Hard delete monitored mold
+ *     tags: [MonitoredMolds]
+ *     security:
+ *       - bearerAuth: []
+ *       - cookieAuth: []
+ *     description: Permanently delete a monitored mold by ID. Requires authentication.
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Monitored mold ID
+ *     responses:
+ *       200:
+ *         description: Successfully deleted monitored mold
+ *       500:
+ *         description: Server error
+ */
 export const deleteMonitoredMold = async (req: Request, res: Response) => {
-  /**
-   * @swagger
-   * /api/v1/monitored-molds/{id}:
-   *   delete:
-   *     summary: Delete monitored mold
-   *     tags: [MonitoredMolds]
-   *     security:
-   *       - bearerAuth: []
-   *       - cookieAuth: []
-   *     description:
-   *       - Requires authentication (Bearer token or session cookie)
-   *     parameters:
-   *       - in: path
-   *         name: id
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: Monitored mold ID
-   *     responses:
-   *       200:
-   *         description: Successfully deleted monitored mold
-   *       500:
-   *         description: Server error
-   */
   try {
     const id: string = req.params.id;
     await removeMonitoredMold(id);
@@ -267,31 +245,30 @@ export const deleteMonitoredMold = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * @swagger
+ * /api/v1/monitor/soft/{id}:
+ *   delete:
+ *     summary: Soft delete monitored mold
+ *     tags: [MonitoredMolds]
+ *     security:
+ *       - bearerAuth: []
+ *       - cookieAuth: []
+ *     description: Soft delete a monitored mold by marking it as archived. Requires authentication.
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Monitored mold ID
+ *     responses:
+ *       200:
+ *         description: Successfully soft deleted monitored mold
+ *       500:
+ *         description: Server error
+ */
 export const softDeleteMonitoredMold = async (req: Request, res: Response) => {
-  /**
-   * @swagger
-   * /api/v1/monitored-molds/soft/{id}:
-   *   delete:
-   *     summary: Soft delete monitored mold
-   *     tags: [MonitoredMolds]
-   *     security:
-   *       - bearerAuth: []
-   *       - cookieAuth: []
-   *     description:
-   *       - Requires authentication (Bearer token or session cookie)
-   *     parameters:
-   *       - in: path
-   *         name: id
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: Monitored mold ID
-   *     responses:
-   *       200:
-   *         description: Successfully soft deleted monitored mold
-   *       500:
-   *         description: Server error
-   */
   try {
     const id: string = req.params.id;
     await softRemoveMonitoredMold(id);
