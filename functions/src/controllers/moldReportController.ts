@@ -113,6 +113,22 @@ export const createMoldReport = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * @swagger
+ * /api/v1/mold-report/counts/statuses:
+ *   get:
+ *     summary: Get mold report status counts
+ *     tags: [MoldReport]
+ *     security:
+ *       - bearerAuth: []
+ *       - cookieAuth: []
+ *     description: Retrieve counts of mold reports by status (pending, in progress, resolved, rejected). Requires admin role.
+ *     responses:
+ *       200:
+ *         description: Status counts retrieved successfully
+ *       500:
+ *         description: Server error
+ */
 export const getMoldReportCountsController = async (req: Request, res: Response) => {
   try {
     const counts = await getMoldReportStatusCounts();
@@ -124,6 +140,35 @@ export const getMoldReportCountsController = async (req: Request, res: Response)
   }
 };
 
+/**
+ * @swagger
+ * /api/v1/mold-report:
+ *   get:
+ *     summary: Get all mold reports
+ *     tags: [MoldReport]
+ *     security:
+ *       - bearerAuth: []
+ *       - cookieAuth: []
+ *     description: Retrieve all mold reports with pagination. Requires authentication.
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         description: Number of items per page (default 10)
+ *       - in: query
+ *         name: pageToken
+ *         schema:
+ *           type: string
+ *         description: Cursor token for pagination
+ *     responses:
+ *       200:
+ *         description: List of mold reports
+ *       404:
+ *         description: Failed to retrieve mold reports
+ *       500:
+ *         description: Server error
+ */
 export const getAllMoldReports = async (req: Request, res: Response) => {
   const limit: number = parseInt(req.query.limit as string) || 10;
   const pageToken: string | undefined = req.query.pageToken as string | undefined;
@@ -137,6 +182,37 @@ export const getAllMoldReports = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * @swagger
+ * /api/v1/mold-report/user:
+ *   get:
+ *     summary: Get all mold reports by authenticated user
+ *     tags: [MoldReport]
+ *     security:
+ *       - bearerAuth: []
+ *       - cookieAuth: []
+ *     description: Retrieve all mold reports created by the authenticated user with pagination. Requires authentication.
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         description: Number of items per page (default 10)
+ *       - in: query
+ *         name: pageToken
+ *         schema:
+ *           type: string
+ *         description: Cursor token for pagination
+ *     responses:
+ *       200:
+ *         description: List of user's mold reports
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Failed to retrieve mold reports
+ *       500:
+ *         description: Server error
+ */
 export const getAllMoldReportsByUser = async (req: Request, res: Response) => {
   const limit: number = parseInt(req.query.limit as string) || 10;
   const pageToken: string | undefined = req.query.pageToken as string | undefined;
@@ -157,6 +233,37 @@ export const getAllMoldReportsByUser = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * @swagger
+ * /api/v1/mold-report/archive:
+ *   get:
+ *     summary: Get all archived mold reports
+ *     tags: [MoldReport]
+ *     security:
+ *       - bearerAuth: []
+ *       - cookieAuth: []
+ *     description: Retrieve all archived mold reports with pagination. Requires authentication.
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         description: Number of items per page (default 10)
+ *       - in: query
+ *         name: pageToken
+ *         schema:
+ *           type: string
+ *         description: Cursor token for pagination
+ *     responses:
+ *       200:
+ *         description: List of archived mold reports
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Failed to retrieve mold reports
+ *       500:
+ *         description: Server error
+ */
 export const getAllArchivedMoldReports = async (req: Request, res: Response) => {
   const limit: number = parseInt(req.query.limit as string) || 10;
   const pageToken: string | undefined = req.query.pageToken as string | undefined;
@@ -172,6 +279,35 @@ export const getAllArchivedMoldReports = async (req: Request, res: Response) => 
   }
 };
 
+/**
+ * @swagger
+ * /api/v1/mold-report/unassigned:
+ *   get:
+ *     summary: Get unassigned mold reports
+ *     tags: [MoldReport]
+ *     security:
+ *       - bearerAuth: []
+ *       - cookieAuth: []
+ *     description: Retrieve all mold reports that have not been assigned to a mycologist. Requires admin role.
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         description: Number of items per page (default 10)
+ *       - in: query
+ *         name: pageToken
+ *         schema:
+ *           type: string
+ *         description: Cursor token for pagination
+ *     responses:
+ *       200:
+ *         description: List of unassigned mold reports
+ *       404:
+ *         description: Failed to retrieve unassigned mold reports
+ *       500:
+ *         description: Server error
+ */
 export const getUnassignedMoldReports = async (req: Request, res: Response) => {
   const limit: number = parseInt(req.query.limit as string) || 10;
   const pageToken: string | undefined = req.query.pageToken as string | undefined;
@@ -185,6 +321,50 @@ export const getUnassignedMoldReports = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * @swagger
+ * /api/v1/mold-report/{id}/case-details:
+ *   post:
+ *     summary: Add case detail to a mold report
+ *     tags: [MoldReport]
+ *     security:
+ *       - bearerAuth: []
+ *       - cookieAuth: []
+ *     description: Add a case detail (follow-up) to an existing mold report. If the requester is the report owner, the report status resets to pending and the mycologist is unassigned. Requires authentication.
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Mold report ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - description
+ *             properties:
+ *               cover_photo:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Array of photo URLs (optional)
+ *               description:
+ *                 type: string
+ *                 description: Case detail description
+ *     responses:
+ *       200:
+ *         description: Case detail added successfully
+ *       400:
+ *         description: Failed to add case detail
+ *       404:
+ *         description: Report not found
+ *       500:
+ *         description: Server error
+ */
 export const postCaseDetail = async (req: Request, res: Response) => {
   try {
     const id: string = req.params.id;
@@ -222,6 +402,46 @@ export const postCaseDetail = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * @swagger
+ * /api/v1/mold-report/{id}/assign:
+ *   patch:
+ *     summary: Assign a mycologist to a mold report
+ *     tags: [MoldReport]
+ *     security:
+ *       - bearerAuth: []
+ *       - cookieAuth: []
+ *     description: Assign a mycologist to a mold report and optionally update its status. Requires admin role.
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Mold report ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - assigned_mycologist_id
+ *             properties:
+ *               assigned_mycologist_id:
+ *                 type: string
+ *                 description: ID of the mycologist to assign
+ *               status:
+ *                 type: string
+ *                 description: Optional status update (defaults to "in progress")
+ *     responses:
+ *       200:
+ *         description: Mycologist assigned successfully
+ *       400:
+ *         description: Failed to assign mycologist
+ *       500:
+ *         description: Server error
+ */
 export const assignReport = async (req: Request, res: Response) => {
   try {
     const id: string = req.params.id;
@@ -243,6 +463,31 @@ export const assignReport = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * @swagger
+ * /api/v1/mold-report/{id}/reject:
+ *   patch:
+ *     summary: Reject/close a mold report
+ *     tags: [MoldReport]
+ *     security:
+ *       - bearerAuth: []
+ *       - cookieAuth: []
+ *     description: Mark a mold report as rejected and clear assigned mycologist. Requires admin role.
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Mold report ID
+ *     responses:
+ *       200:
+ *         description: Report rejected successfully
+ *       400:
+ *         description: Failed to reject/close report
+ *       500:
+ *         description: Server error
+ */
 export const rejectReport = async (req: Request, res: Response) => {
   try {
     const id: string = req.params.id;
@@ -263,6 +508,37 @@ export const rejectReport = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * @swagger
+ * /api/v1/mold-report/assigned:
+ *   get:
+ *     summary: Get mold reports assigned to authenticated mycologist
+ *     tags: [MoldReport]
+ *     security:
+ *       - bearerAuth: []
+ *       - cookieAuth: []
+ *     description: Retrieve all mold reports assigned to the authenticated mycologist. Requires curator role.
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         description: Number of items per page (default 10)
+ *       - in: query
+ *         name: pageToken
+ *         schema:
+ *           type: string
+ *         description: Cursor token for pagination
+ *     responses:
+ *       200:
+ *         description: List of assigned mold reports
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Failed to retrieve assigned mold reports
+ *       500:
+ *         description: Server error
+ */
 export const getAssignedMoldReports = async (req: Request, res: Response) => {
   const limit: number = parseInt(req.query.limit as string) || 10;
   const pageToken: string | undefined = req.query.pageToken as string | undefined;
@@ -278,6 +554,31 @@ export const getAssignedMoldReports = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * @swagger
+ * /api/v1/mold-report/assigned/count:
+ *   get:
+ *     summary: Get count of reports assigned to a specific mycologist
+ *     tags: [MoldReport]
+ *     security:
+ *       - bearerAuth: []
+ *       - cookieAuth: []
+ *     description: Retrieve the count of mold reports assigned to a specific mycologist by ID. Requires admin role.
+ *     parameters:
+ *       - in: query
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Mycologist user ID
+ *     responses:
+ *       200:
+ *         description: Count retrieved successfully
+ *       400:
+ *         description: Missing mycologist id
+ *       500:
+ *         description: Failed to retrieve count
+ */
 export const getAssignedReportsCountController = async (req: Request, res: Response) => {
   try {
     // Admin-only endpoint: expects query param `id` specifying mycologist UID
@@ -292,6 +593,31 @@ export const getAssignedReportsCountController = async (req: Request, res: Respo
   }
 };
 
+/**
+ * @swagger
+ * /api/v1/mold-report/{id}:
+ *   get:
+ *     summary: Get a mold report by ID
+ *     tags: [MoldReport]
+ *     security:
+ *       - bearerAuth: []
+ *       - cookieAuth: []
+ *     description: Retrieve a specific mold report by its ID. Requires authentication.
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Mold report ID
+ *     responses:
+ *       200:
+ *         description: Mold report retrieved successfully
+ *       404:
+ *         description: Failed to retrieve mold report
+ *       500:
+ *         description: Server error
+ */
 export const getMoldReportById = async (req: Request, res: Response) => {
   try {
     const id: string = req.params.id;
@@ -304,6 +630,38 @@ export const getMoldReportById = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * @swagger
+ * /api/v1/mold-report/{id}:
+ *   patch:
+ *     summary: Update a mold report
+ *     tags: [MoldReport]
+ *     security:
+ *       - bearerAuth: []
+ *       - cookieAuth: []
+ *     description: Update a mold report's details by ID. Requires authentication.
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Mold report ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             description: Partial mold report data to update
+ *     responses:
+ *       200:
+ *         description: Mold report updated successfully
+ *       404:
+ *         description: Failed to update mold report
+ *       500:
+ *         description: Server error
+ */
 export const patchMoldReport = async (req: Request, res: Response) => {
   try {
     const id: string = req.params.id;
@@ -317,6 +675,29 @@ export const patchMoldReport = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * @swagger
+ * /api/v1/mold-report/hard/{id}:
+ *   delete:
+ *     summary: Hard delete a mold report
+ *     tags: [MoldReport]
+ *     security:
+ *       - bearerAuth: []
+ *       - cookieAuth: []
+ *     description: Permanently delete a mold report by ID. Requires authentication.
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Mold report ID
+ *     responses:
+ *       200:
+ *         description: Mold report deleted successfully
+ *       500:
+ *         description: Server error
+ */
 export const deleteMoldReport = async (req: Request, res: Response) => {
   try {
     const id: string = req.params.id;
@@ -328,6 +709,29 @@ export const deleteMoldReport = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * @swagger
+ * /api/v1/mold-report/soft/{id}:
+ *   delete:
+ *     summary: Soft delete a mold report
+ *     tags: [MoldReport]
+ *     security:
+ *       - bearerAuth: []
+ *       - cookieAuth: []
+ *     description: Soft delete a mold report by marking it as archived. Requires authentication.
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Mold report ID
+ *     responses:
+ *       200:
+ *         description: Mold report soft deleted successfully
+ *       500:
+ *         description: Server error
+ */
 export const softDeleteMoldReport = async (req: Request, res: Response) => {
   try {
     const id: string = req.params.id;
