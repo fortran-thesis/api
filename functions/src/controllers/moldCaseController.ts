@@ -345,6 +345,31 @@ export const softDeleteMoldCase = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * @swagger
+ * /api/v1/mold-case/by-report/{id}:
+ *   get:
+ *     summary: Get mold case by report ID
+ *     tags: [MoldCases]
+ *     security:
+ *       - bearerAuth: []
+ *       - cookieAuth: []
+ *     description: Retrieve the mold case associated with a given mold report ID. Requires authentication.
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Mold report ID
+ *     responses:
+ *       200:
+ *         description: Mold case retrieved successfully
+ *       404:
+ *         description: No mold case found for this report
+ *       500:
+ *         description: Server error
+ */
 export const getMoldCaseByReportId = async (req: Request, res: Response) => {
   /**
    * GET /api/v1/mold-cases/by-report/:id
@@ -361,6 +386,42 @@ export const getMoldCaseByReportId = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * @swagger
+ * /api/v1/mold-case/{id}/logs:
+ *   post:
+ *     summary: Add a cultivation log entry to a mold case
+ *     tags: [MoldCases]
+ *     security:
+ *       - bearerAuth: []
+ *       - cookieAuth: []
+ *     description: Add a cultivation log entry to a mold case with optional image upload. Requires authentication.
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Mold case ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *                 description: Optional cultivation log image
+ *     responses:
+ *       200:
+ *         description: Cultivation log added successfully
+ *       400:
+ *         description: Failed to add cultivation log
+ *       500:
+ *         description: Server error
+ */
 export const addCultivationLog = async (req: Request, res: Response) => {
   /**
    * POST /api/v1/mold-cases/:caseId/logs
@@ -395,6 +456,38 @@ export const addCultivationLog = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * @swagger
+ * /api/v1/mold-case/{id}/cultivation-details:
+ *   patch:
+ *     summary: Update cultivation details for a mold case
+ *     tags: [MoldCases]
+ *     security:
+ *       - bearerAuth: []
+ *       - cookieAuth: []
+ *     description: Update cultivation details (in_vivo and/or in_vitro) for a mold case. Requires authentication.
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Mold case ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             description: Cultivation details to update
+ *     responses:
+ *       200:
+ *         description: Cultivation details updated successfully
+ *       400:
+ *         description: Failed to update cultivation details
+ *       500:
+ *         description: Server error
+ */
 export const updateCultivationDetails = async (req: Request, res: Response) => {
   /**
    * PATCH /api/v1/mold-cases/:caseId/cultivation-details
@@ -412,6 +505,49 @@ export const updateCultivationDetails = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * @swagger
+ * /api/v1/mold-case/{id}/analyze-cultivation:
+ *   post:
+ *     summary: Analyze cultivation image using AI
+ *     tags: [MoldCases]
+ *     security:
+ *       - bearerAuth: []
+ *       - cookieAuth: []
+ *     description: Analyze a cultivation image using Gemini AI to provide insights. Requires authentication.
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Mold case ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - type
+ *               - image
+ *             properties:
+ *               type:
+ *                 type: string
+ *                 enum: [vivo, vitro]
+ *                 description: Cultivation type (vivo or vitro)
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *                 description: Cultivation image to analyze
+ *     responses:
+ *       200:
+ *         description: Image analyzed successfully
+ *       400:
+ *         description: Invalid cultivation type or no image provided
+ *       500:
+ *         description: Failed to analyze image
+ */
 export const analyzeCultivationLogImage = async (req: Request, res: Response) => {
   /**
    * POST /api/v1/mold-cases/:id/analyze-cultivation
