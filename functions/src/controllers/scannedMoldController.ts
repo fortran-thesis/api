@@ -48,38 +48,6 @@ import {
  *         description: Server error
  */
 export const createScannedMold = async (req: Request, res: Response) => {
-  /**
-   * @swagger
-   * /api/v1/scanned-molds:
-   *   post:
-   *     summary: Create a new scanned mold
-   *     tags: [ScannedMold]
-   *     security:
-   *       - bearerAuth: []
-   *       - cookieAuth: []
-   *     description: Create a new scanned mold with image upload. Requires authentication (Bearer token or session cookie).
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         multipart/form-data:
-   *           schema:
-   *             type: object
-   *             properties:
-   *               name:
-   *                 type: string
-   *               description:
-   *                 type: string
-   *               image:
-   *                 type: string
-   *                 format: binary
-   *     responses:
-   *       200:
-   *         description: Successfully created scanned mold
-   *       400:
-   *         description: Validation error
-   *       500:
-   *         description: Server error
-   */
   try {
     const details: Omit<ScannedMold, "image_url" | "uploaded_at"> = req.body;
     const photo: Express.Multer.File = req.file as Express.Multer.File;
@@ -139,35 +107,6 @@ export const createScannedMold = async (req: Request, res: Response) => {
  *         description: Server error
  */
 export const getAllScannedMolds = async (req: Request, res: Response) => {
-  /**
-   * @swagger
-   * /api/v1/scanned-molds:
-   *   get:
-   *     summary: Get all scanned molds
-   *     tags: [ScannedMold]
-   *     security:
-   *       - bearerAuth: []
-   *       - cookieAuth: []
-   *     description: Retrieve all scanned molds. Requires authentication (Bearer token or session cookie).
-   *     parameters:
-   *       - in: query
-   *         name: page
-   *         schema:
-   *           type: integer
-   *         description: Page number
-   *       - in: query
-   *         name: limit
-   *         schema:
-   *           type: integer
-   *         description: Page size
-   *     responses:
-   *       200:
-   *         description: List of scanned molds
-   *       404:
-   *         description: Not found
-   *       500:
-   *         description: Server error
-   */
   const limit: number = parseInt(req.query.limit as string) || 10;
   const pageToken: string | undefined = req.query.pageToken as string | undefined;
   try {
@@ -209,31 +148,6 @@ export const getAllScannedMolds = async (req: Request, res: Response) => {
  *         description: Server error
  */
 export const getScannedMoldById = async (req: Request, res: Response) => {
-  /**
-   * @swagger
-   * /api/v1/scanned-molds/{id}:
-   *   get:
-   *     summary: Get scanned mold by ID
-   *     tags: [ScannedMold]
-   *     security:
-   *       - bearerAuth: []
-   *       - cookieAuth: []
-   *     description: Retrieve a scanned mold by its ID. Requires authentication (Bearer token or session cookie).
-   *     parameters:
-   *       - in: path
-   *         name: id
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: Scanned mold ID
-   *     responses:
-   *       200:
-   *         description: Scanned mold
-   *       404:
-   *         description: Not found
-   *       500:
-   *         description: Server error
-   */
   try {
     const id = req.params.id;
     const mold: ScannedMold | null = await retrieveScannedMoldById(id);
@@ -283,43 +197,6 @@ export const getScannedMoldById = async (req: Request, res: Response) => {
  *         description: Server error
  */
 export const patchScannedMold = async (req: Request, res: Response) => {
-  /**
-   * @swagger
-   * /api/v1/scanned-molds/{id}:
-   *   patch:
-   *     summary: Update scanned mold
-   *     tags: [ScannedMold]
-   *     security:
-   *       - bearerAuth: []
-   *       - cookieAuth: []
-   *     description: Update a scanned mold by its ID. Requires authentication (Bearer token or session cookie).
-   *     parameters:
-   *       - in: path
-   *         name: id
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: Scanned mold ID
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             properties:
-   *               details:
-   *                 type: object
-   *                 description: Scanned mold details to update
-   *     responses:
-   *       200:
-   *         description: Successfully updated scanned mold
-   *       400:
-   *         description: Validation error
-   *       404:
-   *         description: Not found
-   *       500:
-   *         description: Server error
-   */
   try {
     const id: string = req.params.id;
     const details: Partial<ScannedMold> = req.body;
@@ -361,29 +238,6 @@ export const patchScannedMold = async (req: Request, res: Response) => {
  *         description: Server error
  */
 export const deleteScannedMold = async (req: Request, res: Response) => {
-  /**
-   * @swagger
-   * /api/v1/scanned-molds/hard/{id}:
-   *   delete:
-   *     summary: Hard delete scanned mold
-   *     tags: [ScannedMold]
-   *     security:
-   *       - bearerAuth: []
-   *       - cookieAuth: []
-   *     description: Hard delete a scanned mold by its ID. Requires authentication (Bearer token or session cookie).
-   *     parameters:
-   *       - in: path
-   *         name: id
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: Scanned mold ID
-   *     responses:
-   *       200:
-   *         description: Successfully deleted scanned mold
-   *       500:
-   *         description: Server error
-   */
   try {
     const id: string = req.params.id;
     await removeScannedMold(id);
@@ -423,29 +277,6 @@ export const deleteScannedMold = async (req: Request, res: Response) => {
  *         description: Server error
  */
 export const softDeleteScannedMold = async (req: Request, res: Response) => {
-  /**
-   * @swagger
-   * /api/v1/scanned-molds/soft/{id}:
-   *   delete:
-   *     summary: Soft delete scanned mold
-   *     tags: [ScannedMold]
-   *     security:
-   *       - bearerAuth: []
-   *       - cookieAuth: []
-   *     description: Soft delete a scanned mold by its ID. Requires authentication (Bearer token or session cookie).
-   *     parameters:
-   *       - in: path
-   *         name: id
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: Scanned mold ID
-   *     responses:
-   *       200:
-   *         description: Successfully soft deleted scanned mold
-   *       500:
-   *         description: Server error
-   */
   try {
     const id: string = req.params.id;
     await softRemoveScannedMold(id);
