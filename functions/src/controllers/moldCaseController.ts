@@ -5,6 +5,7 @@ import {MoldCase, PaginatedResult} from "../types/types";
 import {
   addMoldCaseToFirestore,
   retrieveAllMoldCasesByUser,
+  retrieveAssignedMoldCases,
   retrieveMoldCaseByReportId,
   updateMoldCaseInFirestore,
   removeMoldCase,
@@ -12,6 +13,9 @@ import {
   addCultivationLogToCase,
   updateCultivationDetailsInCase,
 } from "../services/moldCaseService";
+import {analyzeCultivationImage} from "../services/cultivationAnalysisService";
+import {uploadFile} from "../lib/storage";
+import {StorageFolder, generateStoragePath} from "../configs/storage";
 
 export const createMoldCase = async (req: Request, res: Response) => {
   /**
@@ -119,6 +123,53 @@ export const getAllMoldCases = async (req: Request, res: Response) => {
   }
 };
 
+export const getAssignedMoldCases = async (req: Request, res: Response) => {
+  /**
+   * @swagger
+   * /api/v1/mold-case/assigned:
+   *   get:
+   *     summary: Get all mold cases assigned to the authenticated curator
+   *     tags: [MoldCases]
+   *     security:
+   *       - bearerAuth: []
+   *       - cookieAuth: []
+   *     description:
+   *       - Requires authentication with CURATOR role (Bearer token or session cookie)
+   *     parameters:
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *         description: Page size
+   *       - in: query
+   *         name: pageToken
+   *         schema:
+   *           type: string
+   *         description: Cursor token
+   *     responses:
+   *       200:
+   *         description: List of assigned mold cases
+   *       401:
+   *         description: Unauthorized (not a curator)
+   *       404:
+   *         description: Not found
+   *       500:
+   *         description: Server error
+   */
+  const limit: number = parseInt(req.query.limit as string) || 10;
+  const pageToken: string | undefined = req.query.pageToken as string | undefined;
+  const mycologistId: string | undefined = req.user?.id;
+  try {
+    if (!mycologistId) return sendError(res, "Unauthorized", 401);
+    const result: PaginatedResult<MoldCase[]> | null = await retrieveAssignedMoldCases(mycologistId, limit, pageToken);
+    if (!result) return sendError(res, "Failed to retrieve assigned mold cases", 404);
+    return sendSuccess(res, result);
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
 export const getAllArchivedMoldCases = async (
   req: Request,
   res: Response
@@ -210,10 +261,14 @@ export const patchMoldCase = async (req: Request, res: Response) => {
    */
   try {
     const id: string = req.params.id;
-    const details: Partial<MoldCase> = req.body.details;
+    // Support both req.body.details and direct properties
+    const details: Partial<MoldCase> = req.body.details || req.body;
+    if (!details || Object.keys(details).length === 0) {
+      return sendError(res, "No update data provided", 400);
+    }
     const updated = await updateMoldCaseInFirestore(id, details);
     if (!updated) return sendError(res, "Failed to update mold case", 404);
-    return sendSuccess(res, "Successfully updated mold case.");
+    return sendSuccess(res, updated);
   } catch (error) {
     devLog(error);
     return defaultError(res);
@@ -309,11 +364,28 @@ export const getMoldCaseByReportId = async (req: Request, res: Response) => {
 export const addCultivationLog = async (req: Request, res: Response) => {
   /**
    * POST /api/v1/mold-cases/:caseId/logs
-   * Add a cultivation log entry to a mold case
+   * Add a cultivation log entry to a mold case with optional image upload
    */
   try {
-  const caseId: string = req.params.id;
+    const caseId: string = req.params.id;
     const logData = req.body;
+    
+    // Handle image upload if provided
+    if (req.file) {
+      const storagePath = generateStoragePath(StorageFolder.CULTIVATION_LOGS, req.file.originalname);
+      const uploadedPath = await uploadFile(
+        storagePath,
+        req.file.buffer,
+        req.file.mimetype
+      );
+      
+      if (!uploadedPath) {
+        return sendError(res, "Failed to upload cultivation log image", 500);
+      }
+      
+      logData.image_url = uploadedPath;
+    }
+    
     const updated = await addCultivationLogToCase(caseId, logData);
     if (!updated) return sendError(res, "Failed to add cultivation log", 400);
     return sendSuccess(res, updated);
@@ -339,3 +411,38 @@ export const updateCultivationDetails = async (req: Request, res: Response) => {
     return defaultError(res);
   }
 };
+
+export const analyzeCultivationLogImage = async (req: Request, res: Response) => {
+  /**
+   * POST /api/v1/mold-cases/:id/analyze-cultivation
+   * Analyze cultivation image using Gemini AI
+   * 
+   * Body:
+   * - type: "vivo" | "vitro" (cultivation type)
+   * - file: image file (via multer)
+   */
+  try {
+    const cultivationType = req.body.type as "vivo" | "vitro";
+    
+    if (!cultivationType || (cultivationType !== "vivo" && cultivationType !== "vitro")) {
+      return sendError(res, "Invalid cultivation type. Must be 'vivo' or 'vitro'", 400);
+    }
+    
+    if (!req.file) {
+      return sendError(res, "No image file provided", 400);
+    }
+    
+    // Analyze the image using Gemini
+    const analysis = await analyzeCultivationImage(req.file.buffer, cultivationType);
+    
+    if (!analysis) {
+      return sendError(res, "Failed to analyze image", 500);
+    }
+    
+    return sendSuccess(res, analysis);
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+

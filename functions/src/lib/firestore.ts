@@ -20,6 +20,7 @@ const callFirebase = (
  * @template T
  * @param collection - The name of the Firestore collection
  * @param document - The document data to add
+ * @param uid - Optional custom document ID
  * @return The document reference or null on error
  */
 export const addDocument = async <T extends object>(
@@ -41,7 +42,7 @@ export const addDocument = async <T extends object>(
       return await ref.get();
     }
 
-    return (await callFirebase(collection).add(withMetadata)).get();
+    return await (await callFirebase(collection).add(withMetadata)).get();
   } catch (error) {
     devLog(error);
     return null;
@@ -193,7 +194,7 @@ export const getDocumentByFieldId = async (
 /**
  * Retrieves a single Firestore document by its document ID.
  * @param collection - The name of the Firestore collection
- * @param documentUid - The document ID
+ * @param uid - The document ID
  * @return The document snapshot or null if not found/error
  */
 export const getDocumentById = async (
@@ -203,6 +204,7 @@ export const getDocumentById = async (
   try {
     const docSnap = await callFirebase(collection).doc(uid).get();
     if (!docSnap.exists) throw new Error("Document does not exist");
+    
     return docSnap;
   } catch (error) {
     devLog(error);
@@ -221,15 +223,15 @@ export const getPaginatedDocuments = async (
     const dbQueryBase: FirebaseFirestore.Query = callFirebase(collection);
 
     // Apply optional filters or other query modifiers first (where, startAt/endAt, etc.)
-    let query: FirebaseFirestore.Query = options.queryModifier ? options.queryModifier(dbQueryBase) : dbQueryBase;
+    let queryBuilder: FirebaseFirestore.Query = options.queryModifier ? options.queryModifier(dbQueryBase) : dbQueryBase;
 
     // Apply orderBy for each order field (paginateQuery expects the same ordering sequence)
     for (const field of orderFields) {
-      query = query.orderBy(field);
+      queryBuilder = queryBuilder.orderBy(field);
     }
 
     // Delegate to paginateQuery (it will apply startAfter(token) and limit)
-    return await paginateQuery(query, limit, token, orderFields);
+    return await paginateQuery(queryBuilder, limit, token, orderFields);
   } catch (error) {
     devLog(error);
     return null;

@@ -3,6 +3,7 @@ import {devLog} from "../utils/dev";
 import {defaultError, sendError, sendSuccess} from "../utils/response";
 import {MoldReport, MoldReportDetails, PaginatedResult} from "../types/types";
 import {uploadFiles} from "../lib/storage";
+import {StorageFolder} from "../configs/storage";
 import {
   addMoldReportToFirestore,
   retrieveAllMoldReportsByUser,
@@ -89,7 +90,7 @@ export const createMoldReport = async (req: Request, res: Response) => {
     if (photos) {
       const uploaded = await uploadFiles(
         photos,
-        "mold_reports"
+        StorageFolder.MOLD_REPORTS
       );
       if (!uploaded) return sendError(res, "Invalid photo, please upload a different image.", 400);
       urls = uploaded;
@@ -142,6 +143,11 @@ export const getAllMoldReportsByUser = async (req: Request, res: Response) => {
   const uid: string | undefined = req.user?.id;
   try {
     if (!uid) return sendError(res, "Unauthorized", 401);
+    // Prevent caching by Authorization header - critical for user-specific data
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0, private');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('Vary', 'Authorization');
     const result: PaginatedResult<Omit<MoldReport, "user_id">[]> | null = await retrieveAllMoldReportsByUser(uid, limit, false, pageToken);
     if (!result) return sendError(res, "Failed to retrieve mold reports", 404);
     return sendSuccess(res, result);
@@ -242,7 +248,7 @@ export const rejectReport = async (req: Request, res: Response) => {
     const id: string = req.params.id;
     // Mark as closed and clear assigned mycologist
     const updated = await updateMoldReportInFirestore(id, {
-      status: "closed",
+      status: "rejected",
       assigned_mycologist_id: null,
     });
     if (!updated) return sendError(res, "Failed to reject/close report", 400);

@@ -27,6 +27,7 @@ import {getDocumentIdByField} from "../lib/firestore";
 import {redis, ensureRedisConnection} from "../configs/redis";
 import {generateCode} from "../utils/code";
 import {v4 as uuidv4} from "uuid";
+import {handlePostCache, handlePatchCache, handleDeleteCache} from "../utils/cacheManager";
 
 export const registerUser = async (
   username: string,
@@ -93,6 +94,10 @@ export const registerUser = async (
 
     const details = await addUser(user, userId);
     if (!details) throw new Error("Could not register user!");
+    
+    // Invalidate user list caches (new user added)
+    await handlePostCache("users");
+    
     return {success: true, data: "Successfully created user!"};
   } catch (error) {
     devLog(error);
@@ -226,6 +231,10 @@ export const updateUser = async (
     if (!updateMetadata) {
       throw new Error("Error updating user metadata in Firestore.");
     }
+    
+    // Invalidate user cache (email/displayName don't affect list ordering)
+    await handlePatchCache("users", id, false);
+    
     return true;
   } catch (error) {
     devLog(error);
@@ -238,6 +247,9 @@ export const softRemoveUser = async (id: string): Promise<void> => {
     await getAuth().updateUser(id, {disabled: true});
     const process = await softDeleteFirestoreUser(id);
     if (!process) throw new Error("Error deleting user.");
+    
+    // Invalidate user cache (soft delete affects list and counts)
+    await handleDeleteCache("users", id);
   } catch (error) {
     devLog(error);
   }
@@ -248,6 +260,9 @@ export const removeUser = async (id: string): Promise<void> => {
     await getAuth().deleteUser(id);
     const process = await deleteFirestoreUser(id);
     if (!process) throw new Error("Error deleting user.");
+    
+    // Invalidate user cache (hard delete affects list and counts)
+    await handleDeleteCache("users", id);
   } catch (error) {
     devLog(error);
   }

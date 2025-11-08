@@ -3,7 +3,6 @@ import {verifyCookie, verifyToken} from "../lib/auth"; // or wherever you export
 import {Role} from "../types/enums";
 import {sendError} from "../utils/response";
 import {devLog} from "../utils/dev";
-import {findFirestoreUserById} from "../repositories/userRepository";
 
 /**
  * Express middleware to verify a user's Bearer token and required role.
@@ -36,18 +35,6 @@ const verifyUserToken =
           return;
         }
 
-        if (
-          requiredRole &&
-        requiredRole === user.user.role &&
-        user.user.role === Role.CURATOR
-        ) {
-          const curator = await findFirestoreUserById(user.id);
-          if (!curator) throw new Error("Cannot find user.");
-          if (!curator.data()?.is_verified) {
-            sendError(res, "Curator not verified!", 401);
-            return;
-          }
-        }
         // Attach user info to request
         req.user = user;
         next();
@@ -86,19 +73,6 @@ const verifyUserCookie =
           );
           sendError(res, "Forbidden", 403);
           return;
-        }
-
-        if (
-          requiredRole &&
-        requiredRole === user.user.role &&
-        user.user.role === Role.CURATOR
-        ) {
-          const curator = await findFirestoreUserById(user.id);
-          if (!curator) throw new Error("Cannot find user.");
-          if (!curator.data()?.is_verified) {
-            sendError(res, "Curator not verified!", 401);
-            return;
-          }
         }
 
         // Attach user info to request

@@ -46,8 +46,9 @@ export const findAllMoldReportsByUser = async (
   token?: string
 ): Promise<{ snapshot: FirebaseFirestore.QuerySnapshot; nextPageToken: string | null } | null> => {
   try {
-    const queryModifier = (q: FirebaseFirestore.Query) =>
-      q.where("user_id", "==", uid).where("is_archived", "==", isArchived);
+    const queryModifier = (q: FirebaseFirestore.Query) => {
+      return q.where("user_id", "==", uid).where("is_archived", "==", isArchived);
+    };
 
     const paged = await getPaginatedDocuments(
       collection,

@@ -11,14 +11,27 @@ import {devLog} from "../utils/dev";
 import {getAuth} from "firebase-admin/auth";
 import {queryToJson} from "../lib/firestore";
 import {Role} from "../types/enums";
+import {getCachedList, cacheList, getCachedItem, cacheItem} from "../utils/cacheManager";
+
+const RESOURCE = "users";
+const TTL = 300; // 5 minutes
 
 export const retrieveAllUsers = async (
   limit: number,
   token?: string
 ): Promise<PaginatedResult<APIUser[]> | null> => {
   try {
-    // Use cursor-based pagination
-    const result = await findAllUsers(limit, token, ["metadata.created_at", "username"]);
+    // Only cache the first page (no token), not subsequent pages
+    // Tokens are ephemeral navigation state
+    const query = {limit, token: token || "first"};
+    const shouldCache = !token; // Only cache first page
+    
+    if (shouldCache) {
+      const cached = await getCachedList<PaginatedResult<APIUser[]>>(RESOURCE, query);
+      if (cached) return cached;
+    }
+    
+    const result = await findAllUsers(limit, token);
     if (!result || !result.snapshot) throw new Error("No users found.");
     const firestoreList: WithId<User>[] = queryToJson<User>(result.snapshot);
     const identifiers = firestoreList.map((user) => ({uid: user.id}));
@@ -46,7 +59,14 @@ export const retrieveAllUsers = async (
       };
     });
 
-    return {snapshot: userList, nextPageToken: result.nextPageToken};
+    const paginatedResult = {snapshot: userList, nextPageToken: result.nextPageToken};
+    
+    // Cache only the first page
+    if (shouldCache) {
+      await cacheList(RESOURCE, paginatedResult, query, {ttl: TTL});
+    }
+    
+    return paginatedResult;
   } catch (error) {
     devLog(error);
     return null;
@@ -59,6 +79,16 @@ export const retrieveUsersByRole = async (
   token?: string
 ): Promise<PaginatedResult<APIUser[]> | null> => {
   try {
+    // Only cache the first page (no token), not subsequent pages
+    // Tokens are ephemeral navigation state
+    const query = {role, limit, token: token || "first"};
+    const shouldCache = !token; // Only cache first page
+    
+    if (shouldCache) {
+      const cached = await getCachedList<PaginatedResult<APIUser[]>>(RESOURCE, query);
+      if (cached) return cached;
+    }
+    
     const result = await findUsersByRole(role, limit, token);
     if (!result || !result.snapshot) throw new Error("No users found.");
     const firestoreList: any[] = queryToJson<any>(result.snapshot);
@@ -87,7 +117,14 @@ export const retrieveUsersByRole = async (
       };
     });
 
-    return { snapshot: userList, nextPageToken: result.nextPageToken };
+    const paginatedResult = { snapshot: userList, nextPageToken: result.nextPageToken };
+    
+    // Cache only the first page
+    if (shouldCache) {
+      await cacheList(RESOURCE, paginatedResult, query, {ttl: TTL});
+    }
+    
+    return paginatedResult;
   } catch (error) {
     devLog(error);
     return null;
@@ -96,8 +133,17 @@ export const retrieveUsersByRole = async (
 
 export const retrieveUserById = async (id: string): Promise<APIUser | null> => {
   try {
+    // Check cache first
+    const cached = await getCachedItem<APIUser>(RESOURCE, id);
+    if (cached) return cached;
+    
+    // Cache miss - fetch from database
     const user: APIUser | null = await findAuthUserById(id);
     if (!user) throw new Error("No user found.");
+    
+    // Cache the result
+    await cacheItem(RESOURCE, id, user, {ttl: TTL});
+    
     return user;
   } catch (error) {
     devLog(error);
@@ -120,6 +166,11 @@ export const retrieveUserByEmail = async (
 
 export const getRoleCounts = async (): Promise<Record<string, number> | null> => {
   try {
+    // Check cache first
+    const cached = await getCachedItem<Record<string, number>>(RESOURCE, "role-counts");
+    if (cached) return cached;
+    
+    // Cache miss - fetch from database
     // Map current role values to include legacy role names
     const mapping: Record<string, string[]> = {
       [Role.USER]: [Role.USER, "user"],
@@ -134,6 +185,9 @@ export const getRoleCounts = async (): Promise<Record<string, number> | null> =>
       result[key] = typeof count === "number" ? count : 0;
     }
 
+    // Cache the result
+    await cacheItem(RESOURCE, "role-counts", result, {ttl: TTL});
+    
     return result;
   } catch (error) {
     devLog(error);
@@ -173,7 +227,18 @@ export const getUsersByActiveStatus = async (
  */
 export const getDisabledCounts = async (): Promise<{ active: number; inactive: number } | null> => {
   try {
+    // Check cache first
+    const cached = await getCachedItem<{ active: number; inactive: number }>(RESOURCE, "disabled-counts");
+    if (cached) return cached;
+    
+    // Cache miss - fetch from database
     const counts = await countUsersByDisabled();
+    
+    if (counts) {
+      // Cache the result
+      await cacheItem(RESOURCE, "disabled-counts", counts, {ttl: TTL});
+    }
+    
     return counts;
   } catch (error) {
     devLog(error);

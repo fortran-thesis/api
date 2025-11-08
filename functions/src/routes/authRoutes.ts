@@ -62,22 +62,6 @@ router.post(
 );
 
 router.post(
-  "/forgot-password/verify",
-  rateLimit(finalActionLimiter),
-  async (req: Request, res: Response) => {
-    verifiedChangePassword(req, res);
-  }
-);
-
-router.post(
-  "/forgot-username/verify",
-  rateLimit(finalActionLimiter),
-  async (req: Request, res: Response) => {
-    verifiedForgetUsername(req, res);
-  }
-);
-
-router.post(
   "/forgot-password",
   rateLimit(sendCodeLimiter),
   sanitizeBody,
@@ -111,6 +95,22 @@ router.post(
   "/logout",
   async (req: Request, res: Response) => {
     logoutUser(req, res);
+  }
+);
+
+router.post(
+  "/forgot-password/verify",
+  rateLimit(finalActionLimiter),
+  async (req: Request, res: Response) => {
+    verifiedChangePassword(req, res);
+  }
+);
+
+router.post(
+  "/forgot-username/verify",
+  rateLimit(finalActionLimiter),
+  async (req: Request, res: Response) => {
+    verifiedForgetUsername(req, res);
   }
 );
 

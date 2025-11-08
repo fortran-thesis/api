@@ -7,11 +7,14 @@ import {
 import {PaginationQuerySchema} from "../dto/paginationDTO";
 import {MoldIdSchema} from "../dto/moldDTO";
 import { ReportIdSchema } from "../dto/reportDTO";
+import {Role} from "../types/enums";
 import { CultivationLogSchema, CultivationDetailsSchema } from "../dto/moldDTO";
 import { validateBody } from "../middlewares/validation";
+import {upload} from "../middlewares/upload";
 import {
   createMoldCase,
   getAllMoldCases,
+  getAssignedMoldCases,
   getAllArchivedMoldCases,
   patchMoldCase,
   deleteMoldCase,
@@ -19,6 +22,7 @@ import {
   getMoldCaseByReportId,
   addCultivationLog,
   updateCultivationDetails,
+  analyzeCultivationLogImage,
 } from "../controllers/moldCaseController";
 
 const router = Router();
@@ -37,6 +41,15 @@ router.get(
   validateQuery(PaginationQuerySchema),
   async (req: Request, res: Response) => {
     await getAllMoldCases(req, res);
+  }
+);
+
+router.get(
+  "/assigned",
+  verifyUser(Role.CURATOR),
+  validateQuery(PaginationQuerySchema),
+  async (req: Request, res: Response) => {
+    await getAssignedMoldCases(req, res);
   }
 );
 
@@ -71,6 +84,7 @@ router.post(
   "/:id/logs",
   verifyUser(),
   validateParams(MoldIdSchema),
+  upload.single("image"),
   validateBody(CultivationLogSchema),
   async (req: Request, res: Response) => {
     // controller expects param name caseId, the route uses :id so controller will read req.params.id
@@ -85,6 +99,16 @@ router.patch(
   validateBody(CultivationDetailsSchema),
   async (req: Request, res: Response) => {
     await updateCultivationDetails(req, res);
+  }
+);
+
+router.post(
+  "/:id/analyze-cultivation",
+  verifyUser(),
+  validateParams(MoldIdSchema),
+  upload.single("image"),
+  async (req: Request, res: Response) => {
+    await analyzeCultivationLogImage(req, res);
   }
 );
 

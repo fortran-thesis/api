@@ -130,19 +130,19 @@ router.get(
 );
 
 router.get(
+  "/counts/statuses",
+  verifyUser(Role.ADMIN),
+  async (req: Request, res: Response) => {
+    await getMoldReportCountsController(req, res);
+  }
+);
+
+router.get(
   "/user",
   verifyUser(),
   validateQuery(PaginationQuerySchema),
   async (req: Request, res: Response) => {
     await getAllMoldReportsByUser(req, res);
-  }
-);
-
-router.get(
-  "/counts/statuses",
-  verifyUser(Role.ADMIN),
-  async (req: Request, res: Response) => {
-    await getMoldReportCountsController(req, res);
   }
 );
 

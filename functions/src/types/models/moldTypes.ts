@@ -42,18 +42,24 @@ export interface MoldCase {
   priority: "low" | "medium" | "high";
   start_date: Timestamp;
   end_date: Timestamp;
-  cultivation_details: CultivationDetails;
-  cultivation_logs: Array<CultivationLog>;
+  cultivation_details?: CultivationDetails;
+  cultivation_logs?: Array<CultivationLog>;
   is_archived: boolean;
 }
 
 export interface CultivationDetails {
-  in_vivo_details: object;
-  in_vitro_details: object;
+  growth_medium: string,
+  in_vivo_details: {
+    environmental_temperature: number
+  };
+  in_vitro_details: {
+    incubation_temperature: number
+  };
 }
 
 export interface CultivationLog {
    type: "vivo" | "vitro";
-   characteristics: object;
+   image_url: string;
+   characteristics: {lesion_size: number, lesion_color: string} | {colony_diameter: number, colony_color: string}; // respective places: vivo | vitro
    additional_info: string;
 }

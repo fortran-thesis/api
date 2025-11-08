@@ -11,6 +11,7 @@ import {
   softRemoveMonitoredMold,
 } from "../services/monitoredMoldService";
 import {uploadFile} from "../lib/storage";
+import {StorageFolder, generateStoragePath} from "../configs/storage";
 
 export const createMonitoredMold = async (req: Request, res: Response) => {
   /**
@@ -62,12 +63,8 @@ export const createMonitoredMold = async (req: Request, res: Response) => {
   try {
     const details: MonitoredMold = req.body.details;
     const photo: Express.Multer.File = req.file as Express.Multer.File;
-    const url = await uploadFile(
-      "monitored_molds",
-      photo.originalname,
-      photo.buffer,
-      photo.mimetype
-    );
+    const filePath = generateStoragePath(StorageFolder.MONITORED_MOLDS, photo.originalname);
+    const url = await uploadFile(filePath, photo.buffer, photo.mimetype);
     if (!url) {
       return sendError(
         res,

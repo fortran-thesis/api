@@ -50,6 +50,31 @@ export const findAllMoldCases = async (
     return null;
   }
 };
+
+export const findAssignedMoldCases = async (
+  mycologistId: string,
+  limit: number,
+  token?: string
+): Promise<{ snapshot: FirebaseFirestore.QuerySnapshot; nextPageToken: string | null } | null> => {
+  try {
+    // Find all mold cases assigned to the given mycologist (curator)
+    const queryModifier = (q: FirebaseFirestore.Query) =>
+      q.where("mycologist_id", "==", mycologistId).where("is_archived", "==", false);
+
+    const paged = await getPaginatedDocuments(
+      collection,
+      limit,
+      token,
+      ["metadata.created_at", FieldPath.documentId()],
+      {queryModifier}
+    );
+
+    return paged;
+  } catch (err) {
+    devLog(err);
+    return null;
+  }
+};
 export const updateMoldCase = async (
   uid: string,
   updatedData: Partial<MoldCase>
@@ -80,12 +105,31 @@ export const updateCultivationDetails = async (
 ): Promise<FirebaseFirestore.WriteResult | null> => {
   try {
     const updates: any = {};
-    if (details.in_vivo_details !== undefined) {
-      updates["cultivation_details.in_vivo_details"] = details.in_vivo_details;
+    
+    // If the entire cultivation_details object is provided, use it directly
+    if (details.cultivation_details !== undefined) {
+      updates["cultivation_details"] = details.cultivation_details;
+    } else {
+      // Otherwise, build the nested path updates for individual fields
+      if (details.growth_medium !== undefined) {
+        updates["cultivation_details.growth_medium"] = details.growth_medium;
+      }
+      if (details.in_vivo_details !== undefined) {
+        updates["cultivation_details.in_vivo_details"] = details.in_vivo_details;
+      }
+      if (details.in_vitro_details !== undefined) {
+        updates["cultivation_details.in_vitro_details"] = details.in_vitro_details;
+      }
     }
-    if (details.in_vitro_details !== undefined) {
-      updates["cultivation_details.in_vitro_details"] = details.in_vitro_details;
+    
+    // Also handle start_date and end_date if provided (they're outside cultivation_details)
+    if (details.start_date !== undefined) {
+      updates["start_date"] = details.start_date;
     }
+    if (details.end_date !== undefined) {
+      updates["end_date"] = details.end_date;
+    }
+    
     return await updateDocument(collection, caseId, updates);
   } catch (err) {
     devLog(err);

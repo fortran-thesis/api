@@ -155,9 +155,11 @@ export const retrieveAllMoldReportsByUser = async (
       token
     );
     if (!docs) throw new Error("No mold reports found.");
-    const raw = queryToJson<Omit<MoldReport, "user_id">>(docs.snapshot);
+    const raw = queryToJson<MoldReport>(docs.snapshot);
+    // Remove user_id from each report
+    const sanitized = raw.map(({ user_id, ...rest }) => rest) as Omit<MoldReport, "user_id">[];
     return {
-      snapshot: raw,
+      snapshot: sanitized,
       nextPageToken: docs.nextPageToken,
     };
   } catch (error) {
@@ -307,7 +309,7 @@ export const getMoldReportStatusCounts = async (): Promise<{ total: number; pend
       pending: ["pending"],
       in_progress: ["in progress", "in_progress", "assigned"],
       resolved: ["resolved", "done"],
-      closed: ["closed"]
+      rejected: ["closed", "rejected"]
     };
 
   const total = await countTotalReports();

@@ -5,6 +5,7 @@ import {Moldipedia, PaginatedResult, WithId} from "../types/types";
 import {createLog} from "../utils/logging";
 import {AuditAction} from "../types/enums";
 import {uploadFile} from "../lib/storage";
+import {StorageFolder, generateStoragePath} from "../configs/storage";
 import {
   addMoldipediaToFirestore,
   retrieveAllMoldipedia,
@@ -55,9 +56,10 @@ export const createMoldipedia = async (req: Request, res: Response) => {
    *         description: Server error
    */
   try {
-    const details: Omit<Moldipedia, "cover_photo"> = req.body.details;
-    const photo: Express.Multer.File = req.file as Express.Multer.File;
-    const url = await uploadFile("moldipedia", photo.originalname, photo.buffer, photo.mimetype);
+  const details: Omit<Moldipedia, "cover_photo"> = req.body.details;
+  const photo: Express.Multer.File = req.file as Express.Multer.File;
+  const filePath = generateStoragePath(StorageFolder.MOLDIPEDIA, photo.originalname);
+  const url = await uploadFile(filePath, photo.buffer, photo.mimetype);
     if (!url) return sendError(res, "Invalid cover photo, please upload a different image.", 400);
     const article: WithId<Moldipedia> | null = await addMoldipediaToFirestore({...details, cover_photo: url});
     if (!article) return sendError(res, "Failed to create moldipedia article", 400);

@@ -5,6 +5,7 @@ import {PaginatedResult, ScannedMold, WithId} from "../types/types";
 import {createLog} from "../utils/logging";
 import {AuditAction} from "../types/enums";
 import {uploadFile} from "../lib/storage";
+import {StorageFolder, generateStoragePath} from "../configs/storage";
 import {
   addScannedMoldToFirestore,
   retrieveAllScannedMolds,
@@ -82,12 +83,8 @@ export const createScannedMold = async (req: Request, res: Response) => {
   try {
     const details: Omit<ScannedMold, "image_url" | "uploaded_at"> = req.body;
     const photo: Express.Multer.File = req.file as Express.Multer.File;
-    const url = await uploadFile(
-      "scanned_molds",
-      photo.originalname,
-      photo.buffer,
-      photo.mimetype
-    );
+    const filePath = generateStoragePath(StorageFolder.SCANNED_MOLDS, photo.originalname);
+    const url = await uploadFile(filePath, photo.buffer, photo.mimetype);
     if (!url) {
       return sendError(
         res,

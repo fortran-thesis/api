@@ -10,6 +10,7 @@ import {
   addMoldCase,
   deleteMoldCase,
   findAllMoldCases,
+  findAssignedMoldCases,
   findMoldCaseById,
   findMoldCaseByName,
   findMoldCaseByReportId,
@@ -66,6 +67,48 @@ export const retrieveAllMoldCasesByUser = async (
       token
     );
     if (!cases) throw new Error("No cases found.");
+    const raw = queryToJson<MoldCase>(cases.snapshot);
+    const normalized = raw.map((c) => {
+      const copy: any = { ...c };
+      try {
+        if (copy.start_date && typeof copy.start_date === "object" && (copy.start_date as any).toDate instanceof Function) {
+          copy.start_date = (copy.start_date as any).toDate().toISOString();
+        }
+      } catch (e) {
+        /* ignore */
+      }
+      try {
+        if (copy.end_date && typeof copy.end_date === "object" && (copy.end_date as any).toDate instanceof Function) {
+          copy.end_date = (copy.end_date as any).toDate().toISOString();
+        }
+      } catch (e) {
+        /* ignore */
+      }
+      return copy as MoldCase;
+    });
+
+    return {
+      snapshot: normalized,
+      nextPageToken: cases.nextPageToken,
+    };
+  } catch (error) {
+    devLog(error);
+    return null;
+  }
+};
+
+export const retrieveAssignedMoldCases = async (
+  mycologistId: string,
+  limit: number,
+  token?: string
+): Promise<PaginatedResult<MoldCase[]> | null> => {
+  try {
+    const cases: PaginatedResult<QuerySnapshot> | null = await findAssignedMoldCases(
+      mycologistId,
+      limit,
+      token
+    );
+    if (!cases) throw new Error("No assigned cases found.");
     const raw = queryToJson<MoldCase>(cases.snapshot);
     const normalized = raw.map((c) => {
       const copy: any = { ...c };
@@ -179,6 +222,24 @@ export const updateMoldCaseInFirestore = async (
       const raw = updatedDetails.end_date;
       const parsed = typeof raw === "string" ? new Date(raw) : raw;
       updatedDetails.end_date = parsed instanceof Date && !isNaN(parsed.getTime()) ? Timestamp.fromDate(parsed) : updatedDetails.end_date;
+    }
+
+    // Handle cultivation_details if it's provided as a nested object
+    // Convert it to use dot notation for proper nesting in Firestore
+    if (updatedDetails.cultivation_details !== undefined) {
+      const cultivationDetails = updatedDetails.cultivation_details;
+      delete updatedDetails.cultivation_details; // Remove the nested object
+      
+      // Add each field with dot notation
+      if (cultivationDetails.growth_medium !== undefined) {
+        updatedDetails["cultivation_details.growth_medium"] = cultivationDetails.growth_medium;
+      }
+      if (cultivationDetails.in_vivo_details !== undefined) {
+        updatedDetails["cultivation_details.in_vivo_details"] = cultivationDetails.in_vivo_details;
+      }
+      if (cultivationDetails.in_vitro_details !== undefined) {
+        updatedDetails["cultivation_details.in_vitro_details"] = cultivationDetails.in_vitro_details;
+      }
     }
 
     const result: WriteResult | null = await updateMoldCaseRepo(id, updatedDetails);

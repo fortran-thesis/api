@@ -6,6 +6,7 @@ import {
   updateFirestoreUser,
 } from "../repositories/userRepository";
 import {sendEmail} from "../utils/email";
+import {handlePatchCache} from "../utils/cacheManager";
 
 export const toggleUser = async (
   id: string,
@@ -34,6 +35,10 @@ export const toggleUser = async (
       <p>Thanks,<br/>The Moldify Team</p>
     `;
     await sendEmail(email, `Your account has been ${message}`, html);
+    
+    // Invalidate user cache (disabled status doesn't affect ordering, but affects filtering)
+    await handlePatchCache("users", id, true);
+    
     return {success: true, data: `Successfully ${message} user.`};
   } catch (error) {
     devLog(error);
@@ -59,6 +64,10 @@ export const banUser = async (
       <p>Thanks,<br/>The Moldify Team</p>
     `;
     await sendEmail(email, "Your account has been banned", html);
+    
+    // Invalidate user cache (is_banned affects filtering, needs list invalidation)
+    await handlePatchCache("users", id, true);
+    
     return {success: true, data: "Successfully banned user."};
   } catch (error) {
     devLog(error);
@@ -86,6 +95,10 @@ export const approveCurator = async (
       <p>Thanks,<br/>The Moldify Team</p>
     `;
     await sendEmail(user?.email, "Curator Application Approved", html);
+    
+    // Invalidate user cache (is_verified affects role-based filtering)
+    await handlePatchCache("users", id, true);
+    
     return {success: true, data: "Successfully approved curator"};
   } catch (error) {
     devLog(error);
@@ -113,6 +126,10 @@ export const rejectCurator = async (
       <p>Thanks,<br/>The Moldify Team</p>
     `; // TODO: idk process after rejecting curator
     await sendEmail(user?.email, "Curator Application Rejected", html);
+    
+    // Invalidate user cache (is_verified affects role-based filtering)
+    await handlePatchCache("users", id, true);
+    
     return {success: true, data: "Successfully rejected curator"};
   } catch (error) {
     devLog(error);
