@@ -33,27 +33,37 @@ export const createMoldipedia = async (req: Request, res: Response) => {
    *         multipart/form-data:
    *           schema:
    *             type: object
+   *             required:
+   *               - details
+   *               - cover_photo
    *             properties:
    *               details:
-   *                 type: object
-   *                 description: Moldipedia DTO. See Moldipedia interface for properties.
-   *                 properties:
-   *                   title:
-   *                     type: string
-   *                   body:
-   *                     type: string
-   *                   author_id:
-   *                     type: string
+   *                 type: string
+   *                 description: JSON string of Moldipedia object with properties - title (string), body (string), author_id (string), tags (array of strings)
+   *                 example: '{"title":"Understanding Aspergillus","body":"Aspergillus is a genus...","author_id":"user123","tags":["fungi"]}'
    *               cover_photo:
    *                 type: string
    *                 format: binary
+   *                 description: Cover photo image file
    *     responses:
    *       200:
    *         description: Successfully created moldipedia article
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/MoldipediaResponse'
    *       400:
    *         description: Validation error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ApiResponseError'
    *       500:
    *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ApiResponseError'
    */
   try {
   const details: Omit<Moldipedia, "cover_photo"> = req.body.details;
@@ -100,10 +110,22 @@ export const getAllMoldipedia = async (req: Request, res: Response) => {
    *     responses:
    *       200:
    *         description: List of moldipedia articles
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/PaginatedResult'
    *       404:
    *         description: Not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ApiResponseError'
    *       500:
    *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ApiResponseError'
    */
   const limit: number = parseInt(req.query.limit as string) || 10;
   const pageToken: string | undefined = req.query.pageToken as string | undefined;
@@ -139,10 +161,22 @@ export const getMoldipediaById = async (req: Request, res: Response) => {
    *     responses:
    *       200:
    *         description: Moldipedia article
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/MoldipediaResponse'
    *       404:
    *         description: Not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ApiResponseError'
    *       500:
    *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ApiResponseError'
    */
   try {
     const id = req.params.id;
