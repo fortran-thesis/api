@@ -268,7 +268,7 @@ export const logoutUser = async (req: Request, res: Response) => {
       idToken = req.headers.authorization.split(" ")[1];
     }
 
-    const process = logoutUserSession(sessionCookie, idToken);
+    const process = await logoutUserSession(sessionCookie, idToken);
     if (!process) throw new Error("Unable to verify token");
 
     // Clear cookie on client
