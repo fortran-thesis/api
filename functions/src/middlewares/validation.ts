@@ -13,10 +13,10 @@
  * import { z } from 'zod';
  * const userSchema = z.object({ name: z.string() });
  */
-import { ZodSchema } from "zod";
-import { Request, Response, NextFunction } from "express";
-import { sendError } from "../utils/response";
-import { devLog } from "../utils/dev";
+import {ZodSchema} from "zod";
+import {Request, Response, NextFunction} from "express";
+import {sendError} from "../utils/response";
+import {devLog} from "../utils/dev";
 
 /**
  * Express middleware to validate the request body against a Zod schema.
@@ -24,60 +24,61 @@ import { devLog } from "../utils/dev";
  * If validation succeeds, replaces req.body with the parsed data and calls next().
  *
  * @param schema - The Zod schema to validate the request body against
- * @returns An Express middleware function
+ * @return An Express middleware function
  */
 export const validateBody =
   (schema: ZodSchema) =>
-  (req: Request, res: Response, next: NextFunction): void => {
-    try {
-      const result = schema.safeParse(req.body);
-      if (!result.success) {
-        const messages = result.error.errors.map((e) => e.message).join(", ");
-        sendError(res, messages);
+    (req: Request, res: Response, next: NextFunction): void => {
+      try {
+        const result = schema.safeParse(req.body);
+        if (!result.success) {
+          const messages = result.error.errors.map((e) => e.message).join(", ");
+          sendError(res, messages);
+          return;
+        }
+        req.body = result.data;
+        next();
+        return;
+      } catch (error) {
+        devLog(error);
+        sendError(res, "Error", 500);
         return;
       }
-      req.body = result.data;
-      next();
-      return;
-    } catch (error) {
-      devLog(error);
-      sendError(res, "Error", 500);
-      return;
-    }
-  };
+    };
 
 export const validateParams =
   (schema: ZodSchema) =>
-  (req: Request, res: Response, next: NextFunction): void => {
-    try {
-      const result = schema.safeParse(req.params);
-      if (!result.success) {
-        const messages = result.error.errors.map((e) => e.message).join(", ");
-        sendError(res, messages);
-        return;
+    (req: Request, res: Response, next: NextFunction): void => {
+      try {
+        const result = schema.safeParse(req.params);
+        if (!result.success) {
+          const messages = result.error.errors.map((e) => e.message).join(", ");
+          sendError(res, messages);
+          return;
+        }
+        req.params = result.data;
+        next();
+      } catch (error) {
+        devLog(error);
+        sendError(res, "Error", 500);
       }
-      req.params = result.data;
-      next();
-    } catch (error) {
-      devLog(error);
-      sendError(res, "Error", 500);
-    }
-  };
+    };
 
 export const validateQuery =
   (schema: ZodSchema) =>
-  (req: Request, res: Response, next: NextFunction): void => {
-    try {
-      const result = schema.safeParse(req.query);
-      if (!result.success) {
-        const messages = result.error.errors.map((e) => e.message).join(", ");
-        sendError(res, messages);
-        return;
+    (req: Request, res: Response, next: NextFunction): void => {
+      try {
+        const result = schema.safeParse(req.query);
+        if (!result.success) {
+          const messages = result.error.errors.map((e) => e.message).join(", ");
+          sendError(res, messages);
+          return;
+        }
+        // req.query is read-only; use Object.assign to merge validated data
+        Object.assign(req.query, result.data);
+        next();
+      } catch (error) {
+        devLog(error);
+        sendError(res, "Error", 500);
       }
-      req.query = result.data;
-      next();
-    } catch (error) {
-      devLog(error);
-      sendError(res, "Error", 500);
-    }
-  };
+    };

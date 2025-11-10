@@ -1,8 +1,8 @@
 
-import { Options, ipKeyGenerator } from "express-rate-limit";
+import {Options, ipKeyGenerator} from "express-rate-limit";
 
 // Generic keyGenerator to handle undefined request.ip
-const genericKeyGenerator = (req: any) => req.ip || ipKeyGenerator(req)|| '127.0.0.1';
+const genericKeyGenerator = (req: any) => req.ip || ipKeyGenerator(req)|| "127.0.0.1";
 
 export const limitingOptions: Partial<Options> = {
   windowMs: 15 * 60 * 1000,

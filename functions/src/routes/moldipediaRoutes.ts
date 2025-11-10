@@ -1,17 +1,17 @@
-import { Request, Response, Router } from "express";
-import { verifyUser } from "../middlewares/verification";
+import {Request, Response, Router} from "express";
+import {verifyUser} from "../middlewares/verification";
 import {
   validateBody,
   validateParams,
   validateQuery,
 } from "../middlewares/validation";
-import { Role } from "../types/enums";
+import {Role} from "../types/enums";
 import {
   MoldipediaCreateSchema,
   MoldipediaIdSchema,
   MoldipediaUpdateSchema,
 } from "../dto/moldipediaDTO";
-import { PaginationQuerySchema } from "../dto/paginationDTO";
+import {PaginationQuerySchema} from "../dto/paginationDTO";
 import {
   createMoldipedia,
   getAllMoldipedia,
@@ -20,7 +20,7 @@ import {
   deleteMoldipedia,
   softDeleteMoldipedia,
 } from "../controllers/moldipediaController";
-import { sanitizeBody, sanitizeParams } from "../middlewares/sanitation";
+import {sanitizeBody, sanitizeParams} from "../middlewares/sanitation";
 
 const router = Router();
 

@@ -4,8 +4,8 @@ import {
   Timestamp,
   WriteResult,
 } from "firebase-admin/firestore";
-import { documentToJson, queryToJson } from "../lib/firestore";
-import { devLog } from "../utils/dev";
+import {documentToJson, queryToJson} from "../lib/firestore";
+import {devLog} from "../utils/dev";
 import {
   addSystemRequest,
   deleteSystemRequest,
@@ -14,7 +14,12 @@ import {
   softDeleteSystemRequest,
   updateSystemRequest,
 } from "../repositories/systemRequestRepository";
-import { SystemRequest, WithMetadata, WithId, PaginatedResult } from "../types/types";
+import {
+  SystemRequest,
+  WithMetadata,
+  WithId,
+  PaginatedResult,
+} from "../types/types";
 
 export const addSystemRequestToFirestore = async (
   details: SystemRequest
@@ -28,7 +33,8 @@ export const addSystemRequestToFirestore = async (
         deleted_at: null,
       },
     };
-    const doc: DocumentSnapshot | null = await addSystemRequest(detailsWithTimestamp);
+    const doc: DocumentSnapshot | null =
+      await addSystemRequest(detailsWithTimestamp);
     if (!doc) throw new Error("Cannot add system request.");
     return documentToJson<WithId<SystemRequest>>(doc);
   } catch (error) {
@@ -42,9 +48,13 @@ export const retrieveAllSystemRequests = async (
   token?: string
 ): Promise<PaginatedResult<SystemRequest[]> | null> => {
   try {
-    const docs: PaginatedResult<QuerySnapshot> | null = await findAllSystemRequests(limit, token);
+    const docs: PaginatedResult<QuerySnapshot> | null =
+      await findAllSystemRequests(limit, token);
     if (!docs) throw new Error("No system requests found.");
-    return {snapshot: queryToJson<SystemRequest>(docs.snapshot), nextPageToken: docs.nextPageToken};
+    return {
+      snapshot: queryToJson<SystemRequest>(docs.snapshot),
+      nextPageToken: docs.nextPageToken,
+    };
   } catch (error) {
     devLog(error);
     return null;

@@ -1,7 +1,7 @@
-import { envOptions } from "./environment";
+import {envOptions} from "./environment";
 
 export const corsOptions = {
-  origin: envOptions.isProd ? [""] : ["*"],
+  origin: envOptions.isProd ? ["http://localhost:3000", "https://moldify.vercel.app"] : ["http://localhost:3000", "https://moldify.vercel.app"],
   credentials: true,
   optionsSuccessStatus: 200, // For legacy browser support
   methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],

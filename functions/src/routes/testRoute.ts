@@ -1,5 +1,5 @@
-import { Router, Request, Response } from 'express';
-import { verifyUser } from '../middlewares/verification';
+import {Router, Request, Response} from "express";
+import {verifyUser} from "../middlewares/verification";
 
 const router = Router();
 
@@ -17,8 +17,8 @@ const router = Router();
  *       401:
  *         description: Verification failed
  */
-router.get('/secure', verifyUser(), (req: Request, res: Response) => {
-  res.status(200).json({ success: true, data: 'Verification passed!' });
+router.get("/secure", verifyUser(), (req: Request, res: Response) => {
+  res.status(200).json({success: true, data: "Verification passed!"});
 });
 
 export default router;

@@ -1,15 +1,15 @@
-import { firebase } from "../configs/firebase";
-import { FieldPath, getFirestore, QuerySnapshot, Timestamp } from "firebase-admin/firestore";
-import { devLog } from "../utils/dev";
-import { PaginatedResult, WithId, WithMetadata } from "../types/types";
-import { GetPaginatedOptions, OrderField, paginateQuery } from '../utils/pagination';
+import {firebase} from "../configs/firebase";
+import {FieldPath, getFirestore, QuerySnapshot, Timestamp} from "firebase-admin/firestore";
+import {devLog} from "../utils/dev";
+import {PaginatedResult, WithId, WithMetadata} from "../types/types";
+import {GetPaginatedOptions, OrderField, paginateQuery} from "../utils/pagination";
 
 const db = getFirestore(firebase);
 
 /**
  * Returns a Firestore collection reference for the given collection name.
  * @param collection - The name of the Firestore collection
- * @returns The collection reference
+ * @return The collection reference
  */
 const callFirebase = (
   collection: string
@@ -20,7 +20,8 @@ const callFirebase = (
  * @template T
  * @param collection - The name of the Firestore collection
  * @param document - The document data to add
- * @returns The document reference or null on error
+ * @param uid - Optional custom document ID
+ * @return The document reference or null on error
  */
 export const addDocument = async <T extends object>(
   collection: string,
@@ -36,12 +37,12 @@ export const addDocument = async <T extends object>(
     };
     if (uid) {
       const ref = callFirebase(collection).doc(uid);
-      if((await ref.get()).exists) throw new Error('User already exists');
+      if ((await ref.get()).exists) throw new Error("User already exists");
       await ref.set(withMetadata);
       return await ref.get();
     }
 
-    return (await callFirebase(collection).add(withMetadata)).get();
+    return await (await callFirebase(collection).add(withMetadata)).get();
   } catch (error) {
     devLog(error);
     return null;
@@ -55,7 +56,7 @@ export const addDocument = async <T extends object>(
  * @param collection - The name of the Firestore collection
  * @param documentUid - The document ID
  * @param updateData - The partial data to update
- * @returns The write result or null on error
+ * @return The write result or null on error
  */
 export const updateDocument = async <T extends object>(
   collection: string,
@@ -63,16 +64,21 @@ export const updateDocument = async <T extends object>(
   updateData: Partial<T>
 ): Promise<FirebaseFirestore.WriteResult | null> => {
   try {
+    // Fetch existing document to preserve metadata fields
+    const docRef = callFirebase(collection).doc(documentUid);
+    const existingDoc = await docRef.get();
+    const existingMetadata = existingDoc.exists ? (existingDoc.data() as any)?.metadata : {};
+
     const withMetadata: WithMetadata<Partial<T>> = {
       ...updateData,
       metadata: {
-        ...(updateData as any).metadata,
+        created_at: existingMetadata?.created_at || Timestamp.now(), // Preserve or create
         updated_at: Timestamp.now(),
+        deleted_at: existingMetadata?.deleted_at || null, // Preserve soft delete status
+        ...(updateData as any).metadata, // Allow explicit metadata overrides
       },
     };
-    return await callFirebase(collection)
-      .doc(documentUid)
-      .update(withMetadata);
+    return await docRef.update(withMetadata);
   } catch (error) {
     devLog(error);
     return null;
@@ -84,7 +90,7 @@ export const updateDocument = async <T extends object>(
  * Uses preconditions to ensure the document exists and has not changed since last read.
  * @param collection - The name of the Firestore collection
  * @param documentUid - The document ID
- * @returns The write result or null on error
+ * @return The write result or null on error
  */
 export const deleteDocument = async (
   collection: string,
@@ -94,7 +100,7 @@ export const deleteDocument = async (
     return await callFirebase(collection)
       .doc(documentUid)
       .delete({
-        exists: true
+        exists: true,
       });
   } catch (error) {
     devLog(error);
@@ -140,7 +146,7 @@ export const getDocumentsByField = async (
  * @param collection - The name of the Firestore collection
  * @param field - The field name to match
  * @param value - The value to match
- * @returns The document ID or null if not found/error
+ * @return The document ID or null if not found/error
  */
 export const getDocumentIdByField = async (
   collection: string,
@@ -165,7 +171,7 @@ export const getDocumentIdByField = async (
  * @param collection - The name of the Firestore collection
  * @param field - The field name to match
  * @param value - The value to match
- * @returns The document snapshot or null if not found/error
+ * @return The document snapshot or null if not found/error
  */
 export const getDocumentByFieldId = async (
   collection: string,
@@ -188,8 +194,8 @@ export const getDocumentByFieldId = async (
 /**
  * Retrieves a single Firestore document by its document ID.
  * @param collection - The name of the Firestore collection
- * @param documentUid - The document ID
- * @returns The document snapshot or null if not found/error
+ * @param uid - The document ID
+ * @return The document snapshot or null if not found/error
  */
 export const getDocumentById = async (
   collection: string,
@@ -198,12 +204,13 @@ export const getDocumentById = async (
   try {
     const docSnap = await callFirebase(collection).doc(uid).get();
     if (!docSnap.exists) throw new Error("Document does not exist");
-    return docSnap
+    
+    return docSnap;
   } catch (error) {
     devLog(error);
     return null;
   }
-}
+};
 
 export const getPaginatedDocuments = async (
   collection: string,
@@ -216,15 +223,15 @@ export const getPaginatedDocuments = async (
     const dbQueryBase: FirebaseFirestore.Query = callFirebase(collection);
 
     // Apply optional filters or other query modifiers first (where, startAt/endAt, etc.)
-    let query: FirebaseFirestore.Query = options.queryModifier ? options.queryModifier(dbQueryBase) : dbQueryBase;
+    let queryBuilder: FirebaseFirestore.Query = options.queryModifier ? options.queryModifier(dbQueryBase) : dbQueryBase;
 
     // Apply orderBy for each order field (paginateQuery expects the same ordering sequence)
     for (const field of orderFields) {
-      query = query.orderBy(field);
+      queryBuilder = queryBuilder.orderBy(field);
     }
 
     // Delegate to paginateQuery (it will apply startAfter(token) and limit)
-    return await paginateQuery(query, limit, token, orderFields);
+    return await paginateQuery(queryBuilder, limit, token, orderFields);
   } catch (error) {
     devLog(error);
     return null;
@@ -255,10 +262,10 @@ export const documentToJson = <T>(
 export const deleteCollection = async (collection: string) => {
   const querySnap = await callFirebase(collection).get();
   const batch = db.batch();
-  querySnap.docs.forEach(doc => {
+  querySnap.docs.forEach((doc) => {
     batch.delete(doc.ref);
   });
   await batch.commit();
 };
 
-export { getFirestore };
+export {getFirestore};

@@ -1,4 +1,4 @@
-import { APIUser, WithId } from "../types/types";
+import {APIUser, WithId} from "../types/types";
 import "express";
 
 declare global {

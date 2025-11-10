@@ -2,7 +2,7 @@
   "name": "functions",
   "scripts": {
     "lint": "eslint --ext .js,.ts .",
-    "build": "tsc",
+    "build": "tsc && xcopy /E /I /Y src\\configs\\*.json lib\\configs\\",
     "local-dev": "ts-node-dev --respawn --transpile-only src/local.ts",
     "emulator-dev": "npm run build && firebase emulators:start",
     "build:watch": "tsc --watch",
@@ -20,6 +20,8 @@
   "main": "lib/index.js",
   "dependencies": {
     "@dotenvx/dotenvx": "^1.48.3",
+    "@google/generative-ai": "^0.24.1",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^17.0.1",
     "express": "^5.1.0",
@@ -28,14 +30,16 @@
     "firebase-functions": "^6.4.0",
     "helmet": "^8.1.0",
     "multer": "^2.0.2",
-    "nodemailer": "^7.0.6",
+    "nodemailer": "^7.0.9",
     "react": "^19.1.1",
     "redis": "^5.6.1",
     "resend": "^4.7.0",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^4.6.3",
     "ts-node-dev": "^2.0.0",
-    "uuid": "^11.1.0"
+    "uuid": "^11.1.0",
+    "validator": "^13.15.15",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.9",
@@ -44,6 +48,7 @@
     "@types/jest": "^30.0.0",
     "@types/multer": "^2.0.0",
     "@types/node": "^24.0.10",
+    "@types/nodemailer": "^7.0.2",
     "@types/react": "^19.1.12",
     "@types/redis": "^4.0.10",
     "@types/supertest": "^6.0.3",
@@ -52,7 +57,6 @@
     "@types/validator": "^13.15.2",
     "@typescript-eslint/eslint-plugin": "^5.12.0",
     "@typescript-eslint/parser": "^5.12.0",
-    "cookie-parser": "^1.4.7",
     "dotenv-cli": "^10.0.0",
     "eslint": "^8.9.0",
     "eslint-config-google": "^0.14.0",
@@ -61,9 +65,7 @@
     "jest": "^30.1.2",
     "supertest": "^7.1.4",
     "ts-jest": "^29.4.1",
-    "typescript": "^5.7.3",
-    "validator": "^13.15.15",
-    "zod": "^3.25.76"
+    "typescript": "^5.7.3"
   },
   "private": true
 }

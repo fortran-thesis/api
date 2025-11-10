@@ -5,8 +5,8 @@ import {
   Timestamp,
   WriteResult,
 } from "firebase-admin/firestore";
-import { documentToJson, queryToJson } from "../lib/firestore";
-import { devLog } from "../utils/dev";
+import {documentToJson, queryToJson} from "../lib/firestore";
+import {devLog} from "../utils/dev";
 import {
   addMonitoredMold,
   deleteMonitoredMold,
@@ -15,7 +15,7 @@ import {
   softDeleteMonitoredMold,
   updateMonitoredMold,
 } from "../repositories/monitoredMoldRepository";
-import { MonitoredMold, PaginatedResult, WithMetadata } from "../types/types";
+import {MonitoredMold, PaginatedResult, WithMetadata} from "../types/types";
 
 export const addMonitoredMoldToFirestore = async (
   details: MonitoredMold
@@ -42,20 +42,24 @@ export const addMonitoredMoldToFirestore = async (
 export const retrieveAllMonitoredMolds = async (
   id: string,
   limit: number,
-  token?: string,
+  token?: string
 ): Promise<PaginatedResult<MonitoredMold[]> | null> => {
   try {
-    const queryModifier = (q: FirebaseFirestore.Query) => q.where("folder_id", "==", id)
+    const queryModifier = (q: FirebaseFirestore.Query) =>
+      q.where("folder_id", "==", id);
 
-    const molds: PaginatedResult<QuerySnapshot> | null = await findAllMonitoredMolds(
-      limit,
-      token,
-      ["metadata.created_at", "user_id", FieldPath.documentId()],
-      { queryModifier },
-      
-    );
+    const molds: PaginatedResult<QuerySnapshot> | null =
+      await findAllMonitoredMolds(
+        limit,
+        token,
+        ["metadata.created_at", "user_id", FieldPath.documentId()],
+        {queryModifier}
+      );
     if (!molds) throw new Error("No monitored molds found.");
-    return {snapshot: queryToJson<MonitoredMold>(molds.snapshot), nextPageToken: molds.nextPageToken};
+    return {
+      snapshot: queryToJson<MonitoredMold>(molds.snapshot),
+      nextPageToken: molds.nextPageToken,
+    };
   } catch (error) {
     devLog(error);
     return null;
@@ -69,7 +73,7 @@ export const retrieveMonitoredMoldById = async (
     const mold: DocumentSnapshot | null = await findMonitoredMoldById(id);
     if (!mold) throw new Error("No monitored mold found.");
     const molds = documentToJson<MonitoredMold>(mold);
-    return molds
+    return molds;
   } catch (error) {
     devLog(error);
     return null;

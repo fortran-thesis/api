@@ -1,12 +1,11 @@
-import { Request, Response } from "express";
-import { devLog } from "../utils/dev";
-import { defaultError, sendError, sendSuccess } from "../utils/response";
-import { getAuditLogsByAction, getAllAuditLogs } from "../services/auditLogService";
+import {Request, Response} from "express";
+import {devLog} from "../utils/dev";
+import {defaultError, sendError, sendSuccess} from "../utils/response";
+import {getAuditLogsByAction, getAllAuditLogs} from "../services/auditLogService";
 
-export const getAuditLogs = async (req: Request, res: Response) => {
 /**
  * @swagger
- * /api/v1/audit-logs:
+ * /api/v1/audit-log:
  *   get:
  *     summary: Get audit logs
  *     tags: [AuditLog]
@@ -21,17 +20,15 @@ export const getAuditLogs = async (req: Request, res: Response) => {
  *           type: string
  *         description: Filter logs by audit action (e.g., ADD_MOLD, EDIT_MOLD, etc.)
  *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *         description: 
- *              Page number (default: 1)
- *       - in: query
  *         name: limit
  *         schema:
  *           type: integer
- *         description: 
- *              Page size (default: 10)
+ *         description: Page size (default 10)
+ *       - in: query
+ *         name: pageToken
+ *         schema:
+ *           type: string
+ *         description: Cursor token for pagination
  *     responses:
  *       200:
  *         description: List of audit logs
@@ -40,6 +37,7 @@ export const getAuditLogs = async (req: Request, res: Response) => {
  *       500:
  *         description: Server error
  */
+export const getAuditLogs = async (req: Request, res: Response) => {
   const action: string | undefined = req.query.action as string | undefined;
   const limit: number = parseInt(req.query.limit as string) || 10;
   const pageToken: string | undefined = req.query.pageToken as string | undefined;

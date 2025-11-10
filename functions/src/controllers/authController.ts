@@ -1,5 +1,5 @@
-import { Request, Response } from "express";
-import { envOptions } from "../configs/environment";
+import {Request, Response} from "express";
+import {envOptions} from "../configs/environment";
 import {
   registerUser,
   authenticateUser,
@@ -11,11 +11,12 @@ import {
   checkVerificationCode,
   forgetUsername,
   checkUserChangePassword,
+  logoutUserSession,
 } from "../services/authService";
-import { devLog } from "../utils/dev";
-import { sendError, sendSuccess, defaultError } from "../utils/response";
-import { ApiResponse } from "../types/types";
-import { getAuth } from "firebase-admin/auth";
+import {devLog} from "../utils/dev";
+import {sendError, sendSuccess, defaultError} from "../utils/response";
+import {ApiResponse} from "../types/types";
+import {getAuth} from "firebase-admin/auth";
 
 /**
  * Register a new user
@@ -23,56 +24,79 @@ import { getAuth } from "firebase-admin/auth";
  * @route POST /api/v1/auth/register
  * @access Public
  */
+/**
+ * @swagger
+ * /api/v1/auth/register:
+ *   post:
+ *     summary: Register a new user
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - username
+ *               - email
+ *               - password
+ *               - firstName
+ *               - lastName
+ *               - address
+ *             properties:
+ *               username:
+ *                 type: string
+ *                 format: string
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               password:
+ *                 type: string
+ *                 format: password
+ *               firstName:
+ *                 type: string
+ *                 description: Given name of the user
+ *               lastName:
+ *                 type: string
+ *                 description: Family name of the user
+ *               address:
+ *                 type: string
+ *                 description: Mailing or residential address
+ *               phoneNumber:
+ *                 type: string
+ *                 description: Contact phone number (optional)
+ *     responses:
+ *       200:
+ *         description: Successfully created user
+ *       400:
+ *         description: Validation error
+ *       500:
+ *         description: Server error
+ */
 export const createUser = async (req: Request, res: Response) => {
-  /**
-   * @swagger
-   * /api/v1/auth/register:
-   *   post:
-   *     summary: Register a new user
-   *     tags: [Auth]
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             required:
-   *               - username
-   *               - email
-   *               - password
-   *             properties:
-   *               username:
-   *                 type: string
-   *                 format: string
-   *               email:
-   *                 type: string
-   *                 format: email
-   *               password:
-   *                 type: string
-   *                 format: password
-   *     responses:
-   *       200:
-   *         description: Successfully created user
-   *       400:
-   *         description: Validation error
-   *       500:
-   *         description: Server error
-   */
   try {
     const {
       username,
       email,
       password,
-    }: { username: string; email: string; password: string } = req.body;
+      firstName,
+      lastName,
+      address,
+      phoneNumber,
+    }: { username: string; email: string; password: string, firstName: string, lastName: string, address: string, phoneNumber?: string } = req.body;
     const process: ApiResponse<string> = await registerUser(
       username,
       email,
-      password
+      password,
+      firstName,
+      lastName,
+      address,
+      phoneNumber
     );
-    if (!process.success) return sendError(res, process.error);
+    if (!process.success) throw Error(process.error);
     return sendSuccess(res, process.data);
   } catch (error) {
-    devLog(error);
+    devLog(error, "REGISTER_USER");
     return defaultError(res);
   }
 };
@@ -127,7 +151,7 @@ export const loginUser = async (req: Request, res: Response) => {
     res.cookie("session", cookie, {
       httpOnly: true,
       secure: envOptions.isProd ? true : false,
-      sameSite: "strict",
+      sameSite: "lax",
       maxAge: envOptions.maxSessionAge,
     });
     return sendSuccess(res, "Successfully logged in!");
@@ -182,7 +206,7 @@ export const oAuth = async (req: Request, res: Response) => {
     res.cookie("session", cookie, {
       httpOnly: true,
       secure: envOptions.isProd ? true : false,
-      sameSite: "strict",
+      sameSite: "lax",
       maxAge: envOptions.maxSessionAge,
     });
     return sendSuccess(res, "Successfully logged in!");
@@ -193,43 +217,88 @@ export const oAuth = async (req: Request, res: Response) => {
 };
 
 /**
+ * Logout user — clears the session cookie and revokes refresh tokens if possible
+ *
+ * @route POST /api/v1/auth/logout
+ * @access Public (clears cookie even if user not authenticated)
+ */
+/**
+ * @swagger
+ * /api/v1/auth/logout:
+ *   post:
+ *     summary: Logout user
+ *     tags: [Auth]
+ *     description: Clears the session cookie and revokes refresh tokens if possible
+ *     responses:
+ *       200:
+ *         description: Successfully logged out
+ *       500:
+ *         description: Server error
+ */
+export const logoutUser = async (req: Request, res: Response) => {
+  try {
+    const sessionCookie: string | undefined = req.cookies?.session;
+    let idToken: string | undefined;
+    if(req.headers.authorization && req.headers.authorization.startsWith("Bearer ")) {
+      idToken = req.headers.authorization.split(" ")[1];
+    }
+    
+    const process = logoutUserSession(sessionCookie, idToken)
+    if(!process) throw new Error("Unable to verify token")
+
+    // Clear cookie on client
+    res.clearCookie("session", {
+      httpOnly: true,
+      secure: envOptions.isProd ? true : false,
+      sameSite: "lax",
+      path: "/",
+    });
+    
+    return sendSuccess(res, "Successfully logged out!");
+  } catch (error) {
+    devLog(error, "LOGOUT_USER");
+    return defaultError(res);
+  }
+};
+
+/**
  * Send verification code to email
  *
  * @route POST /api/v1/auth/send-verification
  * @access Public
  */
+/**
+ * @swagger
+ * /api/v1/auth/send-verification:
+ *   post:
+ *     summary: Send verification code to email
+ *     tags: [Auth]
+ *     description:
+ *       - Public endpoint to send verification code.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *     responses:
+ *       200:
+ *         description: Verification code sent
+ *       400:
+ *         description: Validation error
+ *       500:
+ *         description: Server error
+ */
 export const sendVerificationCodeEmail = async (
   req: Request,
   res: Response
 ) => {
-  /**
-   * @swagger
-   * /api/v1/auth/send-verification:
-   *   post:
-   *     summary: Send verification code to email
-   *     tags: [Auth]
-   *     description:
-   *       - Public endpoint to send verification code.
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             required:
-   *               - email
-   *             properties:
-   *               email:
-   *                 type: string
-   *                 format: email
-   *     responses:
-   *       200:
-   *         description: Verification code sent
-   *       400:
-   *         description: Validation error
-   *       500:
-   *         description: Server error
-   */
   try {
     const email: string = req.body.email;
     const process = await sendVerificationCode(email);
@@ -246,41 +315,41 @@ export const sendVerificationCodeEmail = async (
  * @route POST /api/v1/auth/check-verification
  * @access Public
  */
+/**
+ * @swagger
+ * /api/v1/auth/check-verification:
+ *   post:
+ *     summary: Check verification code
+ *     tags: [Auth]
+ *     description:
+ *       - Public endpoint to check verification code.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - code
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               code:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Verification code valid
+ *       400:
+ *         description: Invalid code
+ *       500:
+ *         description: Server error
+ */
 export const checkVerificationCodeEmail = async (
   req: Request,
   res: Response
 ) => {
-  /**
-   * @swagger
-   * /api/v1/auth/check-verification:
-   *   post:
-   *     summary: Check verification code
-   *     tags: [Auth]
-   *     description:
-   *       - Public endpoint to check verification code.
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             required:
-   *               - email
-   *               - code
-   *             properties:
-   *               email:
-   *                 type: string
-   *                 format: email
-   *               code:
-   *                 type: string
-   *     responses:
-   *       200:
-   *         description: Verification code valid
-   *       400:
-   *         description: Invalid code
-   *       500:
-   *         description: Server error
-   */
   try {
     const email: string = req.body.email;
     const code: string = req.body.code;
@@ -299,37 +368,37 @@ export const checkVerificationCodeEmail = async (
  * @route POST /api/v1/auth/verified-change-password
  * @access Public
  */
+/**
+ * @swagger
+ * /api/v1/auth/verified-change-password:
+ *   post:
+ *     summary: Change password with verification
+ *     tags: [Auth]
+ *     description:
+ *       - Public endpoint to change password after verification.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - token
+ *               - newPassword
+ *             properties:
+ *               token:
+ *                 type: string
+ *               newPassword:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Password changed
+ *       400:
+ *         description: Invalid code
+ *       500:
+ *         description: Server error
+ */
 export const verifiedChangePassword = async (req: Request, res: Response) => {
-  /**
-   * @swagger
-   * /api/v1/auth/verified-change-password:
-   *   post:
-   *     summary: Change password with verification
-   *     tags: [Auth]
-   *     description:
-   *       - Public endpoint to change password after verification.
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             required:
-   *               - token
-   *               - newPassword
-   *             properties:
-   *               token:
-   *                 type: string
-   *               newPassword:
-   *                 type: string
-   *     responses:
-   *       200:
-   *         description: Password changed
-   *       400:
-   *         description: Invalid code
-   *       500:
-   *         description: Server error
-   */
   try {
     const token: string = req.body.token;
     const newPass: string = req.body.newPassword;
@@ -348,34 +417,34 @@ export const verifiedChangePassword = async (req: Request, res: Response) => {
  * @route POST /api/v1/auth/verified-forget-username
  * @access Public
  */
+/**
+ * @swagger
+ * /api/v1/auth/verified-forget-username:
+ *   post:
+ *     summary: Send username to email after verification
+ *     tags: [Auth]
+ *     description:
+ *       - Public endpoint to send username after verification.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - token
+ *             properties:
+ *               token:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Username sent
+ *       400:
+ *         description: Invalid code
+ *       500:
+ *         description: Server error
+ */
 export const verifiedForgetUsername = async (req: Request, res: Response) => {
-  /**
-   * @swagger
-   * /api/v1/auth/verified-forget-username:
-   *   post:
-   *     summary: Send username to email after verification
-   *     tags: [Auth]
-   *     description:
-   *       - Public endpoint to send username after verification.
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             required:
-   *               - token
-   *             properties:
-   *               token:
-   *                 type: string
-   *     responses:
-   *       200:
-   *         description: Username sent
-   *       400:
-   *         description: Invalid code
-   *       500:
-   *         description: Server error
-   */
   try {
     const token: string = req.body.token;
     const process = await forgetUsername(token);
@@ -393,53 +462,54 @@ export const verifiedForgetUsername = async (req: Request, res: Response) => {
  * @route POST /api/v1/auth/change-password
  * @access Authenticated users
  */
+/**
+ * @swagger
+ * /api/v1/auth/change-password:
+ *   post:
+ *     summary: Change password (authenticated)
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *       - cookieAuth: []
+ *     description:
+ *       - Requires authentication (Bearer token or session cookie)
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - oldPassword
+ *               - newPassword
+ *             properties:
+ *               oldPassword:
+ *                 type: string
+ *               newPassword:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Password changed
+ *       400:
+ *         description: Wrong credentials
+ *       401:
+ *         description: Not authenticated
+ *       500:
+ *         description: Server error
+ */
 export const changeUserPassword = async (req: Request, res: Response) => {
-  /**
-   * @swagger
-   * /api/v1/auth/change-password:
-   *   post:
-   *     summary: Change password (authenticated)
-   *     tags: [Auth]
-   *     security:
-   *       - bearerAuth: []
-   *       - cookieAuth: []
-   *     description:
-   *       - Requires authentication (Bearer token or session cookie)
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             required:
-   *               - oldPassword
-   *               - newPassword
-   *             properties:
-   *               oldPassword:
-   *                 type: string
-   *               newPassword:
-   *                 type: string
-   *     responses:
-   *       200:
-   *         description: Password changed
-   *       400:
-   *         description: Wrong credentials
-   *       401:
-   *         description: Not authenticated
-   *       500:
-   *         description: Server error
-   */
   try {
     const email: string | undefined = req.user?.details.email;
     const uid: string | undefined = req.user?.id;
     const oldPassword: string = req.body.oldPassword;
     const newPassword: string = req.body.newPassword;
 
-    if (!email || !uid)
+    if (!email || !uid) {
       return sendError(res, "User not authenticated properly.");
+    }
     const correctAuth = await checkUserChangePassword(email, oldPassword);
     if (!correctAuth) return sendError(res, "Wrong credentials");
-    await getAuth().updateUser(uid, { password: newPassword });
+    await getAuth().updateUser(uid, {password: newPassword});
     return sendSuccess(res, "Successfully changed password!");
   } catch (error) {
     devLog(error);

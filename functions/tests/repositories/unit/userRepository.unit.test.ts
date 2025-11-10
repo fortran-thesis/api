@@ -1,15 +1,15 @@
-import { describe, it, expect, jest, beforeEach } from '@jest/globals';
-import { FieldPath } from 'firebase-admin/firestore';
-import * as userRepository from '../../../src/repositories/userRepository';
-import * as authLib from '../../../src/lib/auth';
-import * as firestoreLib from '../../../src/lib/firestore';
-import { Role } from '../../../src/types/enums';
+import {describe, it, expect, jest, beforeEach} from "@jest/globals";
+import {FieldPath} from "firebase-admin/firestore";
+import * as userRepository from "../../../src/repositories/userRepository";
+import * as authLib from "../../../src/lib/auth";
+import * as firestoreLib from "../../../src/lib/firestore";
+import {Role} from "../../../src/types/enums";
 
 // Mock all external dependencies
-jest.mock('../../../src/lib/auth');
-jest.mock('../../../src/lib/firestore');
-jest.mock('../../../src/utils/dev');
-jest.mock('../../../src/configs/redis', () => ({
+jest.mock("../../../src/lib/auth");
+jest.mock("../../../src/lib/firestore");
+jest.mock("../../../src/utils/dev");
+jest.mock("../../../src/configs/redis", () => ({
   redis: {},
   redisReady: Promise.resolve(),
 }));
@@ -17,15 +17,15 @@ jest.mock('../../../src/configs/redis', () => ({
 const mockAuthLib = authLib as jest.Mocked<typeof authLib>;
 const mockFirestoreLib = firestoreLib as jest.Mocked<typeof firestoreLib>;
 
-describe('userRepository (unit)', () => {
+describe("userRepository (unit)", () => {
   const mockUser = {
-    username: 'testuser',
+    username: "testuser",
     role: Role.USER,
     is_banned: false,
   };
 
   const mockUserWithId = {
-    id: 'test-user-id',
+    id: "test-user-id",
     ...mockUser,
     metadata: {
       created_at: new Date(),
@@ -38,9 +38,9 @@ describe('userRepository (unit)', () => {
     jest.clearAllMocks();
   });
 
-  describe('addUser', () => {
-    it('should successfully add a user', async () => {
-      const uid = 'test-uid';
+  describe("addUser", () => {
+    it("should successfully add a user", async () => {
+      const uid = "test-uid";
       const mockDocSnapshot = {
         id: uid,
         data: jest.fn().mockReturnValue(mockUserWithId),
@@ -51,12 +51,16 @@ describe('userRepository (unit)', () => {
 
       const result = await userRepository.addUser(mockUser as any, uid);
 
-      expect(mockFirestoreLib.addDocument).toHaveBeenCalledWith('users', mockUser, uid);
+      expect(mockFirestoreLib.addDocument).toHaveBeenCalledWith(
+        "users",
+        mockUser,
+        uid
+      );
       expect(result).toEqual(mockDocSnapshot);
     });
 
-    it('should return null on failure', async () => {
-      const uid = 'test-uid';
+    it("should return null on failure", async () => {
+      const uid = "test-uid";
       mockFirestoreLib.addDocument.mockResolvedValue(null);
 
       const result = await userRepository.addUser(mockUser as any, uid);
@@ -65,25 +69,30 @@ describe('userRepository (unit)', () => {
     });
   });
 
-  describe('findFirestoreUserById', () => {
-    it('should find user by ID', async () => {
-      const userId = 'test-user-id';
+  describe("findFirestoreUserById", () => {
+    it("should find user by ID", async () => {
+      const userId = "test-user-id";
       const mockDocSnapshot = {
         id: userId,
         data: jest.fn().mockReturnValue(mockUserWithId),
         exists: true,
       };
 
-      mockFirestoreLib.getDocumentById.mockResolvedValue(mockDocSnapshot as any);
+      mockFirestoreLib.getDocumentById.mockResolvedValue(
+        mockDocSnapshot as any
+      );
 
       const result = await userRepository.findFirestoreUserById(userId);
 
-      expect(mockFirestoreLib.getDocumentById).toHaveBeenCalledWith('users', userId);
+      expect(mockFirestoreLib.getDocumentById).toHaveBeenCalledWith(
+        "users",
+        userId
+      );
       expect(result).toEqual(mockDocSnapshot);
     });
 
-    it('should return null when user not found', async () => {
-      const userId = 'nonexistent-user';
+    it("should return null when user not found", async () => {
+      const userId = "nonexistent-user";
       mockFirestoreLib.getDocumentById.mockResolvedValue(null);
 
       const result = await userRepository.findFirestoreUserById(userId);
@@ -92,14 +101,14 @@ describe('userRepository (unit)', () => {
     });
   });
 
-  describe('findAuthUserById', () => {
-    it('should find auth user by ID', async () => {
-      const userId = 'test-user-id';
+  describe("findAuthUserById", () => {
+    it("should find auth user by ID", async () => {
+      const userId = "test-user-id";
       const mockAuthUser = {
         uid: userId,
         user: mockUser,
         details: {
-          email: 'test@example.com',
+          email: "test@example.com",
           emailVerified: true,
         },
       };
@@ -112,8 +121,8 @@ describe('userRepository (unit)', () => {
       expect(result).toEqual(mockAuthUser);
     });
 
-    it('should return null when auth user not found', async () => {
-      const userId = 'nonexistent-user';
+    it("should return null when auth user not found", async () => {
+      const userId = "nonexistent-user";
       mockAuthLib.getAuthUserById.mockResolvedValue(null);
 
       const result = await userRepository.findAuthUserById(userId);
@@ -122,11 +131,11 @@ describe('userRepository (unit)', () => {
     });
   });
 
-  describe('findAuthUserByEmail', () => {
-    it('should find auth user by email', async () => {
-      const email = 'test@example.com';
+  describe("findAuthUserByEmail", () => {
+    it("should find auth user by email", async () => {
+      const email = "test@example.com";
       const mockAuthUser = {
-        uid: 'test-user-id',
+        uid: "test-user-id",
         user: mockUser,
         details: {
           email,
@@ -142,8 +151,8 @@ describe('userRepository (unit)', () => {
       expect(result).toEqual(mockAuthUser);
     });
 
-    it('should return null when auth user not found by email', async () => {
-      const email = 'nonexistent@example.com';
+    it("should return null when auth user not found by email", async () => {
+      const email = "nonexistent@example.com";
       mockAuthLib.getAuthUserByEmail.mockResolvedValue(null);
 
       const result = await userRepository.findAuthUserByEmail(email);
@@ -152,62 +161,72 @@ describe('userRepository (unit)', () => {
     });
   });
 
-  describe('findAllUsers', () => {
-    it('should retrieve paginated users with default order fields', async () => {
+  describe("findAllUsers", () => {
+    it("should retrieve paginated users with default order fields", async () => {
       const limit = 10;
       const mockPaginatedResult = {
         snapshot: [mockUserWithId],
         nextPageToken: null,
       };
 
-      mockFirestoreLib.getPaginatedDocuments.mockResolvedValue(mockPaginatedResult as any);
+      mockFirestoreLib.getPaginatedDocuments.mockResolvedValue(
+        mockPaginatedResult as any
+      );
 
       const result = await userRepository.findAllUsers(limit);
 
       expect(mockFirestoreLib.getPaginatedDocuments).toHaveBeenCalledWith(
-        'users',
+        "users",
         limit,
         undefined,
-        ['metadata.created_at', 'username', FieldPath.documentId()]
+        ["metadata.created_at", "username", FieldPath.documentId()]
       );
       expect(result).toEqual(mockPaginatedResult);
     });
 
-    it('should use custom pagination token', async () => {
+    it("should use custom pagination token", async () => {
       const limit = 5;
-      const token = 'pagination-token-123';
+      const token = "pagination-token-123";
       const mockPaginatedResult = {
         snapshot: [],
         nextPageToken: null,
       };
 
-      mockFirestoreLib.getPaginatedDocuments.mockResolvedValue(mockPaginatedResult as any);
+      mockFirestoreLib.getPaginatedDocuments.mockResolvedValue(
+        mockPaginatedResult as any
+      );
 
       const result = await userRepository.findAllUsers(limit, token);
 
       expect(mockFirestoreLib.getPaginatedDocuments).toHaveBeenCalledWith(
-        'users',
+        "users",
         limit,
         token,
-        ['metadata.created_at', 'username', FieldPath.documentId()]
+        ["metadata.created_at", "username", FieldPath.documentId()]
       );
       expect(result).toEqual(mockPaginatedResult);
     });
 
-    it('should use custom order fields', async () => {
+    it("should use custom order fields", async () => {
       const limit = 10;
-      const customOrderFields = ['username', FieldPath.documentId()];
+      const customOrderFields = ["username", FieldPath.documentId()];
       const mockPaginatedResult = {
         snapshot: [mockUserWithId],
         nextPageToken: null,
       };
 
-      mockFirestoreLib.getPaginatedDocuments.mockResolvedValue(mockPaginatedResult as any);
+      mockFirestoreLib.getPaginatedDocuments.mockResolvedValue(
+        mockPaginatedResult as any
+      );
 
-      const result = await userRepository.findAllUsers(limit, undefined, customOrderFields);
+      const result = await userRepository.findAllUsers(
+        limit,
+        undefined,
+        customOrderFields
+      );
 
       expect(mockFirestoreLib.getPaginatedDocuments).toHaveBeenCalledWith(
-        'users',
+        "users",
         limit,
         undefined,
         customOrderFields
@@ -216,23 +235,27 @@ describe('userRepository (unit)', () => {
     });
   });
 
-  describe('updateFirestoreUser', () => {
-    it('should successfully update user', async () => {
-      const uid = 'test-user-id';
-      const updateData = { username: 'newusername' };
-      const mockWriteResult = { writeTime: new Date() };
+  describe("updateFirestoreUser", () => {
+    it("should successfully update user", async () => {
+      const uid = "test-user-id";
+      const updateData = {username: "newusername"};
+      const mockWriteResult = {writeTime: new Date()};
 
       mockFirestoreLib.updateDocument.mockResolvedValue(mockWriteResult as any);
 
       const result = await userRepository.updateFirestoreUser(uid, updateData);
 
-      expect(mockFirestoreLib.updateDocument).toHaveBeenCalledWith('users', uid, updateData);
+      expect(mockFirestoreLib.updateDocument).toHaveBeenCalledWith(
+        "users",
+        uid,
+        updateData
+      );
       expect(result).toEqual(mockWriteResult);
     });
 
-    it('should return null on update failure', async () => {
-      const uid = 'test-user-id';
-      const updateData = { username: 'newusername' };
+    it("should return null on update failure", async () => {
+      const uid = "test-user-id";
+      const updateData = {username: "newusername"};
 
       mockFirestoreLib.updateDocument.mockResolvedValue(null);
 
@@ -242,21 +265,24 @@ describe('userRepository (unit)', () => {
     });
   });
 
-  describe('deleteFirestoreUser', () => {
-    it('should successfully delete user', async () => {
-      const uid = 'test-user-id';
-      const mockWriteResult = { writeTime: new Date() };
+  describe("deleteFirestoreUser", () => {
+    it("should successfully delete user", async () => {
+      const uid = "test-user-id";
+      const mockWriteResult = {writeTime: new Date()};
 
       mockFirestoreLib.deleteDocument.mockResolvedValue(mockWriteResult as any);
 
       const result = await userRepository.deleteFirestoreUser(uid);
 
-      expect(mockFirestoreLib.deleteDocument).toHaveBeenCalledWith('users', uid);
+      expect(mockFirestoreLib.deleteDocument).toHaveBeenCalledWith(
+        "users",
+        uid
+      );
       expect(result).toEqual(mockWriteResult);
     });
 
-    it('should return null on delete failure', async () => {
-      const uid = 'test-user-id';
+    it("should return null on delete failure", async () => {
+      const uid = "test-user-id";
 
       mockFirestoreLib.deleteDocument.mockResolvedValue(null);
 
@@ -266,21 +292,26 @@ describe('userRepository (unit)', () => {
     });
   });
 
-  describe('softDeleteFirestoreUser', () => {
-    it('should successfully soft delete user', async () => {
-      const uid = 'test-user-id';
-      const mockWriteResult = { writeTime: new Date() };
+  describe("softDeleteFirestoreUser", () => {
+    it("should successfully soft delete user", async () => {
+      const uid = "test-user-id";
+      const mockWriteResult = {writeTime: new Date()};
 
-      mockFirestoreLib.softDeleteDocument.mockResolvedValue(mockWriteResult as any);
+      mockFirestoreLib.softDeleteDocument.mockResolvedValue(
+        mockWriteResult as any
+      );
 
       const result = await userRepository.softDeleteFirestoreUser(uid);
 
-      expect(mockFirestoreLib.softDeleteDocument).toHaveBeenCalledWith('users', uid);
+      expect(mockFirestoreLib.softDeleteDocument).toHaveBeenCalledWith(
+        "users",
+        uid
+      );
       expect(result).toEqual(mockWriteResult);
     });
 
-    it('should return null on soft delete failure', async () => {
-      const uid = 'test-user-id';
+    it("should return null on soft delete failure", async () => {
+      const uid = "test-user-id";
 
       mockFirestoreLib.softDeleteDocument.mockResolvedValue(null);
 

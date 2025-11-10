@@ -1,18 +1,19 @@
-import { firebase } from "../configs/firebase";
-import { getStorage } from "firebase-admin/storage";
-import { Bucket, File } from "@google-cloud/storage";
-import { Readable } from "stream";
-import { devLog } from "../utils/dev";
+import {firebase} from "../configs/firebase";
+import {getStorage} from "firebase-admin/storage";
+import {Bucket, File} from "@google-cloud/storage";
+import {Readable} from "stream";
+import {devLog} from "../utils/dev";
+import {getDefaultBucket} from "../configs/storage";
 
 const storage = getStorage(firebase);
 
-const callBucket = (bucketName: string): Bucket => storage.bucket(bucketName);
+const callBucket = (bucketName: string = getDefaultBucket()): Bucket => storage.bucket(bucketName);
 
 /**
  * Returns a reference to a file in the default bucket.
  * @param filePath - The path to the file in the bucket
  */
-export const getFileRef = (bucketName: string, filePath: string): File => {
+export const getFileRef = (filePath: string, bucketName?: string): File => {
   return callBucket(bucketName).file(filePath);
 };
 
@@ -23,15 +24,15 @@ export const getFileRef = (bucketName: string, filePath: string): File => {
  * @param contentType - (Optional) The MIME type of the file
  */
 export const uploadFile = async (
-  bucketName: string,
   filePath: string,
   data: Buffer | Readable,
-  contentType?: string
+  contentType?: string,
+  bucketName?: string
 ): Promise<string | null> => {
   try {
-    const file = getFileRef(bucketName, filePath);
+    const file = getFileRef(filePath, bucketName);
     const options: any = {};
-    if (contentType) options.metadata = { contentType };
+    if (contentType) options.metadata = {contentType};
     await file.save(data, options);
     return filePath;
   } catch (error) {
@@ -42,33 +43,34 @@ export const uploadFile = async (
 
 export const uploadFiles = async (
   files: Express.Multer.File[],
-  bucketName: string
+  folder: string,
+  bucketName?: string
 ): Promise<string[]> => {
-  let filePaths: string[] = [];
+  const filePaths: string[] = [];
   for (const file of files) {
-    const filePath = `molds/${Date.now()}_${file.originalname}`;
+    const filePath = `${folder}/${Date.now()}_${file.originalname}`;
     const uploadedPath = await uploadFile(
-      bucketName,
       filePath,
       file.buffer,
-      file.mimetype
+      file.mimetype,
+      bucketName
     );
     if (uploadedPath) filePaths.push(uploadedPath);
   }
   return filePaths;
-}
+};
 
 /**
  * Downloads a file from the bucket as a buffer.
  * @param filePath - The path to the file in the bucket
- * @returns The file contents as a Buffer
+ * @return The file contents as a Buffer
  */
 export const downloadFile = async (
-  bucketName: string,
-  filePath: string
+  filePath: string,
+  bucketName?: string
 ): Promise<Buffer | null> => {
   try {
-    const file = getFileRef(bucketName, filePath);
+    const file = getFileRef(filePath, bucketName);
     const [contents] = await file.download();
     return contents;
   } catch (error) {
@@ -76,16 +78,17 @@ export const downloadFile = async (
     return null;
   }
 };
+
 /**
  * Deletes a file from the bucket.
  * @param filePath - The path to the file in the bucket
  */
 export const deleteFile = async (
-  bucketName: string,
-  filePath: string
+  filePath: string,
+  bucketName?: string
 ): Promise<boolean> => {
   try {
-    const file = getFileRef(bucketName, filePath);
+    const file = getFileRef(filePath, bucketName);
     await file.delete();
     return true;
   } catch (error) {
@@ -98,15 +101,15 @@ export const deleteFile = async (
  * Gets a signed URL for a file (for temporary public access).
  * @param filePath - The path to the file in the bucket
  * @param expiresInSeconds - How long the URL should be valid (default: 1 hour)
- * @returns The signed URL as a string
+ * @return The signed URL as a string
  */
 export const getSignedUrl = async (
-  bucketName: string,
   filePath: string,
-  expiresInSeconds = 3600
+  expiresInSeconds = 3600,
+  bucketName?: string
 ): Promise<string | null> => {
   try {
-    const file = getFileRef(bucketName, filePath);
+    const file = getFileRef(filePath, bucketName);
     const [url] = await file.getSignedUrl({
       action: "read",
       expires: Date.now() + expiresInSeconds * 1000,

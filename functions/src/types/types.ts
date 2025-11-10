@@ -7,3 +7,4 @@ export * from "./models/moldipediaTypes";
 export * from "./models/utilityTypes";
 export * from "./models/flagReportTypes";
 export * from "./models/paginationTypes";
+export * from "./models/investigationTypes";

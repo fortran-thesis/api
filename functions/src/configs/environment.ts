@@ -1,14 +1,17 @@
 import dotenv from "dotenv";
-dotenv.config({quiet: process.env.NODE_ENV === 'test' ? true : false});
+// Only load .env file in local development (not in Cloud Run/production)
+if (process.env.NODE_ENV !== "production") {
+  dotenv.config({quiet: process.env.NODE_ENV === "test" ? true : false});
+}
 
 export const envOptions = {
   env: process.env.NODE_ENV || "development",
   port:
-    process.env.NODE_ENV === "production"
-      ? 3000
-      : process.env.NODE_ENV === "test"
-      ? 4000
-      : 5001,
+    process.env.NODE_ENV === "production" ?
+      8080 :
+      process.env.NODE_ENV === "test" ?
+        4000 :
+        8080,
   isProd: process.env.NODE_ENV === "production",
   isTest: process.env.NODE_ENV === "test" || process.env.IS_TESTING === "true",
   isDev: process.env.NODE_ENV === "development",
@@ -19,6 +22,8 @@ export const envOptions = {
   redisPassword: process.env.REDIS_PASSWORD || null,
   redisHost: process.env.REDIS_HOST || "localhost",
   redisPort: Number(process.env.REDIS_PORT) || 6379,
+  moldifyEmail: process.env.MOLDIFY_EMAIL,
+  moldifyPassword: process.env.MOLDIFY_PASSWORD,
   encryptionKey: process.env.ENCRYPTION_KEY,
   maxSessionAge: 60 * 60 * 24 * 5 * 1000, // 5 days
 };

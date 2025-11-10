@@ -1,10 +1,10 @@
-import { Request, Response, Router } from "express";
-import { upload } from "../middlewares/upload";
-import { verifyUser } from "../middlewares/verification";
-import { sanitizeBody } from "../middlewares/sanitation";
-import { validateQuery, validateParams } from "../middlewares/validation";
-import { PaginationQuerySchema } from "../dto/paginationDTO";
-import { MoldIdSchema } from "../dto/moldDTO";
+import {Request, Response, Router} from "express";
+import {upload} from "../middlewares/upload";
+import {verifyUser} from "../middlewares/verification";
+import {sanitizeBody} from "../middlewares/sanitation";
+import {validateQuery, validateParams} from "../middlewares/validation";
+import {PaginationQuerySchema} from "../dto/paginationDTO";
+import {MoldIdSchema} from "../dto/moldDTO";
 import {
   createMonitoredMold,
   getAllMonitoredMoldsByFolderId,

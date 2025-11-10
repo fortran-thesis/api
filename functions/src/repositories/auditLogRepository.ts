@@ -1,9 +1,9 @@
-import { FieldPath } from "firebase-admin/firestore";
-import { getPaginatedDocuments, getDocumentsByField } from "../lib/firestore";
-import { OrderField } from "../utils/pagination";
-import { FirestoreCollection, getCollectionName } from "../types/models/firestoreCollections";
+import {FieldPath} from "firebase-admin/firestore";
+import {getPaginatedDocuments, getDocumentsByField} from "../lib/firestore";
+import {OrderField} from "../utils/pagination";
+import {FirestoreCollection, getCollectionName} from "../types/models/firestoreCollections";
 
-const collection = getCollectionName(FirestoreCollection.AUDIT_LOGS)
+const collection = getCollectionName(FirestoreCollection.AUDIT_LOGS);
 
 export const findAuditLogsByAction = async (action: string) =>
   getDocumentsByField(collection, "action", action);

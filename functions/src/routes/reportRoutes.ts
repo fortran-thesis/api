@@ -1,13 +1,13 @@
-import { Router, Request, Response } from "express";
-import { verifyUser } from "../middlewares/verification";
+import {Router, Request, Response} from "express";
+import {verifyUser} from "../middlewares/verification";
 import {
   validateBody,
   validateParams,
   validateQuery,
 } from "../middlewares/validation";
-import { Role } from "../types/enums";
-import { PaginationQuerySchema } from "../dto/paginationDTO";
-import { ReportCreateSchema, ReportIdSchema } from "../dto/reportDTO";
+import {Role} from "../types/enums";
+import {PaginationQuerySchema} from "../dto/paginationDTO";
+import {ReportCreateSchema, ReportIdSchema} from "../dto/reportDTO";
 import {
   createReport,
   getAllReports,

@@ -1,4 +1,4 @@
-import { FieldPath } from "firebase-admin/firestore";
+import {FieldPath} from "firebase-admin/firestore";
 import {
   addDocument,
   deleteDocument,
@@ -8,9 +8,9 @@ import {
   softDeleteDocument,
   updateDocument,
 } from "../lib/firestore";
-import { Mold } from "../types/types";
-import { OrderField } from "../utils/pagination";
-import { getCollectionName, FirestoreCollection } from "../types/models/firestoreCollections";
+import {Mold} from "../types/types";
+import {OrderField} from "../utils/pagination";
+import {getCollectionName, FirestoreCollection} from "../types/models/firestoreCollections";
 
 const collection: string = getCollectionName(FirestoreCollection.MOLDS);
 

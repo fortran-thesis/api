@@ -1,4 +1,4 @@
-import { DecodedIdToken, getAuth, UpdateRequest } from "firebase-admin/auth";
+import {DecodedIdToken, getAuth, UpdateRequest} from "firebase-admin/auth";
 import {
   verifyToken,
   generateCookie,
@@ -11,7 +11,7 @@ import {
   softDeleteFirestoreUser,
   updateFirestoreUser,
 } from "../repositories/userRepository";
-import { Role } from "../types/enums";
+import {Role} from "../types/enums";
 import {
   ApiResponse,
   APIUser,
@@ -20,21 +20,45 @@ import {
   WithId,
   WithMetadata,
 } from "../types/types";
-import { devLog } from "../utils/dev";
-import { Timestamp } from "firebase-admin/firestore";
-import { sendEmail } from "../utils/email";
-import { getDocumentIdByField } from "../lib/firestore";
-import { redis } from "../configs/redis";
-import { redisReady } from "../configs/redis";
-import { generateCode } from "../utils/code";
-import { v4 as uuidv4 } from "uuid";
+import {devLog} from "../utils/dev";
+import {Timestamp} from "firebase-admin/firestore";
+import {sendEmail} from "../utils/email";
+import {getDocumentIdByField} from "../lib/firestore";
+import {redis, ensureRedisConnection} from "../configs/redis";
+import {generateCode} from "../utils/code";
+import {v4 as uuidv4} from "uuid";
+import {handlePostCache, handlePatchCache, handleDeleteCache} from "../utils/cacheManager";
 
 export const registerUser = async (
   username: string,
   email: string,
-  password: string
+  password: string,
+  firstName: string,
+  lastName: string,
+  address: string,
+  phoneNumber?: string,
+  role: Role = Role.USER
 ): Promise<ApiResponse<string>> => {
   try {
+    // Normalize Philippine phone numbers to E.164 (+63...) expected by Firebase
+    const normalizePH = (raw?: string): string | undefined => {
+      if (!raw) return undefined;
+      let p = raw.trim();
+      // remove common separators
+      p = p.replace(/[^0-9+]/g, "");
+      // If already in E.164 and starts with +63, accept
+      if (p.startsWith("+63")) return p;
+      // If starts with + but not +63, leave as-is (assume user provided full international)
+      if (p.startsWith("+")) return p;
+      // If starts with 63 (no plus), add +
+      if (p.startsWith("63")) return `+${p}`;
+      // If starts with 0 (local Philippine), replace leading 0 with +63
+      if (p.startsWith("0")) return `+63${p.slice(1)}`;
+      // Otherwise assume it's a local number without 0/prefix; prepend +63
+      return `+63${p}`;
+    };
+
+    const normalizedPhone = normalizePH(phoneNumber);
     let userExists = false;
     try {
       await getAuth().getUserByEmail(email);
@@ -42,20 +66,24 @@ export const registerUser = async (
     } catch (err: any) {
       if (err.code !== "auth/user-not-found") throw err;
     }
-    if (userExists) return { success: false, error: "Email already used!" };
+    if (userExists) return {success: false, error: "Email already used!"};
 
     const userRecord = await getAuth().createUser({
       email: email,
       emailVerified: false,
       password: password,
+      phoneNumber: normalizedPhone,
+      displayName: firstName + " " + lastName,
     });
 
     const userId = userRecord.uid;
     if (!userId) throw new Error("ID does not exist!");
-
     const user: WithMetadata<User> = {
       username: username,
-      role: Role.USER,
+      first_name: firstName,
+      last_name: lastName,
+      address: address,
+      role: role,
       is_banned: false,
       metadata: {
         created_at: Timestamp.now(),
@@ -66,10 +94,14 @@ export const registerUser = async (
 
     const details = await addUser(user, userId);
     if (!details) throw new Error("Could not register user!");
-    return { success: true, data: "Successfully created user!" };
+    
+    // Invalidate user list caches (new user added)
+    await handlePostCache("users");
+    
+    return {success: true, data: "Successfully created user!"};
   } catch (error) {
     devLog(error);
-    return { success: false, error: "Registration failed" };
+    return {success: false, error: "Registration failed"};
   }
 };
 
@@ -94,6 +126,9 @@ export const registerOAuthUser = async (
 
     const user: WithMetadata<User> = {
       username: "",
+      first_name: "",
+      last_name: "",
+      address: "",
       role: Role.USER,
       is_banned: false,
       metadata: {
@@ -131,15 +166,18 @@ export const identifyUser = async (
     if (!uid) throw new Error("UID not found in Firebase Firestore.");
     const user = await getAuthUserById(uid);
     if (!user) throw new Error("User not found in Firebase Authentication");
-    const result = await fetch(process.env.FIREBASE_AUTH_API as string, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email: user.details.email,
-        password: password,
-        returnSecureToken: true,
-      }),
-    });
+    const result = await fetch(
+        "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=AIzaSyALLixtCRzZYHtnsaCF74Z_PDzj51zN6SY",
+      {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+          email: user.details.email,
+          password: password,
+          returnSecureToken: true,
+        }),
+      }
+    );
     if (!result.ok) throw new Error("Firebase Auth API doesn't recognize user");
     const obtainedUser = await result.json();
     return obtainedUser.idToken;
@@ -182,15 +220,21 @@ export const updateUser = async (
   try {
     const update: UpdateRequest = {};
     if (newDetails.email !== undefined) update.email = newDetails.email;
-    if (newDetails.displayName !== undefined)
+    if (newDetails.displayName !== undefined) {
       update.displayName = newDetails.displayName;
+    }
 
     const details = await getAuth().updateUser(id, newDetails);
     const updateMetadata = await updateFirestoreUser(id, {});
 
     if (!details) throw new Error("Error updating user in Firebase Auth.");
-    if (!updateMetadata)
+    if (!updateMetadata) {
       throw new Error("Error updating user metadata in Firestore.");
+    }
+    
+    // Invalidate user cache (email/displayName don't affect list ordering)
+    await handlePatchCache("users", id, false);
+    
     return true;
   } catch (error) {
     devLog(error);
@@ -200,9 +244,12 @@ export const updateUser = async (
 
 export const softRemoveUser = async (id: string): Promise<void> => {
   try {
-    await getAuth().updateUser(id, { disabled: true });
+    await getAuth().updateUser(id, {disabled: true});
     const process = await softDeleteFirestoreUser(id);
     if (!process) throw new Error("Error deleting user.");
+    
+    // Invalidate user cache (soft delete affects list and counts)
+    await handleDeleteCache("users", id);
   } catch (error) {
     devLog(error);
   }
@@ -213,6 +260,9 @@ export const removeUser = async (id: string): Promise<void> => {
     await getAuth().deleteUser(id);
     const process = await deleteFirestoreUser(id);
     if (!process) throw new Error("Error deleting user.");
+    
+    // Invalidate user cache (hard delete affects list and counts)
+    await handleDeleteCache("users", id);
   } catch (error) {
     devLog(error);
   }
@@ -224,13 +274,13 @@ export const generateVerificationCode = async (
   try {
     // Generate a random 4-digit code, zero-padded (e.g., '0004', '0348')
     const code = generateCode();
-    await redisReady;
+    await ensureRedisConnection();
     // Always overwrite the code in Redis, even if one already exists
-    await redis.set(`verify:${email}`, code, { EX: 600 });
+    await redis.set(`verify:${email}`, code, {EX: 600});
     return code;
   } catch (error) {
     devLog(error);
-    return `Something went wrong`;
+    return "Something went wrong";
   }
 };
 
@@ -239,12 +289,12 @@ export const checkVerificationCode = async (
   code: string
 ): Promise<string | null> => {
   try {
-    await redisReady;
+    await ensureRedisConnection();
     const storedCode = await redis.get(`verify:${email}`);
     if (!storedCode || storedCode !== code) return null;
     await redis.del(`verify:${email}`);
     const token = uuidv4();
-    await redis.set(`token:${token}`, email, { EX: 1800 }); // 30 min TTL
+    await redis.set(`token:${token}`, email, {EX: 1800}); // 30 min TTL
 
     return token;
   } catch (error) {
@@ -272,7 +322,7 @@ export const sendVerificationCode = async (email: string): Promise<string> => {
     return `Verification code sent to ${email}`;
   } catch (error) {
     devLog(error);
-    return `Something went wrong sending verification code`;
+    return "Something went wrong sending verification code";
   }
 };
 
@@ -281,36 +331,36 @@ export const changePassword = async (
   newPassword: string
 ): Promise<ApiResponse<string>> => {
   try {
-    await redisReady;
+    await ensureRedisConnection();
     const email = await redis.get(`token:${redisToken}`);
     if (!email) {
       devLog(`changePassword: Invalid or expired token: ${redisToken}`);
-      return { success: false, data: "Invalid or expired token!" };
+      return {success: false, data: "Invalid or expired token!"};
     }
     const user = await getAuthUserByEmail(email);
     if (!user) {
       devLog(`changePassword: No user found for email: ${email}`);
-      return { success: false, data: "User not found." };
+      return {success: false, data: "User not found."};
     }
-    await getAuth().updateUser(user.id, { password: newPassword });
+    await getAuth().updateUser(user.id, {password: newPassword});
     await redis.del(`token:${redisToken}`);
-    return { success: true, data: "Password changed successfully!" };
+    return {success: true, data: "Password changed successfully!"};
   } catch (error) {
     devLog(error);
-    return { success: false, data: "Something went wrong." };
+    return {success: false, data: "Something went wrong."};
   }
-}
+};
 
 export const forgetUsername = async (
   redisToken: string
 ): Promise<ApiResponse<string>> => {
   try {
-    await redisReady;
+    await ensureRedisConnection();
     const email = await redis.get(`token:${redisToken}`);
-    if (!email) return { success: false, data: "Invalid or expired token!" };
+    if (!email) return {success: false, data: "Invalid or expired token!"};
     const user = await getAuthUserByEmail(email);
     if (!user) throw new Error("No user found in Firebase");
-    const username = user.user.username
+    const username = user.user.username;
     const html = `
       <h2>Username</h2>
       <p>Hello,</p>
@@ -322,10 +372,10 @@ export const forgetUsername = async (
     `;
     sendEmail(email, "Forgot Username", html);
     await redis.del(`token:${redisToken}`);
-    return { success: true, data: "Successfully sent email." };
+    return {success: true, data: "Successfully sent email."};
   } catch (error) {
     devLog(error);
-    return { success: false, data: "Something went wrong" };
+    return {success: false, data: "Something went wrong"};
   }
 };
 
@@ -334,9 +384,9 @@ export const checkUserChangePassword = async (
   password: string
 ): Promise<boolean> => {
   try {
-    const result = await fetch(process.env.FIREBASE_AUTH_API as string, {
+    const result = await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=AIzaSyALLixtCRzZYHtnsaCF74Z_PDzj51zN6SY', {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {"Content-Type": "application/json"},
       body: JSON.stringify({
         email: email,
         password: password,
@@ -347,6 +397,51 @@ export const checkUserChangePassword = async (
     return true;
   } catch (error) {
     devLog(error);
+    return false;
+  }
+};
+
+/**
+ * Logout helper: verifies either a Firebase session cookie or an ID token
+ * and revokes refresh tokens for the corresponding user to force sign-out
+ * across clients. Returns true if revocation was attempted successfully or
+ * false otherwise.
+ */
+export const logoutUserSession = async (
+  sessionCookie?: string,
+  idToken?: string
+): Promise<boolean> => {
+  try {
+    // Prefer session cookie verification if provided
+    if (sessionCookie) {
+      try {
+        const decoded = await getAuth().verifySessionCookie(sessionCookie, true);
+        if (decoded?.uid) {
+          await getAuth().revokeRefreshTokens(decoded.uid);
+          return true;
+        }
+      } catch (err) {
+        devLog(err, "logoutUserSession:verifySessionCookie");
+        // fallthrough to try idToken if provided
+      }
+    }
+
+    if (idToken) {
+      try {
+        const decoded = await getAuth().verifyIdToken(idToken);
+        if (decoded?.uid) {
+          await getAuth().revokeRefreshTokens(decoded.uid);
+          return true;
+        }
+      } catch (err) {
+        devLog(err, "logoutUserSession:verifyIdToken");
+      }
+    }
+
+    // Nothing to revoke or attempts failed
+    return false;
+  } catch (error) {
+    devLog(error, "logoutUserSession");
     return false;
   }
 };

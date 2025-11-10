@@ -6,9 +6,9 @@ import {
   softDeleteDocument,
   getDocumentById,
 } from "../lib/firestore";
-import { FirestoreCollection, getCollectionName } from "../types/models/firestoreCollections";
-import { MonitoredMold } from "../types/types";
-import { GetPaginatedOptions, OrderField } from "../utils/pagination";
+import {FirestoreCollection, getCollectionName} from "../types/models/firestoreCollections";
+import {MonitoredMold} from "../types/types";
+import {GetPaginatedOptions, OrderField} from "../utils/pagination";
 
 const collection = getCollectionName(FirestoreCollection.MONITORED_MOLDS);
 

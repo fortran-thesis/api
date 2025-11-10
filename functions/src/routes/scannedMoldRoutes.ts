@@ -1,7 +1,7 @@
-import { Request, Response, Router } from "express";
-import { upload } from "../middlewares/upload";
-import { verifyUser } from "../middlewares/verification";
-import { sanitizeBody } from "../middlewares/sanitation";
+import {Request, Response, Router} from "express";
+import {upload} from "../middlewares/upload";
+import {verifyUser} from "../middlewares/verification";
+import {sanitizeBody} from "../middlewares/sanitation";
 
 const router = Router();
 
