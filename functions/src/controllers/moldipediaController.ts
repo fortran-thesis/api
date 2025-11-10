@@ -33,39 +33,69 @@ export const createMoldipedia = async (req: Request, res: Response) => {
    *         multipart/form-data:
    *           schema:
    *             type: object
+   *             required:
+   *               - details
+   *               - cover_photo
    *             properties:
    *               details:
-   *                 type: object
-   *                 description: Moldipedia DTO. See Moldipedia interface for properties.
-   *                 properties:
-   *                   title:
-   *                     type: string
-   *                   body:
-   *                     type: string
-   *                   author_id:
-   *                     type: string
+   *                 type: string
+   *                 description: JSON string of Moldipedia object with properties - title (string), body (string), author_id (string), tags (array of strings)
+   *                 example: '{"title":"Understanding Aspergillus","body":"Aspergillus is a genus...","author_id":"user123","tags":["fungi"]}'
    *               cover_photo:
    *                 type: string
    *                 format: binary
+   *                 description: Cover photo image file
    *     responses:
    *       200:
    *         description: Successfully created moldipedia article
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/MoldipediaResponse'
    *       400:
    *         description: Validation error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ApiResponseError'
    *       500:
    *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ApiResponseError'
    */
   try {
-  const details: Omit<Moldipedia, "cover_photo"> = req.body.details;
-  const photo: Express.Multer.File = req.file as Express.Multer.File;
-  const filePath = generateStoragePath(StorageFolder.MOLDIPEDIA, photo.originalname);
-  const url = await uploadFile(filePath, photo.buffer, photo.mimetype);
-    if (!url) return sendError(res, "Invalid cover photo, please upload a different image.", 400);
-    const article: WithId<Moldipedia> | null = await addMoldipediaToFirestore({...details, cover_photo: url});
-    if (!article) return sendError(res, "Failed to create moldipedia article", 400);
+    const details: Omit<Moldipedia, "cover_photo"> = req.body.details;
+    const photo: Express.Multer.File = req.file as Express.Multer.File;
+    const filePath = generateStoragePath(
+      StorageFolder.MOLDIPEDIA,
+      photo.originalname
+    );
+    const url = await uploadFile(filePath, photo.buffer, photo.mimetype);
+    if (!url) {
+      return sendError(
+        res,
+        "Invalid cover photo, please upload a different image.",
+        400
+      );
+    }
+    const article: WithId<Moldipedia> | null = await addMoldipediaToFirestore({
+      ...details,
+      cover_photo: url,
+    });
+    if (!article) {
+      return sendError(res, "Failed to create moldipedia article", 400);
+    }
     // Audit log
     if (req.user) {
-      createLog(req.user.id, req.user.user.role, AuditAction.ADD_WIKIMOLD, `Created moldipedia: ${details.title}`, article["id"] || "");
+      createLog(
+        req.user.id,
+        req.user.user.role,
+        AuditAction.ADD_WIKIMOLD,
+        `Created moldipedia: ${details.title}`,
+        article["id"] || ""
+      );
     }
     return sendSuccess(res, article);
   } catch (error) {
@@ -100,16 +130,33 @@ export const getAllMoldipedia = async (req: Request, res: Response) => {
    *     responses:
    *       200:
    *         description: List of moldipedia articles
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/PaginatedResult'
    *       404:
    *         description: Not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ApiResponseError'
    *       500:
    *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ApiResponseError'
    */
   const limit: number = parseInt(req.query.limit as string) || 10;
-  const pageToken: string | undefined = req.query.pageToken as string | undefined;
+  const pageToken: string | undefined = req.query.pageToken as
+    | string
+    | undefined;
   try {
-    const result: PaginatedResult<Moldipedia[]> | null = await retrieveAllMoldipedia(limit, pageToken);
-    if (!result) return sendError(res, "Failed to retrieve moldipedia articles", 404);
+    const result: PaginatedResult<Moldipedia[]> | null =
+      await retrieveAllMoldipedia(limit, pageToken);
+    if (!result) {
+      return sendError(res, "Failed to retrieve moldipedia articles", 404);
+    }
     return sendSuccess(res, result);
   } catch (error) {
     devLog(error);
@@ -139,15 +186,29 @@ export const getMoldipediaById = async (req: Request, res: Response) => {
    *     responses:
    *       200:
    *         description: Moldipedia article
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/MoldipediaResponse'
    *       404:
    *         description: Not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ApiResponseError'
    *       500:
    *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ApiResponseError'
    */
   try {
     const id = req.params.id;
     const article: Moldipedia | null = await retrieveMoldipediaById(id);
-    if (!article) return sendError(res, "Failed to retrieve moldipedia article", 404);
+    if (!article) {
+      return sendError(res, "Failed to retrieve moldipedia article", 404);
+    }
     return sendSuccess(res, article);
   } catch (error) {
     devLog(error);
@@ -198,10 +259,18 @@ export const patchMoldipedia = async (req: Request, res: Response) => {
     const id: string = req.params.id;
     const details: Partial<Moldipedia> = req.body.details;
     const updated = await updateMoldipediaInFirestore(id, details);
-    if (!updated) return sendError(res, "Failed to update moldipedia article", 404);
+    if (!updated) {
+      return sendError(res, "Failed to update moldipedia article", 404);
+    }
     // Audit log
     if (req.user) {
-      createLog(req.user.id, req.user.user.role, AuditAction.EDIT_WIKIMOLD, `Updated moldipedia: ${id}`, id);
+      createLog(
+        req.user.id,
+        req.user.user.role,
+        AuditAction.EDIT_WIKIMOLD,
+        `Updated moldipedia: ${id}`,
+        id
+      );
     }
     return sendSuccess(res, updated);
   } catch (error) {
@@ -240,7 +309,13 @@ export const deleteMoldipedia = async (req: Request, res: Response) => {
     await removeMoldipedia(id);
     // Audit log
     if (req.user) {
-      createLog(req.user.id, req.user.user.role, AuditAction.ARCHIVE_WIKIMOLD, `Deleted moldipedia: ${id}`, id);
+      createLog(
+        req.user.id,
+        req.user.user.role,
+        AuditAction.ARCHIVE_WIKIMOLD,
+        `Deleted moldipedia: ${id}`,
+        id
+      );
     }
     return sendSuccess(res, "Successfully deleted moldipedia article");
   } catch (error) {

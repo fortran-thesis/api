@@ -33,10 +33,22 @@ export const createReport = async (req: Request, res: Response) => {
    *     responses:
    *       200:
    *         description: Successfully created report
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ReportResponse'
    *       400:
    *         description: Validation error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ApiResponseError'
    *       500:
    *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ApiResponseError'
    */
   try {
     const details: Omit<Report, "created_at"> = req.body;
@@ -80,10 +92,22 @@ export const getAllReports = async (req: Request, res: Response) => {
    *     responses:
    *       200:
    *         description: List of reports
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/PaginatedResult'
    *       404:
    *         description: Not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ApiResponseError'
    *       500:
    *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ApiResponseError'
    */
   const limit: number = parseInt(req.query.limit as string) || 10;
   const pageToken: string | undefined = req.query.pageToken as string | undefined;
@@ -158,10 +182,7 @@ export const patchReport = async (req: Request, res: Response) => {
    *         application/json:
    *           schema:
    *             type: object
-   *             properties:
-   *               details:
-   *                 type: object
-   *                 description: Report details to update
+   *             description: Partial Report object with fields to update
    *     responses:
    *       200:
    *         description: Successfully updated report

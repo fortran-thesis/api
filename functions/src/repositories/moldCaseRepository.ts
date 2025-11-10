@@ -105,7 +105,7 @@ export const updateCultivationDetails = async (
 ): Promise<FirebaseFirestore.WriteResult | null> => {
   try {
     const updates: any = {};
-    
+
     // If the entire cultivation_details object is provided, use it directly
     if (details.cultivation_details !== undefined) {
       updates["cultivation_details"] = details.cultivation_details;
@@ -121,7 +121,7 @@ export const updateCultivationDetails = async (
         updates["cultivation_details.in_vitro_details"] = details.in_vitro_details;
       }
     }
-    
+
     // Also handle start_date and end_date if provided (they're outside cultivation_details)
     if (details.start_date !== undefined) {
       updates["start_date"] = details.start_date;
@@ -129,7 +129,7 @@ export const updateCultivationDetails = async (
     if (details.end_date !== undefined) {
       updates["end_date"] = details.end_date;
     }
-    
+
     return await updateDocument(collection, caseId, updates);
   } catch (err) {
     devLog(err);

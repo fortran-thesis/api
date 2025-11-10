@@ -40,12 +40,22 @@ export const createFlagReport = async (req: Request, res: Response) => {
    */
   try {
     const details = req.body;
-    const reporter_id = req.user?.id;
-    if (!reporter_id) return sendError(res, "Missing reporter id", 400);
-    const report = await addFlagReportToFirestore({...details, reporter_id, status: "unresolved"});
+    const reporterId = req.user?.id;
+    if (!reporterId) return sendError(res, "Missing reporter id", 400);
+    const report = await addFlagReportToFirestore({
+      ...details,
+      reporterId,
+      status: "unresolved",
+    });
     if (!report) return sendError(res, "Failed to create flag report");
     if (req.user) {
-      createLog(reporter_id, req.user.user.role, AuditAction.CORRECT_FLAG_REPORT, `Flagged content ${details.content_id}`, details.content_id);
+      createLog(
+        reporterId,
+        req.user.user.role,
+        AuditAction.CORRECT_FLAG_REPORT,
+        `Flagged content ${details.content_id}`,
+        details.content_id
+      );
     }
     return sendSuccess(res, report);
   } catch (error) {
@@ -83,9 +93,12 @@ export const getAllFlagReports = async (req: Request, res: Response) => {
    *         description: Server error
    */
   const limit: number = parseInt(req.query.limit as string) || 10;
-  const pageToken: string | undefined = req.query.pageToken as string | undefined;
+  const pageToken: string | undefined = req.query.pageToken as
+    | string
+    | undefined;
   try {
-    const result: PaginatedResult<FlagReportBase[]> | null = await retrieveAllFlagReports(limit, pageToken);
+    const result: PaginatedResult<FlagReportBase[]> | null =
+      await retrieveAllFlagReports(limit, pageToken);
     if (!result) return sendError(res, "Failed to retrieve flag reports", 500);
     return sendSuccess(res, result);
   } catch (error) {
@@ -177,7 +190,13 @@ export const patchFlagReport = async (req: Request, res: Response) => {
     const updated = await updateFlagReportInFirestore(id, details);
     if (!updated) return sendError(res, "Failed to update flag report", 404);
     if (details.status === "resolved" && req.user) {
-      createLog(req.user.id, req.user.user.role, AuditAction.CORRECT_FLAG_REPORT, `Resolved flag report ${id}`, id);
+      createLog(
+        req.user.id,
+        req.user.user.role,
+        AuditAction.CORRECT_FLAG_REPORT,
+        `Resolved flag report ${id}`,
+        id
+      );
     }
     return sendSuccess(res, updated);
   } catch (error) {

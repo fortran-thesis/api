@@ -18,25 +18,27 @@ export interface GetPaginatedOptions {
  */
 function makePageToken(
   lastDoc: FirebaseFirestore.DocumentSnapshot,
-  orderFields: OrderField[]
+  orderFields: OrderField[],
 ): string {
   const vals = orderFields.map((f) => {
     // If ordering by documentId, return the id
     const fieldPath = f instanceof FieldPath ? FieldPath.documentId() : f;
-    const isDocId = 
-      fieldPath === FieldPath.documentId() || 
-      (typeof f === 'object' && f.toString && f.toString().includes('documentId'));
-    
-    if (isDocId || f === '__name__') {
+    const isDocId =
+      fieldPath === FieldPath.documentId() ||
+      (typeof f === "object" &&
+        f.toString &&
+        f.toString().includes("documentId"));
+
+    if (isDocId || f === "__name__") {
       return lastDoc.id;
     }
-    
+
     const v = lastDoc.get(f as string);
     // Convert Timestamps to millis for portability
     if (v instanceof Timestamp) return v.toMillis();
     return v;
   });
-  
+
   const payload = {vals};
   return Buffer.from(JSON.stringify(payload)).toString("base64");
 }
@@ -44,17 +46,17 @@ function makePageToken(
 /**
  * Parse token -> array of values for query.startAfter(...)
  */
-function parsePageToken(token?: string): any[] | null {
+function parsePageToken(token?: string) {
   if (!token) return null;
   try {
     const parsed = JSON.parse(Buffer.from(token, "base64").toString("utf8"));
     const vals = parsed.vals ?? null;
     if (!vals) return null;
-    
+
     // Reconstruct Timestamps from milliseconds
     return vals.map((v: any) => {
       // If it's a number that looks like a timestamp (milliseconds since epoch)
-      if (typeof v === 'number' && v > 1000000000000 && v < 9999999999999) {
+      if (typeof v === "number" && v > 1000000000000 && v < 9999999999999) {
         // Convert milliseconds back to Timestamp
         const seconds = Math.floor(v / 1000);
         const nanoseconds = (v % 1000) * 1000000;
@@ -80,7 +82,7 @@ export async function paginateQuery(
   query: FirebaseFirestore.Query,
   limit: number,
   token?: string,
-  orderFields: OrderField[] = [FieldPath.documentId()]
+  orderFields: OrderField[] = [FieldPath.documentId()],
 ): Promise<{
   snapshot: FirebaseFirestore.QuerySnapshot;
   nextPageToken: string | null;
@@ -88,18 +90,18 @@ export async function paginateQuery(
   try {
     let q = query.limit(limit);
     const vals = parsePageToken(token);
-    
+
     if (vals && vals.length) {
       // startAfter expects the same number of ordering values as orderBy clauses
       q = (q as any).startAfter(...vals);
     }
     const snap = await q.get();
-    
+
     if (snap.empty) {
       return {snapshot: snap, nextPageToken: null};
     }
     const last = snap.docs[snap.docs.length - 1];
-    
+
     // If the query returned fewer than limit items, we still return a token if there is a last doc;
     // caller can inspect nextPageToken===null vs not to disable "load more".
     const nextPageToken = makePageToken(last, orderFields);

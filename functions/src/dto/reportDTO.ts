@@ -24,7 +24,7 @@ export const MoldReportSchema = z.object({
   date_observed: z.string({required_error: "Date observed is required."}).min(1, {message: "Date observed is required."}),
   user_id: z.string({required_error: "User ID is required."}).min(1, {message: "User ID is required."}),
   host: z.string({required_error: "Host is required."}).min(1, {message: "Host is required."}),
-  description: z.string({required_error: "Description is required."}).min(1, {message: "Description is required."})
+  description: z.string({required_error: "Description is required."}).min(1, {message: "Description is required."}),
 });
 
 export const MoldReportUpdateSchema = MoldReportSchema.partial();

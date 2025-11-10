@@ -3,13 +3,11 @@ import {verifyUser} from "../middlewares/verification";
 import {
   validateParams,
   validateQuery,
-} from "../middlewares/validation";
+  validateBody} from "../middlewares/validation";
 import {PaginationQuerySchema} from "../dto/paginationDTO";
-import {MoldIdSchema} from "../dto/moldDTO";
-import { ReportIdSchema } from "../dto/reportDTO";
+import {MoldIdSchema, CultivationLogSchema, CultivationDetailsSchema} from "../dto/moldDTO";
+import {ReportIdSchema} from "../dto/reportDTO";
 import {Role} from "../types/enums";
-import { CultivationLogSchema, CultivationDetailsSchema } from "../dto/moldDTO";
-import { validateBody } from "../middlewares/validation";
 import {upload} from "../middlewares/upload";
 import {
   createMoldCase,

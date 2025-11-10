@@ -20,6 +20,29 @@ import {
   updateCultivationDetails,
 } from "../repositories/moldCaseRepository";
 import {MoldCase, PaginatedResult, WithMetadata} from "../types/types";
+import {transformToSignedUrl} from "../utils/storageTransform";
+
+// Helper function to transform MoldCase photo_url and cultivation_logs image_urls
+const transformMoldCaseImages = async (moldCase: MoldCase): Promise<MoldCase> => {
+  const transformed = {...moldCase};
+  
+  // Transform photo_url if present
+  if (transformed.photo_url) {
+    transformed.photo_url = await transformToSignedUrl(transformed.photo_url);
+  }
+  
+  // Transform cultivation_logs image_urls if present
+  if (transformed.cultivation_logs && Array.isArray(transformed.cultivation_logs)) {
+    transformed.cultivation_logs = await Promise.all(
+      transformed.cultivation_logs.map(async (log) => ({
+        ...log,
+        image_url: await transformToSignedUrl(log.image_url) || log.image_url,
+      }))
+    );
+  }
+  
+  return transformed;
+};
 
 export const addMoldCaseToFirestore = async (
   details: MoldCase
@@ -28,10 +51,17 @@ export const addMoldCaseToFirestore = async (
     // convert start_date/end_date (strings from DTO) to Firestore Timestamp
     const rawStart = (details as any).start_date;
     const rawEnd = (details as any).end_date;
-    const parsedStart = typeof rawStart === "string" ? new Date(rawStart) : rawStart;
+    const parsedStart =
+      typeof rawStart === "string" ? new Date(rawStart) : rawStart;
     const parsedEnd = typeof rawEnd === "string" ? new Date(rawEnd) : rawEnd;
-    const startTimestamp = parsedStart instanceof Date && !isNaN(parsedStart.getTime()) ? Timestamp.fromDate(parsedStart) : parsedStart;
-    const endTimestamp = parsedEnd instanceof Date && !isNaN(parsedEnd.getTime()) ? Timestamp.fromDate(parsedEnd) : parsedEnd;
+    const startTimestamp =
+      parsedStart instanceof Date && !isNaN(parsedStart.getTime()) ?
+        Timestamp.fromDate(parsedStart) :
+        parsedStart;
+    const endTimestamp =
+      parsedEnd instanceof Date && !isNaN(parsedEnd.getTime()) ?
+        Timestamp.fromDate(parsedEnd) :
+        parsedEnd;
 
     const detailsWithMetadata: WithMetadata<MoldCase> = {
       ...details,
@@ -69,16 +99,24 @@ export const retrieveAllMoldCasesByUser = async (
     if (!cases) throw new Error("No cases found.");
     const raw = queryToJson<MoldCase>(cases.snapshot);
     const normalized = raw.map((c) => {
-      const copy: any = { ...c };
+      const copy: any = {...c};
       try {
-        if (copy.start_date && typeof copy.start_date === "object" && (copy.start_date as any).toDate instanceof Function) {
+        if (
+          copy.start_date &&
+          typeof copy.start_date === "object" &&
+          (copy.start_date as any).toDate instanceof Function
+        ) {
           copy.start_date = (copy.start_date as any).toDate().toISOString();
         }
       } catch (e) {
         /* ignore */
       }
       try {
-        if (copy.end_date && typeof copy.end_date === "object" && (copy.end_date as any).toDate instanceof Function) {
+        if (
+          copy.end_date &&
+          typeof copy.end_date === "object" &&
+          (copy.end_date as any).toDate instanceof Function
+        ) {
           copy.end_date = (copy.end_date as any).toDate().toISOString();
         }
       } catch (e) {
@@ -87,8 +125,13 @@ export const retrieveAllMoldCasesByUser = async (
       return copy as MoldCase;
     });
 
+    // Transform photo URLs and cultivation log image URLs
+    const transformed = await Promise.all(
+      normalized.map((c) => transformMoldCaseImages(c))
+    );
+
     return {
-      snapshot: normalized,
+      snapshot: transformed,
       nextPageToken: cases.nextPageToken,
     };
   } catch (error) {
@@ -103,24 +146,29 @@ export const retrieveAssignedMoldCases = async (
   token?: string
 ): Promise<PaginatedResult<MoldCase[]> | null> => {
   try {
-    const cases: PaginatedResult<QuerySnapshot> | null = await findAssignedMoldCases(
-      mycologistId,
-      limit,
-      token
-    );
+    const cases: PaginatedResult<QuerySnapshot> | null =
+      await findAssignedMoldCases(mycologistId, limit, token);
     if (!cases) throw new Error("No assigned cases found.");
     const raw = queryToJson<MoldCase>(cases.snapshot);
     const normalized = raw.map((c) => {
-      const copy: any = { ...c };
+      const copy: any = {...c};
       try {
-        if (copy.start_date && typeof copy.start_date === "object" && (copy.start_date as any).toDate instanceof Function) {
+        if (
+          copy.start_date &&
+          typeof copy.start_date === "object" &&
+          (copy.start_date as any).toDate instanceof Function
+        ) {
           copy.start_date = (copy.start_date as any).toDate().toISOString();
         }
       } catch (e) {
         /* ignore */
       }
       try {
-        if (copy.end_date && typeof copy.end_date === "object" && (copy.end_date as any).toDate instanceof Function) {
+        if (
+          copy.end_date &&
+          typeof copy.end_date === "object" &&
+          (copy.end_date as any).toDate instanceof Function
+        ) {
           copy.end_date = (copy.end_date as any).toDate().toISOString();
         }
       } catch (e) {
@@ -129,8 +177,13 @@ export const retrieveAssignedMoldCases = async (
       return copy as MoldCase;
     });
 
+    // Transform photo URLs and cultivation log image URLs
+    const transformed = await Promise.all(
+      normalized.map((c) => transformMoldCaseImages(c))
+    );
+
     return {
-      snapshot: normalized,
+      snapshot: transformed,
       nextPageToken: cases.nextPageToken,
     };
   } catch (error) {
@@ -146,22 +199,32 @@ export const retrieveMoldCaseById = async (
     const moldCase: DocumentSnapshot | null = await findMoldCaseById(id);
     if (!moldCase) throw new Error("No case found.");
     const cases = documentToJson<MoldCase>(moldCase);
-    const copy: any = { ...cases };
+    const copy: any = {...cases};
     try {
-      if (copy.start_date && typeof copy.start_date === "object" && (copy.start_date as any).toDate instanceof Function) {
+      if (
+        copy.start_date &&
+        typeof copy.start_date === "object" &&
+        (copy.start_date as any).toDate instanceof Function
+      ) {
         copy.start_date = (copy.start_date as any).toDate().toISOString();
       }
     } catch (e) {
       /* ignore */
     }
     try {
-      if (copy.end_date && typeof copy.end_date === "object" && (copy.end_date as any).toDate instanceof Function) {
+      if (
+        copy.end_date &&
+        typeof copy.end_date === "object" &&
+        (copy.end_date as any).toDate instanceof Function
+      ) {
         copy.end_date = (copy.end_date as any).toDate().toISOString();
       }
     } catch (e) {
       /* ignore */
     }
-    return copy as MoldCase;
+    
+    // Transform photo URL and cultivation log image URLs
+    return await transformMoldCaseImages(copy as MoldCase);
   } catch (error) {
     devLog(error);
     return null;
@@ -186,20 +249,26 @@ export const retrieveMoldCaseByReportId = async (
   reportId: string
 ): Promise<MoldCase | null> => {
   try {
-    const moldCaseSnap: QuerySnapshot | null = await findMoldCaseByReportId(reportId);
+    const moldCaseSnap: QuerySnapshot | null =
+      await findMoldCaseByReportId(reportId);
     if (!moldCaseSnap) throw new Error("No case found for this report.");
     const cases = queryToJson<MoldCase>(moldCaseSnap);
     if (cases.length === 0) return null;
     // normalize dates
     const raw = cases[0];
-    const normalized: any = { ...raw };
-    if (raw.start_date && typeof (raw.start_date as any).toDate === "function") {
+    const normalized: any = {...raw};
+    if (
+      raw.start_date &&
+      typeof (raw.start_date as any).toDate === "function"
+    ) {
       normalized.start_date = (raw.start_date as any).toDate().toISOString();
     }
     if (raw.end_date && typeof (raw.end_date as any).toDate === "function") {
       normalized.end_date = (raw.end_date as any).toDate().toISOString();
     }
-    return normalized as MoldCase;
+    
+    // Transform photo URL and cultivation log image URLs
+    return await transformMoldCaseImages(normalized as MoldCase);
   } catch (error) {
     devLog(error);
     return null;
@@ -212,16 +281,22 @@ export const updateMoldCaseInFirestore = async (
 ): Promise<MoldCase | null> => {
   try {
     // convert start_date/end_date strings to Timestamps if present
-    const updatedDetails: any = { ...details };
+    const updatedDetails: any = {...details};
     if (updatedDetails.start_date) {
       const raw = updatedDetails.start_date;
       const parsed = typeof raw === "string" ? new Date(raw) : raw;
-      updatedDetails.start_date = parsed instanceof Date && !isNaN(parsed.getTime()) ? Timestamp.fromDate(parsed) : updatedDetails.start_date;
+      updatedDetails.start_date =
+        parsed instanceof Date && !isNaN(parsed.getTime()) ?
+          Timestamp.fromDate(parsed) :
+          updatedDetails.start_date;
     }
     if (updatedDetails.end_date) {
       const raw = updatedDetails.end_date;
       const parsed = typeof raw === "string" ? new Date(raw) : raw;
-      updatedDetails.end_date = parsed instanceof Date && !isNaN(parsed.getTime()) ? Timestamp.fromDate(parsed) : updatedDetails.end_date;
+      updatedDetails.end_date =
+        parsed instanceof Date && !isNaN(parsed.getTime()) ?
+          Timestamp.fromDate(parsed) :
+          updatedDetails.end_date;
     }
 
     // Handle cultivation_details if it's provided as a nested object
@@ -229,20 +304,26 @@ export const updateMoldCaseInFirestore = async (
     if (updatedDetails.cultivation_details !== undefined) {
       const cultivationDetails = updatedDetails.cultivation_details;
       delete updatedDetails.cultivation_details; // Remove the nested object
-      
+
       // Add each field with dot notation
       if (cultivationDetails.growth_medium !== undefined) {
-        updatedDetails["cultivation_details.growth_medium"] = cultivationDetails.growth_medium;
+        updatedDetails["cultivation_details.growth_medium"] =
+          cultivationDetails.growth_medium;
       }
       if (cultivationDetails.in_vivo_details !== undefined) {
-        updatedDetails["cultivation_details.in_vivo_details"] = cultivationDetails.in_vivo_details;
+        updatedDetails["cultivation_details.in_vivo_details"] =
+          cultivationDetails.in_vivo_details;
       }
       if (cultivationDetails.in_vitro_details !== undefined) {
-        updatedDetails["cultivation_details.in_vitro_details"] = cultivationDetails.in_vitro_details;
+        updatedDetails["cultivation_details.in_vitro_details"] =
+          cultivationDetails.in_vitro_details;
       }
     }
 
-    const result: WriteResult | null = await updateMoldCaseRepo(id, updatedDetails);
+    const result: WriteResult | null = await updateMoldCaseRepo(
+      id,
+      updatedDetails
+    );
     if (!result) throw new Error("Failed to update mold case.");
     const updatedCase = await retrieveMoldCaseById(id);
     return updatedCase;

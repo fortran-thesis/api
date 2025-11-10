@@ -27,7 +27,12 @@ import {getDocumentIdByField} from "../lib/firestore";
 import {redis, ensureRedisConnection} from "../configs/redis";
 import {generateCode} from "../utils/code";
 import {v4 as uuidv4} from "uuid";
-import {handlePostCache, handlePatchCache, handleDeleteCache} from "../utils/cacheManager";
+import {
+  handlePostCache,
+  handlePatchCache,
+  handleDeleteCache,
+} from "../utils/cacheManager";
+import {envOptions} from "../configs/environment";
 
 export const registerUser = async (
   username: string,
@@ -94,10 +99,10 @@ export const registerUser = async (
 
     const details = await addUser(user, userId);
     if (!details) throw new Error("Could not register user!");
-    
+
     // Invalidate user list caches (new user added)
     await handlePostCache("users");
-    
+
     return {success: true, data: "Successfully created user!"};
   } catch (error) {
     devLog(error);
@@ -167,7 +172,7 @@ export const identifyUser = async (
     const user = await getAuthUserById(uid);
     if (!user) throw new Error("User not found in Firebase Authentication");
     const result = await fetch(
-        "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=AIzaSyALLixtCRzZYHtnsaCF74Z_PDzj51zN6SY",
+      `${envOptions.clientApi}:signInWithPassword?key=${envOptions.projectApiKey}`,
       {
         method: "POST",
         headers: {"Content-Type": "application/json"},
@@ -231,10 +236,10 @@ export const updateUser = async (
     if (!updateMetadata) {
       throw new Error("Error updating user metadata in Firestore.");
     }
-    
+
     // Invalidate user cache (email/displayName don't affect list ordering)
     await handlePatchCache("users", id, false);
-    
+
     return true;
   } catch (error) {
     devLog(error);
@@ -247,7 +252,7 @@ export const softRemoveUser = async (id: string): Promise<void> => {
     await getAuth().updateUser(id, {disabled: true});
     const process = await softDeleteFirestoreUser(id);
     if (!process) throw new Error("Error deleting user.");
-    
+
     // Invalidate user cache (soft delete affects list and counts)
     await handleDeleteCache("users", id);
   } catch (error) {
@@ -260,7 +265,7 @@ export const removeUser = async (id: string): Promise<void> => {
     await getAuth().deleteUser(id);
     const process = await deleteFirestoreUser(id);
     if (!process) throw new Error("Error deleting user.");
-    
+
     // Invalidate user cache (hard delete affects list and counts)
     await handleDeleteCache("users", id);
   } catch (error) {
@@ -366,7 +371,11 @@ export const forgetUsername = async (
       <p>Hello,</p>
       <p>Account: <strong>${email}</strong></p>
       <p>This is your username:</p>
-      <div style="font-size:2em;font-weight:bold;letter-spacing:0.2em;background:#f5f5f5;padding:10px;border-radius:6px;width:max-content;">${username}</div>
+      <div 
+        style="font-size:2em;font-weight:bold;letter-spacing:0.2em;background:#f5f5f5;padding:10px;border-radius:6px;width:max-content;"
+      >
+        ${username}
+      </div>
       <p>If you did not request this, you can ignore this email.</p>
       <p>Thanks,<br/>The Moldify Team</p>
     `;
@@ -384,15 +393,18 @@ export const checkUserChangePassword = async (
   password: string
 ): Promise<boolean> => {
   try {
-    const result = await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=AIzaSyALLixtCRzZYHtnsaCF74Z_PDzj51zN6SY', {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({
-        email: email,
-        password: password,
-        returnSecureToken: true,
-      }),
-    });
+    const result = await fetch(
+      `${envOptions.clientApi}:signInWithPassword?key=${envOptions.projectApiKey}`,
+      {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+          email: email,
+          password: password,
+          returnSecureToken: true,
+        }),
+      }
+    );
     if (!result.ok) throw new Error("Firebase Auth API doesn't recognize user");
     return true;
   } catch (error) {
@@ -415,7 +427,10 @@ export const logoutUserSession = async (
     // Prefer session cookie verification if provided
     if (sessionCookie) {
       try {
-        const decoded = await getAuth().verifySessionCookie(sessionCookie, true);
+        const decoded = await getAuth().verifySessionCookie(
+          sessionCookie,
+          true
+        );
         if (decoded?.uid) {
           await getAuth().revokeRefreshTokens(decoded.uid);
           return true;

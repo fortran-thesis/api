@@ -10,10 +10,8 @@ import {
   retrieveAllUsers,
   retrieveUserByEmail,
   retrieveUserById,
-} from "../services/userService";
-import { retrieveUsersByRole } from "../services/userService";
+  retrieveUsersByRole, getRoleCounts, getUsersByActiveStatus, getDisabledCounts} from "../services/userService";
 import {APIUser, PaginatedResult, UserDetails} from "../types/types";
-import { getRoleCounts, getUsersByActiveStatus, getDisabledCounts } from "../services/userService";
 
 /**
  * Get user by ID
@@ -45,10 +43,22 @@ import { getRoleCounts, getUsersByActiveStatus, getDisabledCounts } from "../ser
  *     responses:
  *       200:
  *         description: User found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UserResponse'
  *       404:
  *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponseError'
  *       500:
  *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponseError'
  */
 export const getUserById = async (req: Request, res: Response) => {
   try {
@@ -93,10 +103,22 @@ export const getUserByEmail = async (req: Request, res: Response) => {
    *     responses:
    *       200:
    *         description: User found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/UserResponse'
    *       404:
    *         description: User not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ApiResponseError'
    *       500:
    *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ApiResponseError'
    */
   try {
     const email = req.params.email;
@@ -134,10 +156,22 @@ export const getAllUsers = async (req: Request, res: Response) => {
    *     responses:
    *       200:
    *         description: List of users
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/PaginatedResult'
    *       403:
    *         description: Forbidden
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ApiResponseError'
    *       500:
    *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ApiResponseError'
    */
   const limit: number = parseInt(req.query.limit as string) || 10;
   const pageToken: string | undefined = req.query.pageToken as string | undefined;
@@ -323,7 +357,7 @@ export const getUsersByActiveController = async (req: Request, res: Response) =>
  */
 export const getDisabledCountsController = async (req: Request, res: Response) => {
   try {
-  const counts = await getDisabledCounts();
+    const counts = await getDisabledCounts();
     if (!counts) return sendError(res, "Failed to get disabled counts", 500);
     return sendSuccess(res, counts);
   } catch (error) {

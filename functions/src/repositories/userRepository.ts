@@ -1,9 +1,8 @@
-import {FieldPath} from "firebase-admin/firestore";
+import {FieldPath, getFirestore} from "firebase-admin/firestore";
 import {devLog} from "../utils/dev";
 import {getAuthUserByEmail, getAuthUserById} from "../lib/auth";
-import {getFirestore} from "firebase-admin/firestore";
 import {firebase} from "../configs/firebase";
-import { getAuth } from "firebase-admin/auth";
+import {getAuth} from "firebase-admin/auth";
 import {
   addDocument,
   deleteDocument,
@@ -47,7 +46,7 @@ export const findUsersByRole = async (
       limit,
       token,
       ["metadata.created_at", "username", FieldPath.documentId()],
-      { queryModifier }
+      {queryModifier}
     );
     return paged;
   } catch (err) {
@@ -94,7 +93,7 @@ export const countUsersByDisabled = async (): Promise<{ active: number; inactive
       nextPageToken = list.pageToken ?? undefined;
     } while (nextPageToken);
 
-    return { active, inactive };
+    return {active, inactive};
   } catch (error) {
     return null;
   }

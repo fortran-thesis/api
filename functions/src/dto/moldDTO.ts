@@ -11,8 +11,8 @@ export const MoldIdSchema = z.object({
 
 export const MoldSchema = z.object({
   name: z
-    .string({ required_error: "Name is required. " })
-    .nonempty({ message: "Name is required " }),
+    .string({required_error: "Name is required. "})
+    .nonempty({message: "Name is required "}),
   mold_details: z.object({
     info: z.object({
       description: z.string().optional(),
@@ -50,7 +50,7 @@ export const NameParamSchema = z.object({
 export const MoldUpdateSchema = MoldSchema.partial();
 
 export const CultivationLogSchema = z.object({
-  type: z.enum(["vivo", "vitro"], { required_error: "Type is required (vivo or vitro)" }),
+  type: z.enum(["vivo", "vitro"], {required_error: "Type is required (vivo or vitro)"}),
   characteristics: z.record(z.any()).optional(),
   additional_info: z.string().optional(),
   image_url: z.string().optional(),

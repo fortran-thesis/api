@@ -54,7 +54,7 @@ import {AuditAction} from "../types/enums";
  */
 export const createMold = async (req: Request, res: Response) => {
   try {
-    const moldName: string = req.body.moldName
+    const moldName: string = req.body.moldName;
     const details: MoldDetails = req.body.details;
     const mold: WithId<Mold> | null = await addMoldToFirestore({name: moldName, mold_details: details});
     if (!mold) return sendError(res, "Failed to retrieve mold", 404);

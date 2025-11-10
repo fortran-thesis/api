@@ -4,5 +4,6 @@
         "Moldify",
         "uuidv",
         "wikimold"
-    ]
+    ],
+    "postman.settings.dotenv-detection-notification-visibility": false
 }

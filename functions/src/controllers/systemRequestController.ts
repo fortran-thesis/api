@@ -33,10 +33,22 @@ export const createSystemRequest = async (req: Request, res: Response) => {
    *     responses:
    *       200:
    *         description: Successfully created system request
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/SystemRequestResponse'
    *       400:
    *         description: Validation error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ApiResponseError'
    *       500:
    *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ApiResponseError'
    */
   try {
     const details: Omit<SystemRequest, "created_at"> = req.body;
@@ -64,25 +76,37 @@ export const getAllSystemRequests = async (req: Request, res: Response) => {
    *     security:
    *       - bearerAuth: []
    *       - cookieAuth: []
-   *     description: Retrieve all system requests (feedback and bug reports). Admin only.
+   *     description: Retrieve all system requests (feedback and bug reports) with pagination. Admin only.
    *     parameters:
-   *       - in: query
-   *         name: page
-   *         schema:
-   *           type: integer
-   *         description: Page number
    *       - in: query
    *         name: limit
    *         schema:
    *           type: integer
-   *         description: Page size
+   *         description: Number of items per page (default 10)
+   *       - in: query
+   *         name: pageToken
+   *         schema:
+   *           type: string
+   *         description: Cursor token for pagination
    *     responses:
    *       200:
    *         description: List of system requests
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/PaginatedResult'
    *       404:
    *         description: Not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ApiResponseError'
    *       500:
    *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ApiResponseError'
    */
   const limit: number = parseInt(req.query.limit as string) || 10;
   const pageToken: string | undefined = req.query.pageToken as string | undefined;
@@ -117,10 +141,22 @@ export const getSystemRequestById = async (req: Request, res: Response) => {
    *     responses:
    *       200:
    *         description: System request
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/SystemRequestResponse'
    *       404:
    *         description: Not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ApiResponseError'
    *       500:
    *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ApiResponseError'
    */
   try {
     const id = req.params.id;

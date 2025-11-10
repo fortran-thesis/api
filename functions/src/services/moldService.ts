@@ -17,11 +17,17 @@ import {
 } from "../repositories/moldRepository";
 import {Mold, PaginatedResult, WithId, WithMetadata} from "../types/types";
 import {
-  getCache,
-  setCache,
-  deleteCache,
-  deleteCachePattern,
-} from "../utils/redis";
+  getCachedList,
+  cacheList,
+  getCachedItem,
+  cacheItem,
+  handlePostCache,
+  handlePatchCache,
+  handleDeleteCache,
+} from "../utils/cacheManager";
+
+const RESOURCE = "molds";
+const TTL = 300; // 5 minutes
 
 export const addMoldToFirestore = async (
   details: Mold
@@ -37,9 +43,10 @@ export const addMoldToFirestore = async (
     };
     const mold: DocumentSnapshot | null = await addMold(detailsWithMetadata);
     if (!mold) throw new Error("Cannot add mold.");
-    // Invalidate all list caches
-    await deleteCachePattern("molds:list:*");
-    return documentToJson<WithId<Mold>>(mold);
+    const result = documentToJson<WithId<Mold>>(mold);
+    // Invalidate all list caches using new cache manager
+    await handlePostCache(RESOURCE);
+    return result;
   } catch (error) {
     devLog(error);
     return null;
@@ -50,12 +57,11 @@ export const retrieveAllMolds = async (
   limit: number,
   token?: string
 ): Promise<PaginatedResult<Mold[]> | null> => {
-  // Build a short, safe cache key based on limit + token hash (or 'start' for the first page)
-  const tokenKey = token;
-  const cacheKey = `molds:list:${limit}:${tokenKey}`;
+  const query = {limit, token};
 
   try {
-    const cached = await getCache<PaginatedResult<Mold[]>>(cacheKey);
+    // Check cache using new cache manager
+    const cached = await getCachedList<PaginatedResult<Mold[]>>(RESOURCE, query);
     if (cached) return cached;
 
     // Use the common getPaginatedDocuments helper (cursor-first)
@@ -70,8 +76,8 @@ export const retrieveAllMolds = async (
       nextPageToken: paged.nextPageToken,
     };
 
-    // Cache the entire page (items + nextPageToken) for a short TTL (5 minutes)
-    await setCache(cacheKey, items, 300);
+    // Cache the entire page using new cache manager
+    await cacheList(RESOURCE, items, query, {ttl: TTL});
 
     return items;
   } catch (error) {
@@ -81,14 +87,17 @@ export const retrieveAllMolds = async (
 };
 
 export const retrieveMoldById = async (id: string): Promise<Mold | null> => {
-  const cacheKey = `mold:${id}`;
   try {
-    const cached = await getCache<Mold>(cacheKey);
+    // Check cache using new cache manager
+    const cached = await getCachedItem<Mold>(RESOURCE, id);
     if (cached) return cached;
+
     const mold: DocumentSnapshot | null = await findMoldById(id);
     if (!mold) throw new Error("No mold found.");
     const molds = documentToJson<Mold>(mold);
-    if (molds) await setCache(cacheKey, molds, 300); // cache for 5 minutes
+
+    // Cache using new cache manager
+    if (molds) await cacheItem(RESOURCE, id, molds, {ttl: TTL});
     return molds;
   } catch (error) {
     devLog(error);
@@ -99,15 +108,18 @@ export const retrieveMoldById = async (id: string): Promise<Mold | null> => {
 export const retrieveMoldByName = async (
   name: string
 ): Promise<Mold | null> => {
-  const cacheKey = `mold:name:${name}`;
   try {
-    const cached = await getCache<Mold>(cacheKey);
+    // Check cache using custom key (name lookup)
+    const cached = await getCachedItem<Mold>(RESOURCE, `name:${name}`);
     if (cached) return cached;
+
     const mold: QuerySnapshot | null = await findMoldByName(name);
     if (!mold) throw new Error("No user found.");
     const molds = queryToJson<Mold>(mold);
     const result = molds.length > 0 ? molds[0] : null;
-    if (result) await setCache(cacheKey, result, 300); // cache for 5 minutes
+
+    // Cache using custom key
+    if (result) await cacheItem(RESOURCE, `name:${name}`, result, {ttl: TTL});
     return result;
   } catch (error) {
     devLog(error);
@@ -122,9 +134,10 @@ export const updateMoldInFirestore = async (
   try {
     const result: WriteResult | null = await updateMold(id, details);
     if (!result) throw new Error("Failed to update mold.");
-    // Invalidate cache for this mold and all lists
-    await deleteCache(`mold:${id}`);
-    await deleteCachePattern("molds:list:*");
+    
+    // Invalidate cache using new cache manager (invalidates item + all lists)
+    await handlePatchCache(RESOURCE, id);
+    
     const updatedMold = await retrieveMoldById(id);
     return updatedMold;
   } catch (error) {
@@ -137,9 +150,9 @@ export const softRemoveMold = async (id: string): Promise<void> => {
   try {
     const result: WriteResult | null = await softDeleteMold(id);
     if (!result) throw new Error("Failed to delete mold");
-    // Invalidate cache for this mold and all lists
-    await deleteCache(`mold:${id}`);
-    await deleteCachePattern("molds:list:*");
+    
+    // Invalidate cache using new cache manager (invalidates item + all lists)
+    await handleDeleteCache(RESOURCE, id);
   } catch (error) {
     devLog(error);
   }
@@ -149,9 +162,9 @@ export const removeMold = async (id: string): Promise<void> => {
   try {
     const result: WriteResult | null = await deleteMold(id);
     if (!result) throw new Error("Failed to delete mold");
-    // Invalidate cache for this mold and all lists
-    await deleteCache(`mold:${id}`);
-    await deleteCachePattern("molds:list:*");
+    
+    // Invalidate cache using new cache manager (invalidates item + all lists)
+    await handleDeleteCache(RESOURCE, id);
   } catch (error) {
     devLog(error);
   }

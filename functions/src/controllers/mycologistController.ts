@@ -1,7 +1,7 @@
-import { Request, Response } from "express";
-import { devLog } from "../utils/dev";
-import { defaultError, sendError, sendSuccess } from "../utils/response";
-import { registerMycologist } from "../services/mycologistService";
+import {Request, Response} from "express";
+import {devLog} from "../utils/dev";
+import {defaultError, sendError, sendSuccess} from "../utils/response";
+import {registerMycologist} from "../services/mycologistService";
 
 /**
  * @swagger
@@ -36,14 +36,6 @@ import { registerMycologist } from "../services/mycologistService";
  *                 type: string
  *               password:
  *                 type: string
- *               resume:
- *                 type: string
- *                 description: Optional resume or bio
- *               links:
- *                 type: array
- *                 items:
- *                   type: string
- *                 description: Optional array of profile URLs
  *     responses:
  *       200:
  *         description: Mycologist registered successfully

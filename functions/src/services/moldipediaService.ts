@@ -20,6 +20,7 @@ import {
   WithId,
   PaginatedResult,
 } from "../types/types";
+import {transformToSignedUrl} from "../utils/storageTransform";
 
 export const addMoldipediaToFirestore = async (
   details: Moldipedia
@@ -53,8 +54,18 @@ export const retrieveAllMoldipedia = async (
       token
     );
     if (!docs) throw new Error("No moldipedia entries found.");
+    const items = queryToJson<Moldipedia>(docs.snapshot);
+    
+    // Transform cover_photo paths to signed URLs
+    const itemsWithSignedUrls = await Promise.all(
+      items.map(async (item) => ({
+        ...item,
+        cover_photo: (await transformToSignedUrl(item.cover_photo)) || item.cover_photo,
+      }))
+    );
+    
     return {
-      snapshot: queryToJson<Moldipedia>(docs.snapshot),
+      snapshot: itemsWithSignedUrls,
       nextPageToken: docs.nextPageToken,
     };
   } catch (error) {
@@ -69,7 +80,14 @@ export const retrieveMoldipediaById = async (
   try {
     const query: DocumentSnapshot | null = await findMoldipediaById(id);
     if (!query) throw new Error("No moldipedia found.");
-    return documentToJson<Moldipedia>(query);
+    const moldipedia = documentToJson<Moldipedia>(query);
+    
+    // Transform cover_photo path to signed URL
+    const signedUrl = await transformToSignedUrl(moldipedia.cover_photo);
+    return {
+      ...moldipedia,
+      cover_photo: signedUrl || moldipedia.cover_photo,
+    };
   } catch (error) {
     devLog(error);
     return null;
