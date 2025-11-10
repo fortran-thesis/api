@@ -64,18 +64,18 @@ export const getAllSystemRequests = async (req: Request, res: Response) => {
    *     security:
    *       - bearerAuth: []
    *       - cookieAuth: []
-   *     description: Retrieve all system requests (feedback and bug reports). Admin only.
+   *     description: Retrieve all system requests (feedback and bug reports) with pagination. Admin only.
    *     parameters:
-   *       - in: query
-   *         name: page
-   *         schema:
-   *           type: integer
-   *         description: Page number
    *       - in: query
    *         name: limit
    *         schema:
    *           type: integer
-   *         description: Page size
+   *         description: Number of items per page (default 10)
+   *       - in: query
+   *         name: pageToken
+   *         schema:
+   *           type: string
+   *         description: Cursor token for pagination
    *     responses:
    *       200:
    *         description: List of system requests
