@@ -1,8 +1,9 @@
-import { devLog } from "../utils/dev";
-import { registerUser } from "../services/authService";
-import { Role } from "../types/enums";
-import { RegisterMycologistRequest } from "../dto/mycologistDTO";
-import { ApiResponse } from "../types/types";
+import {devLog} from "../utils/dev";
+import {registerUser} from "../services/authService";
+import {Role} from "../types/enums";
+import {RegisterMycologistRequest} from "../dto/mycologistDTO";
+import {ApiResponse} from "../types/types";
+import {getAuth} from "firebase-admin/auth";
 
 export const registerMycologist = async (
   data: RegisterMycologistRequest
@@ -27,9 +28,9 @@ export const registerMycologist = async (
     // Extract userId from the auth record
     // Note: registerUser returns a success message, not the userId directly
     // We need to fetch it after creation
-    const auth = require("firebase-admin/auth").getAuth();
+    const auth = getAuth();
     const userRecord = await auth.getUserByEmail(data.email);
-    
+
     return {
       userId: userRecord.uid,
       message: result.data || "Mycologist registered successfully",

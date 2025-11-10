@@ -25,5 +25,7 @@ export const envOptions = {
   moldifyEmail: process.env.MOLDIFY_EMAIL,
   moldifyPassword: process.env.MOLDIFY_PASSWORD,
   encryptionKey: process.env.ENCRYPTION_KEY,
+  clientApi: process.env.THESIS_FIREBASE_CLIENT_API,
+  projectApiKey: process.env.MAIN_PROJECT_API_KEY,
   maxSessionAge: 60 * 60 * 24 * 5 * 1000, // 5 days
 };

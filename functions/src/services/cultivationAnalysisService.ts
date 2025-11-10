@@ -6,9 +6,9 @@ import {devLog} from "../utils/dev";
  */
 export interface CultivationAnalysisResult {
   type: "vivo" | "vitro";
-  characteristics: 
-    | {lesion_size: number; lesion_color: string}
-    | {colony_diameter: number; colony_color: string};
+  characteristics:
+    | { lesion_size: number; lesion_color: string }
+    | { colony_diameter: number; colony_color: string };
   additional_info: string;
   confidence: string;
 }
@@ -26,10 +26,10 @@ export const analyzeCultivationImage = async (
   try {
     // Convert buffer to base64
     const base64Image = imageBuffer.toString("base64");
-    
+
     // Build prompt based on cultivation type
     const prompt = buildPrompt(cultivationType);
-    
+
     // Call Gemini with image and prompt
     const result = await cultivationModel.generateContent([
       prompt,
@@ -43,10 +43,10 @@ export const analyzeCultivationImage = async (
 
     const response = result.response;
     const text = response.text();
-    
+
     // Parse the JSON response from Gemini
     const parsed = parseGeminiResponse(text, cultivationType);
-    
+
     return parsed;
   } catch (error) {
     devLog(error, "CultivationAnalysisService");
@@ -59,54 +59,54 @@ export const analyzeCultivationImage = async (
  */
 function buildPrompt(cultivationType: "vivo" | "vitro"): string {
   if (cultivationType === "vivo") {
-    return `You are an expert mycologist analyzing an in vivo mold cultivation image (growing on a living host/plant).
-
-Your task is to examine ONLY these two characteristics:
-1. Lesion size (in millimeters) - Measure the diameter or width of the visible lesion/infected area
-2. Lesion color - Describe the predominant color of the lesion (be specific: e.g., "dark brown", "yellowish-green", "black with white edges")
-
-Return your analysis in this EXACT JSON format:
-{
-  "lesion_size": <number in mm>,
-  "lesion_color": "<color description>",
-  "additional_info": "<any relevant observations about the lesion's appearance, texture, or growth pattern>",
-  "confidence": "<number in percentage>"
-}
-
-If the image is not recognizable as a mold lesion or is unclear, return:
-{
-  "lesion_size": 0,
-  "lesion_color": "unrecognizable",
-  "additional_info": "Image quality insufficient or does not show clear mold lesion",
-  "confidence": "0%"
-}
-
-IMPORTANT: Return ONLY the JSON object, no additional text.`;
+    const intro =
+      "You are an expert mycologist analyzing an in vivo mold cultivation " +
+      "image (growing on a living host/plant).";
+    const task =
+      "Your task is to examine ONLY these two characteristics: " +
+      "1. Lesion size (in millimeters) - Measure the diameter or width of " +
+      "the visible lesion/infected area " +
+      "2. Lesion color - Describe the predominant color of the lesion " +
+      "(be specific: e.g., \"dark brown\", \"yellowish-green\", " +
+      "\"black with white edges\")";
+    const format =
+      "Return your analysis in this EXACT JSON format: " +
+      "{\"lesion_size\": <number in mm>, \"lesion_color\": " +
+      "\"<color description>\", \"additional_info\": \"<any relevant " +
+      "observations about the lesion's appearance, texture, or growth " +
+      "pattern>\", \"confidence\": \"<number in percentage>\"}";
+    const fallback =
+      "If the image is not recognizable as a mold lesion or is unclear, " +
+      "return: {\"lesion_size\": 0, \"lesion_color\": \"unrecognizable\", " +
+      "\"additional_info\": \"Image quality insufficient or does not show " +
+      "clear mold lesion\", \"confidence\": \"0%\"}";
+    const note = "IMPORTANT: Return ONLY the JSON object, no additional text.";
+    return `${intro}\n\n${task}\n\n${format}\n\n${fallback}\n\n${note}`;
   } else {
     // vitro
-    return `You are an expert mycologist analyzing an in vitro mold cultivation image (growing in a petri dish/culture medium).
-
-Your task is to examine ONLY these two characteristics:
-1. Colony diameter (in millimeters) - Measure the diameter of the mold colony
-2. Colony color - Describe the predominant color of the colony (be specific: e.g., "white with green spores", "dark gray", "orange-brown with white edges")
-
-Return your analysis in this EXACT JSON format:
-{
-  "colony_diameter": <number in mm>,
-  "colony_color": "<color description>",
-  "additional_info": "<any relevant observations about the colony's texture, sporulation, or growth pattern>",
-  "confidence": "<number in percentage>"
-}
-
-If the image is not recognizable as a mold colony or is unclear, return:
-{
-  "colony_diameter": 0,
-  "colony_color": "unrecognizable",
-  "additional_info": "Image quality insufficient or does not show clear mold colony",
-  "confidence": "0%"
-}
-
-IMPORTANT: Return ONLY the JSON object, no additional text.`;
+    const intro =
+      "You are an expert mycologist analyzing an in vitro mold cultivation " +
+      "image (growing in a petri dish/culture medium).";
+    const task =
+      "Your task is to examine ONLY these two characteristics: " +
+      "1. Colony diameter (in millimeters) - Measure the diameter of " +
+      "the mold colony " +
+      "2. Colony color - Describe the predominant color of the colony " +
+      "(be specific: e.g., \"white with green spores\", \"dark gray\", " +
+      "\"orange-brown with white edges\")";
+    const format =
+      "Return your analysis in this EXACT JSON format: " +
+      "{\"colony_diameter\": <number in mm>, \"colony_color\": " +
+      "\"<color description>\", \"additional_info\": \"<any relevant " +
+      "observations about the colony's texture, sporulation, or growth " +
+      "pattern>\", \"confidence\": \"<number in percentage>\"}";
+    const fallback =
+      "If the image is not recognizable as a mold colony or is unclear, " +
+      "return: {\"colony_diameter\": 0, \"colony_color\": " +
+      "\"unrecognizable\", \"additional_info\": \"Image quality insufficient " +
+      "or does not show clear mold colony\", \"confidence\": \"0%\"}";
+    const note = "IMPORTANT: Return ONLY the JSON object, no additional text.";
+    return `${intro}\n\n${task}\n\n${format}\n\n${fallback}\n\n${note}`;
   }
 }
 
@@ -123,9 +123,9 @@ function parseGeminiResponse(
       .replace(/```json\s*/g, "")
       .replace(/```\s*/g, "")
       .trim();
-    
+
     const parsed = JSON.parse(cleanText);
-    
+
     // Validate and structure based on type
     if (cultivationType === "vivo") {
       return {

@@ -9,10 +9,11 @@ import {
   getUserProfile,
   patchUser,
   softDeleteUser,
+  getAllMycologists,
+  getRoleCountsController,
+  getUsersByActiveController,
+  getDisabledCountsController,
 } from "../controllers/userController";
-import { getAllMycologists } from "../controllers/userController";
-import { getRoleCountsController } from "../controllers/userController";
-import { getUsersByActiveController, getDisabledCountsController } from "../controllers/userController";
 import {EmailSchema, UserDetailsUpdateSchema, UserIdSchema} from "../dto/dto";
 import {
   validateBody,

@@ -1,7 +1,10 @@
 import {initializeApp, cert, getApps, getApp} from "firebase-admin/app";
 import {envOptions} from "./environment";
+import {getDefaultBucket} from "./storage";
 
-const firebaseConfig: any = {};
+const firebaseConfig: any = {
+  storageBucket: getDefaultBucket(), // Add default storage bucket
+};
 
 // Only use service account file in local development or emulator
 // In production (Cloud Functions/Cloud Run), Firebase SDK auto-initializes

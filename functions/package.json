@@ -10,6 +10,8 @@
     "shell": "npm run build && firebase functions:shell",
     "start": "npm run shell",
     "test": "jest",
+    "test:unit": "jest --testPathPatterns=tests/unit",
+    "test:integration": "jest --testPathPatterns=tests --testPathIgnorePatterns=tests/unit",
     "test-dev": "npm run local-dev && jest",
     "deploy": "firebase deploy --only functions",
     "logs": "firebase functions:log"

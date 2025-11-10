@@ -7,7 +7,7 @@ type ApiErrorShape = { success: false; error: string };
  * Development logging utility
  * Handles errors, info messages, and structured logs
  * Only logs in dev mode (isDev = true)
- * 
+ *
  * @param error - Error object, string message, or structured data
  * @param context - Optional context label (default: "Unlabeled")
  */
@@ -17,7 +17,7 @@ export const devLog = (error: unknown, context?: string): void => {
   const timestamp = new Date().toISOString();
   const contextTag = context ?? "Unlabeled";
 
-  const safeLog = (payload: any, isError: boolean = true) => {
+  const safeLog = (payload: any, isError = true) => {
     try {
       if (isError) {
         logger.error(payload);

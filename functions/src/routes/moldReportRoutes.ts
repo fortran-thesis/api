@@ -2,9 +2,19 @@ import {Request, Response, Router} from "express";
 import {verifyUser} from "../middlewares/verification";
 import {sanitizeBody} from "../middlewares/sanitation";
 import {parseMultipartJson} from "../middlewares/parseMultipartJson";
-import {validateBody, validateParams, validateQuery} from "../middlewares/validation";
+import {
+  validateBody,
+  validateParams,
+  validateQuery,
+} from "../middlewares/validation";
 import {PaginationQuerySchema} from "../dto/paginationDTO";
-import {ReportIdSchema, MoldReportSchema, MoldReportUpdateSchema} from "../dto/reportDTO";
+import {
+  ReportIdSchema,
+  MoldReportSchema,
+  MoldReportUpdateSchema,
+  CaseDetailCreateSchema,
+  AssignMoldReportSchema,
+} from "../dto/reportDTO";
 import {
   createMoldReport,
   getAllMoldReports,
@@ -23,8 +33,6 @@ import {
   rejectReport,
 } from "../controllers/moldReportController";
 import {Role} from "../types/enums";
-import {CaseDetailCreateSchema} from "../dto/reportDTO";
-import {AssignMoldReportSchema} from "../dto/reportDTO";
 
 const router = Router();
 

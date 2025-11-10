@@ -10,10 +10,8 @@ import {
   retrieveAllUsers,
   retrieveUserByEmail,
   retrieveUserById,
-} from "../services/userService";
-import { retrieveUsersByRole } from "../services/userService";
+  retrieveUsersByRole, getRoleCounts, getUsersByActiveStatus, getDisabledCounts} from "../services/userService";
 import {APIUser, PaginatedResult, UserDetails} from "../types/types";
-import { getRoleCounts, getUsersByActiveStatus, getDisabledCounts } from "../services/userService";
 
 /**
  * Get user by ID
@@ -323,7 +321,7 @@ export const getUsersByActiveController = async (req: Request, res: Response) =>
  */
 export const getDisabledCountsController = async (req: Request, res: Response) => {
   try {
-  const counts = await getDisabledCounts();
+    const counts = await getDisabledCounts();
     if (!counts) return sendError(res, "Failed to get disabled counts", 500);
     return sendSuccess(res, counts);
   } catch (error) {

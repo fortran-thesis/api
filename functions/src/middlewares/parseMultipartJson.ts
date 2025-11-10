@@ -13,12 +13,12 @@ export const parseMultipartJson = (fields: string[]) => (
     console.log("[parseMultipartJson] Content-Type:", req.headers["content-type"]);
     console.log("[parseMultipartJson] Content-Length:", req.headers["content-length"]);
     console.log("[parseMultipartJson] Body keys:", Object.keys(req.body || {}));
-    
+
     if (!req.body || typeof req.body !== "object") {
       console.log("[parseMultipartJson] No body or body is not an object");
       return next();
     }
-    
+
     for (const f of fields) {
       const val = (req.body as any)[f];
       console.log(`[parseMultipartJson] Field "${f}" type:`, typeof val);

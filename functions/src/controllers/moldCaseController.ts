@@ -430,7 +430,7 @@ export const addCultivationLog = async (req: Request, res: Response) => {
   try {
     const caseId: string = req.params.id;
     const logData = req.body;
-    
+
     // Handle image upload if provided
     if (req.file) {
       const storagePath = generateStoragePath(StorageFolder.CULTIVATION_LOGS, req.file.originalname);
@@ -439,14 +439,14 @@ export const addCultivationLog = async (req: Request, res: Response) => {
         req.file.buffer,
         req.file.mimetype
       );
-      
+
       if (!uploadedPath) {
         return sendError(res, "Failed to upload cultivation log image", 500);
       }
-      
+
       logData.image_url = uploadedPath;
     }
-    
+
     const updated = await addCultivationLogToCase(caseId, logData);
     if (!updated) return sendError(res, "Failed to add cultivation log", 400);
     return sendSuccess(res, updated);
@@ -494,7 +494,7 @@ export const updateCultivationDetails = async (req: Request, res: Response) => {
    * Update cultivation details (in_vivo and/or in_vitro)
    */
   try {
-  const caseId: string = req.params.id;
+    const caseId: string = req.params.id;
     const details = req.body;
     const updated = await updateCultivationDetailsInCase(caseId, details);
     if (!updated) return sendError(res, "Failed to update cultivation details", 400);
@@ -552,29 +552,29 @@ export const analyzeCultivationLogImage = async (req: Request, res: Response) =>
   /**
    * POST /api/v1/mold-cases/:id/analyze-cultivation
    * Analyze cultivation image using Gemini AI
-   * 
+   *
    * Body:
    * - type: "vivo" | "vitro" (cultivation type)
    * - file: image file (via multer)
    */
   try {
     const cultivationType = req.body.type as "vivo" | "vitro";
-    
+
     if (!cultivationType || (cultivationType !== "vivo" && cultivationType !== "vitro")) {
       return sendError(res, "Invalid cultivation type. Must be 'vivo' or 'vitro'", 400);
     }
-    
+
     if (!req.file) {
       return sendError(res, "No image file provided", 400);
     }
-    
+
     // Analyze the image using Gemini
     const analysis = await analyzeCultivationImage(req.file.buffer, cultivationType);
-    
+
     if (!analysis) {
       return sendError(res, "Failed to analyze image", 500);
     }
-    
+
     return sendSuccess(res, analysis);
   } catch (error) {
     devLog(error);

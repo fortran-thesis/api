@@ -1,8 +1,17 @@
 import {firebase} from "../configs/firebase";
-import {FieldPath, getFirestore, QuerySnapshot, Timestamp} from "firebase-admin/firestore";
+import {
+  FieldPath,
+  getFirestore,
+  QuerySnapshot,
+  Timestamp,
+} from "firebase-admin/firestore";
 import {devLog} from "../utils/dev";
 import {PaginatedResult, WithId, WithMetadata} from "../types/types";
-import {GetPaginatedOptions, OrderField, paginateQuery} from "../utils/pagination";
+import {
+  GetPaginatedOptions,
+  OrderField,
+  paginateQuery,
+} from "../utils/pagination";
 
 const db = getFirestore(firebase);
 
@@ -67,7 +76,9 @@ export const updateDocument = async <T extends object>(
     // Fetch existing document to preserve metadata fields
     const docRef = callFirebase(collection).doc(documentUid);
     const existingDoc = await docRef.get();
-    const existingMetadata = existingDoc.exists ? (existingDoc.data() as any)?.metadata : {};
+    const existingMetadata = existingDoc.exists ?
+      (existingDoc.data() as any)?.metadata :
+      {};
 
     const withMetadata: WithMetadata<Partial<T>> = {
       ...updateData,
@@ -97,11 +108,9 @@ export const deleteDocument = async (
   documentUid: string
 ): Promise<FirebaseFirestore.WriteResult | null> => {
   try {
-    return await callFirebase(collection)
-      .doc(documentUid)
-      .delete({
-        exists: true,
-      });
+    return await callFirebase(collection).doc(documentUid).delete({
+      exists: true,
+    });
   } catch (error) {
     devLog(error);
     return null;
@@ -200,11 +209,11 @@ export const getDocumentByFieldId = async (
 export const getDocumentById = async (
   collection: string,
   uid: string
-): Promise<FirebaseFirestore.DocumentSnapshot| null> => {
+): Promise<FirebaseFirestore.DocumentSnapshot | null> => {
   try {
     const docSnap = await callFirebase(collection).doc(uid).get();
     if (!docSnap.exists) throw new Error("Document does not exist");
-    
+
     return docSnap;
   } catch (error) {
     devLog(error);
@@ -223,7 +232,9 @@ export const getPaginatedDocuments = async (
     const dbQueryBase: FirebaseFirestore.Query = callFirebase(collection);
 
     // Apply optional filters or other query modifiers first (where, startAt/endAt, etc.)
-    let queryBuilder: FirebaseFirestore.Query = options.queryModifier ? options.queryModifier(dbQueryBase) : dbQueryBase;
+    let queryBuilder: FirebaseFirestore.Query = options.queryModifier ?
+      options.queryModifier(dbQueryBase) :
+      dbQueryBase;
 
     // Apply orderBy for each order field (paginateQuery expects the same ordering sequence)
     for (const field of orderFields) {

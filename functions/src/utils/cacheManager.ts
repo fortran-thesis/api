@@ -3,12 +3,12 @@ import {devLog} from "./dev";
 
 /**
  * Cache Manager for modular Redis caching
- * 
+ *
  * Cache Key Patterns:
  * - List: `{resource}:list:{query_params_hash}` (e.g., "users:list:abc123")
  * - Item: `{resource}:item:{id}` (e.g., "users:item:userId123")
  * - Count: `{resource}:count` (e.g., "users:count")
- * 
+ *
  * Usage:
  * - GET operations: Cache results with TTL
  * - POST operations: Invalidate list caches (new item added)
@@ -34,7 +34,7 @@ export function generateListCacheKey(resource: string, query?: Record<string, an
   if (!query || Object.keys(query).length === 0) {
     return `${resource}:list:all`;
   }
-  
+
   // Sort keys for consistent hashing
   const sortedQuery = Object.keys(query)
     .sort()
@@ -42,7 +42,7 @@ export function generateListCacheKey(resource: string, query?: Record<string, an
       acc[key] = query[key];
       return acc;
     }, {} as Record<string, any>);
-  
+
   // Create a hash from query params
   const queryString = JSON.stringify(sortedQuery);
   const hash = Buffer.from(queryString).toString("base64").substring(0, 16);
@@ -218,7 +218,7 @@ export async function handlePostCache(resource: string): Promise<void> {
 export async function handlePatchCache(
   resource: string,
   id: string,
-  invalidateLists: boolean = false
+  invalidateLists = false
 ): Promise<void> {
   await invalidateItem(resource, id);
   if (invalidateLists) {
@@ -251,7 +251,7 @@ export async function withCache<T extends object>(
 ): Promise<T> {
   // Try to get from cache first
   let cached: T | null = null;
-  
+
   if (id) {
     // Single item query
     cached = await getCachedItem<T>(resource, id);
@@ -259,20 +259,20 @@ export async function withCache<T extends object>(
     // List query
     cached = await getCachedList<T>(resource, query);
   }
-  
+
   if (cached) {
     return cached;
   }
-  
+
   // Cache miss - fetch from database
   const result = await fetchFn();
-  
+
   // Store in cache
   if (id) {
     await cacheItem(resource, id, result, options);
   } else {
     await cacheList(resource, result, query, options);
   }
-  
+
   return result;
 }

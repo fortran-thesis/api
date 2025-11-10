@@ -27,9 +27,9 @@ const options = {
     },
   },
   apis: [
-    process.env.NODE_ENV === "production" 
-      ? "./lib/controllers/*.js" 
-      : "./src/controllers/*.ts"
+    process.env.NODE_ENV === "production" ?
+      "./lib/controllers/*.js" :
+      "./src/controllers/*.ts",
   ], // Path to your API files
 };
 
