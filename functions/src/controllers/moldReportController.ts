@@ -37,43 +37,43 @@ export const createMoldReport = async (req: Request, res: Response) => {
    *       content:
    *         multipart/form-data:
    *           schema:
-  *             type: object
-  *             properties:
-  *               details:
-  *                 type: object
-  *                 properties:
-  *                  date_observed:
-  *                    type: string
-  *                    format: date-time
-  *                   case_name:
-  *                     type: string
-  *                   user_id:
-  *                     type: string
-  *                   host:
-  *                     type: string
-  *                   case_details:
-  *                     type: array
-  *                     items:
-  *                       type: object
-  *                       properties:
-  *                         cover_photo:
-  *                           type: array
-  *                           items:
-  *                             type: string
-  *                         description:
-  *                           type: string
-  *                   description:
-  *                     type: string
-  *                   assigned_mycologist_id:
-  *                     type: string
-  *                   status:
-  *                     type: string
-  *                   is_archived:
-  *                     type: boolean
-  *                 description: MoldReport DTO (location omitted)
-  *               cover_photo:
-  *                 type: string
-  *                 format: binary
+   *             type: object
+   *             properties:
+   *               details:
+   *                 type: object
+   *                 properties:
+   *                   date_observed:
+   *                     type: string
+   *                     format: date-time
+   *                   case_name:
+   *                     type: string
+   *                   user_id:
+   *                     type: string
+   *                   host:
+   *                     type: string
+   *                   case_details:
+   *                     type: array
+   *                     items:
+   *                       type: object
+   *                       properties:
+   *                         cover_photo:
+   *                           type: array
+   *                           items:
+   *                             type: string
+   *                         description:
+   *                           type: string
+   *                   description:
+   *                     type: string
+   *                   assigned_mycologist_id:
+   *                     type: string
+   *                   status:
+   *                     type: string
+   *                   is_archived:
+   *                     type: boolean
+   *                 description: MoldReport DTO (location omitted)
+   *               cover_photo:
+   *                 type: string
+   *                 format: binary
    *     responses:
    *       200:
    *         description: Successfully created mold report
