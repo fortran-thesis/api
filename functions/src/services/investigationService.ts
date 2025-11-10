@@ -1,4 +1,8 @@
-import {DocumentSnapshot, WriteResult, Timestamp} from "firebase-admin/firestore";
+import {
+  DocumentSnapshot,
+  WriteResult,
+  Timestamp,
+} from "firebase-admin/firestore";
 import {documentToJson} from "../lib/firestore";
 import {devLog} from "../utils/dev";
 import {
@@ -22,7 +26,8 @@ export const addInvestigationToFirestore = async (
         deleted_at: null,
       },
     };
-    const doc: DocumentSnapshot | null = await addInvestigation(detailsWithMetadata);
+    const doc: DocumentSnapshot | null =
+      await addInvestigation(detailsWithMetadata);
     if (!doc) throw new Error("Cannot add investigation.");
     return documentToJson<Investigation>(doc);
   } catch (error) {
@@ -49,7 +54,10 @@ export const updateInvestigationInFirestore = async (
   details: Partial<Investigation>
 ): Promise<Investigation | null> => {
   try {
-    const result: WriteResult | null = await updateInvestigationRepo(id, details);
+    const result: WriteResult | null = await updateInvestigationRepo(
+      id,
+      details
+    );
     if (!result) throw new Error("Failed to update investigation.");
     const updated = await retrieveInvestigationById(id);
     return updated;

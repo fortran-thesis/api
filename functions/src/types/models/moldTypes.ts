@@ -7,7 +7,7 @@ export interface Mold {
 
 export interface MoldDetails {
   info: MoldInfo;
-  prevention: object
+  prevention: object;
 }
 
 export interface MoldInfo {
@@ -18,20 +18,20 @@ export interface MoldInfo {
     class: string;
     order: string;
     family: string;
-    genus: string
-  }
+    genus: string;
+  };
   additional_info: Array<{
     title: string;
-    description: string
-  }>
+    description: string;
+  }>;
 }
 
 export interface MoldPrevention {
-  fungicide: Array<string>
+  fungicide: Array<string>;
   additional_info: Array<{
     title: string;
-    description: string
-  }>
+    description: string;
+  }>;
 }
 
 export interface MoldCase {
@@ -48,18 +48,20 @@ export interface MoldCase {
 }
 
 export interface CultivationDetails {
-  growth_medium: string,
+  growth_medium: string;
   in_vivo_details: {
-    environmental_temperature: number
+    environmental_temperature: number;
   };
   in_vitro_details: {
-    incubation_temperature: number
+    incubation_temperature: number;
   };
 }
 
 export interface CultivationLog {
-   type: "vivo" | "vitro";
-   image_url: string;
-   characteristics: {lesion_size: number, lesion_color: string} | {colony_diameter: number, colony_color: string}; // respective places: vivo | vitro
-   additional_info: string;
+  type: "vivo" | "vitro";
+  image_url: string;
+  characteristics:
+    | { lesion_size: number; lesion_color: string }
+    | { colony_diameter: number; colony_color: string }; // respective places: vivo | vitro
+  additional_info: string;
 }

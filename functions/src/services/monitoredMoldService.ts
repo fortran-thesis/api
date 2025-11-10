@@ -16,6 +16,7 @@ import {
   updateMonitoredMold,
 } from "../repositories/monitoredMoldRepository";
 import {MonitoredMold, PaginatedResult, WithMetadata} from "../types/types";
+import {transformImageUrl, transformImageUrls} from "../utils/storageTransform";
 
 export const addMonitoredMoldToFirestore = async (
   details: MonitoredMold
@@ -56,8 +57,13 @@ export const retrieveAllMonitoredMolds = async (
         {queryModifier}
       );
     if (!molds) throw new Error("No monitored molds found.");
+    const items = queryToJson<MonitoredMold>(molds.snapshot);
+    
+    // Transform file paths to signed URLs
+    const itemsWithSignedUrls = await transformImageUrls(items);
+    
     return {
-      snapshot: queryToJson<MonitoredMold>(molds.snapshot),
+      snapshot: itemsWithSignedUrls,
       nextPageToken: molds.nextPageToken,
     };
   } catch (error) {
@@ -73,7 +79,9 @@ export const retrieveMonitoredMoldById = async (
     const mold: DocumentSnapshot | null = await findMonitoredMoldById(id);
     if (!mold) throw new Error("No monitored mold found.");
     const molds = documentToJson<MonitoredMold>(mold);
-    return molds;
+    
+    // Transform file path to signed URL
+    return await transformImageUrl(molds);
   } catch (error) {
     devLog(error);
     return null;

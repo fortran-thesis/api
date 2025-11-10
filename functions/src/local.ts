@@ -1,6 +1,3 @@
-/**
-@deprecated Use the firebase emulators equivalent
-*/
 import express from "express";
 import app from "./app";
 import {envOptions} from "./configs/environment";

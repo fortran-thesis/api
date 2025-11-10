@@ -11,7 +11,12 @@ import {devLog} from "../utils/dev";
 import {getAuth} from "firebase-admin/auth";
 import {queryToJson} from "../lib/firestore";
 import {Role} from "../types/enums";
-import {getCachedList, cacheList, getCachedItem, cacheItem} from "../utils/cacheManager";
+import {
+  getCachedList,
+  cacheList,
+  getCachedItem,
+  cacheItem,
+} from "../utils/cacheManager";
 
 const RESOURCE = "users";
 const TTL = 300; // 5 minutes
@@ -25,12 +30,15 @@ export const retrieveAllUsers = async (
     // Tokens are ephemeral navigation state
     const query = {limit, token: token || "first"};
     const shouldCache = !token; // Only cache first page
-    
+
     if (shouldCache) {
-      const cached = await getCachedList<PaginatedResult<APIUser[]>>(RESOURCE, query);
+      const cached = await getCachedList<PaginatedResult<APIUser[]>>(
+        RESOURCE,
+        query
+      );
       if (cached) return cached;
     }
-    
+
     const result = await findAllUsers(limit, token);
     if (!result || !result.snapshot) throw new Error("No users found.");
     const firestoreList: WithId<User>[] = queryToJson<User>(result.snapshot);
@@ -38,7 +46,9 @@ export const retrieveAllUsers = async (
     const authUsers = await getAuth().getUsers(identifiers);
 
     const userList: APIUser[] = firestoreList.map((firestoreUser) => {
-      const authUser = authUsers.users.find((u: any) => u.uid === firestoreUser.id);
+      const authUser = authUsers.users.find(
+        (u: any) => u.uid === firestoreUser.id
+      );
       return {
         id: firestoreUser.id,
         user: {
@@ -59,13 +69,16 @@ export const retrieveAllUsers = async (
       };
     });
 
-    const paginatedResult = {snapshot: userList, nextPageToken: result.nextPageToken};
-    
+    const paginatedResult = {
+      snapshot: userList,
+      nextPageToken: result.nextPageToken,
+    };
+
     // Cache only the first page
     if (shouldCache) {
       await cacheList(RESOURCE, paginatedResult, query, {ttl: TTL});
     }
-    
+
     return paginatedResult;
   } catch (error) {
     devLog(error);
@@ -83,20 +96,25 @@ export const retrieveUsersByRole = async (
     // Tokens are ephemeral navigation state
     const query = {role, limit, token: token || "first"};
     const shouldCache = !token; // Only cache first page
-    
+
     if (shouldCache) {
-      const cached = await getCachedList<PaginatedResult<APIUser[]>>(RESOURCE, query);
+      const cached = await getCachedList<PaginatedResult<APIUser[]>>(
+        RESOURCE,
+        query
+      );
       if (cached) return cached;
     }
-    
+
     const result = await findUsersByRole(role, limit, token);
     if (!result || !result.snapshot) throw new Error("No users found.");
     const firestoreList: any[] = queryToJson<any>(result.snapshot);
-    const identifiers = firestoreList.map((user) => ({ uid: user.id }));
+    const identifiers = firestoreList.map((user) => ({uid: user.id}));
     const authUsers = await getAuth().getUsers(identifiers);
 
     const userList: APIUser[] = firestoreList.map((firestoreUser) => {
-      const authUser = authUsers.users.find((u: any) => u.uid === firestoreUser.id);
+      const authUser = authUsers.users.find(
+        (u: any) => u.uid === firestoreUser.id
+      );
       return {
         id: firestoreUser.id,
         user: {
@@ -117,13 +135,16 @@ export const retrieveUsersByRole = async (
       };
     });
 
-    const paginatedResult = { snapshot: userList, nextPageToken: result.nextPageToken };
-    
+    const paginatedResult = {
+      snapshot: userList,
+      nextPageToken: result.nextPageToken,
+    };
+
     // Cache only the first page
     if (shouldCache) {
       await cacheList(RESOURCE, paginatedResult, query, {ttl: TTL});
     }
-    
+
     return paginatedResult;
   } catch (error) {
     devLog(error);
@@ -136,14 +157,14 @@ export const retrieveUserById = async (id: string): Promise<APIUser | null> => {
     // Check cache first
     const cached = await getCachedItem<APIUser>(RESOURCE, id);
     if (cached) return cached;
-    
+
     // Cache miss - fetch from database
     const user: APIUser | null = await findAuthUserById(id);
     if (!user) throw new Error("No user found.");
-    
+
     // Cache the result
     await cacheItem(RESOURCE, id, user, {ttl: TTL});
-    
+
     return user;
   } catch (error) {
     devLog(error);
@@ -164,12 +185,18 @@ export const retrieveUserByEmail = async (
   }
 };
 
-export const getRoleCounts = async (): Promise<Record<string, number> | null> => {
+export const getRoleCounts = async (): Promise<Record<
+  string,
+  number
+> | null> => {
   try {
     // Check cache first
-    const cached = await getCachedItem<Record<string, number>>(RESOURCE, "role-counts");
+    const cached = await getCachedItem<Record<string, number>>(
+      RESOURCE,
+      "role-counts"
+    );
     if (cached) return cached;
-    
+
     // Cache miss - fetch from database
     // Map current role values to include legacy role names
     const mapping: Record<string, string[]> = {
@@ -187,7 +214,7 @@ export const getRoleCounts = async (): Promise<Record<string, number> | null> =>
 
     // Cache the result
     await cacheItem(RESOURCE, "role-counts", result, {ttl: TTL});
-    
+
     return result;
   } catch (error) {
     devLog(error);
@@ -214,7 +241,7 @@ export const getUsersByActiveStatus = async (
       const disabled = !!u.details?.disabled;
       return active ? !disabled : disabled;
     });
-    return { snapshot: filtered, nextPageToken: result.nextPageToken };
+    return {snapshot: filtered, nextPageToken: result.nextPageToken};
   } catch (error) {
     devLog(error);
     return null;
@@ -225,20 +252,26 @@ export const getUsersByActiveStatus = async (
  * Count users by disabled flag across all Firebase Auth users.
  * Iterates through auth.listUsers pages and counts disabled vs active users.
  */
-export const getDisabledCounts = async (): Promise<{ active: number; inactive: number } | null> => {
+export const getDisabledCounts = async (): Promise<{
+  active: number;
+  inactive: number;
+} | null> => {
   try {
     // Check cache first
-    const cached = await getCachedItem<{ active: number; inactive: number }>(RESOURCE, "disabled-counts");
+    const cached = await getCachedItem<{ active: number; inactive: number }>(
+      RESOURCE,
+      "disabled-counts"
+    );
     if (cached) return cached;
-    
+
     // Cache miss - fetch from database
     const counts = await countUsersByDisabled();
-    
+
     if (counts) {
       // Cache the result
       await cacheItem(RESOURCE, "disabled-counts", counts, {ttl: TTL});
     }
-    
+
     return counts;
   } catch (error) {
     devLog(error);

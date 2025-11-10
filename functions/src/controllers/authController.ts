@@ -73,7 +73,15 @@ export const createUser = async (req: Request, res: Response) => {
       lastName,
       address,
       phoneNumber,
-    }: { username: string; email: string; password: string, firstName: string, lastName: string, address: string, phoneNumber?: string } = req.body;
+    }: {
+      username: string;
+      email: string;
+      password: string;
+      firstName: string;
+      lastName: string;
+      address: string;
+      phoneNumber?: string;
+    } = req.body;
     const process: ApiResponse<string> = await registerUser(
       username,
       email,
@@ -196,7 +204,9 @@ export const oAuth = async (req: Request, res: Response) => {
     const uid: string | null = await identifyOAuthUser(token);
     if (!uid) return sendError(res, "Something went wrong identifying user.");
     const process: ApiResponse<string> = await registerOAuthUser(uid);
-    if (!process.success) return sendError(res, "Something went wrong registering user.");
+    if (!process.success) {
+      return sendError(res, "Something went wrong registering user.");
+    }
     const cookie: string | null = await authenticateUser(token);
     if (!cookie) return sendError(res, "Incorrect credentials");
 
@@ -251,12 +261,15 @@ export const logoutUser = async (req: Request, res: Response) => {
   try {
     const sessionCookie: string | undefined = req.cookies?.session;
     let idToken: string | undefined;
-    if(req.headers.authorization && req.headers.authorization.startsWith("Bearer ")) {
+    if (
+      req.headers.authorization &&
+      req.headers.authorization.startsWith("Bearer ")
+    ) {
       idToken = req.headers.authorization.split(" ")[1];
     }
-    
-    const process = logoutUserSession(sessionCookie, idToken)
-    if(!process) throw new Error("Unable to verify token")
+
+    const process = logoutUserSession(sessionCookie, idToken);
+    if (!process) throw new Error("Unable to verify token");
 
     // Clear cookie on client
     res.clearCookie("session", {
@@ -265,7 +278,7 @@ export const logoutUser = async (req: Request, res: Response) => {
       sameSite: "lax",
       path: "/",
     });
-    
+
     return sendSuccess(res, "Successfully logged out!");
   } catch (error) {
     devLog(error, "LOGOUT_USER");

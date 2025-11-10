@@ -21,15 +21,16 @@ import {
   WithId,
   PaginatedResult,
 } from "../types/types";
+import {transformImageUrl, transformImageUrls} from "../utils/storageTransform";
 
 export const addScannedMoldToFirestore = async (
   details: Omit<ScannedMold, "image_url">,
-  image_url: string
+  imageUrl: string
 ): Promise<WithId<ScannedMold> | null> => {
   try {
     const detailsWithMeta: WithMetadata<ScannedMold> = {
       ...details,
-      image_url,
+      image_url: imageUrl,
       metadata: {
         created_at: Timestamp.now(),
         updated_at: null,
@@ -53,8 +54,13 @@ export const retrieveAllScannedMolds = async (
     const docs: PaginatedResult<QuerySnapshot> | null =
       await findAllScannedMolds(limit, token);
     if (!docs) throw new Error("No scanned molds found.");
+    const items = queryToJson<WithMetadata<ScannedMold>>(docs.snapshot);
+    
+    // Transform file paths to signed URLs
+    const itemsWithSignedUrls = await transformImageUrls(items);
+    
     return {
-      snapshot: queryToJson<WithMetadata<ScannedMold>>(docs.snapshot),
+      snapshot: itemsWithSignedUrls,
       nextPageToken: docs.nextPageToken,
     };
   } catch (error) {
@@ -69,7 +75,10 @@ export const retrieveScannedMoldById = async (
   try {
     const doc: DocumentSnapshot | null = await findScannedMoldById(id);
     if (!doc) throw new Error("No scanned mold found.");
-    return documentToJson<WithMetadata<ScannedMold>>(doc);
+    const mold = documentToJson<WithMetadata<ScannedMold>>(doc);
+    
+    // Transform file path to signed URL
+    return await transformImageUrl(mold);
   } catch (error) {
     devLog(error);
     return null;

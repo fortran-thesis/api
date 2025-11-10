@@ -37,23 +37,24 @@ npm install
 
 ---
 
-### 4. Run Locally (with Firebase Emulators)
+### 4. Run Locally (local-dev method)
 
-- Start Firebase emulators at the root directory:
+**Note:** Firebase Emulators setup is now deprecated.
 
-  ```sh
-  cd *your-directory-to*/api
-  firebase emulators:start
-  ```
-
-- In a separate terminal, run the app at the functions folder:
+- Build and start the development server:
 
   ```sh
   cd functions
   npm run build:watch
   ```
 
-- Once both are running, you can now access endpoints at the (API Documentation)[`http://localhost:5001/thesis-2e701/asia-southeast1/api/api-docs`]
+- In a separate terminal, start the local server:
+
+  ```sh
+  npm run dev
+  ```
+
+- Once both are running, you can now access endpoints at the API Documentation: [`http://localhost:5001/api-docs`](http://localhost:5001/api-docs)
   
 ---
 
@@ -78,19 +79,25 @@ docker-compose down
 
 - To run all tests:
 
- ``` sh
- sh npm test
+ ```sh
+ npm test
  ```
 
 - To run tests with coverage:
 
  ```sh
- npm test:coverage
+ npm run test:coverage
+ ```
+
+- To run specific test files:
+
+ ```sh
+ npm test -- path/to/test/file.test.ts
  ```
 
 ---
 
 ### Notes
 
-- For `.env`, copy and paste `.env.dev` for development or `.env.test` for testing.
-- For Docker, environment variables from `.env.dev` are loaded automatically if specified in `docker-compose.yml`.
+- Firebase Emulators setup is deprecated. Use local-dev method for development.
+- Due to time constraints, Docker setup is NOT fixed. Will fix as soon as there is time.

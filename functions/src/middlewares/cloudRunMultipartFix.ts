@@ -9,7 +9,7 @@ const Busboy = require("busboy");
  */
 export const cloudRunMultipartFix = (req: Request, res: Response, next: NextFunction) => {
   const contentType = req.headers["content-type"] || "";
-  
+
   if (!contentType.includes("multipart/form-data")) {
     return next();
   }
@@ -23,17 +23,17 @@ export const cloudRunMultipartFix = (req: Request, res: Response, next: NextFunc
   // Check if stream is already consumed
   if (!req.readable || req.readableEnded) {
     console.log("[CLOUD RUN FIX] Stream already consumed, trying rawBody...");
-    
+
     // Firebase Functions attaches rawBody to the request
     const rawBody = (req as any).rawBody;
-    
+
     if (rawBody && Buffer.isBuffer(rawBody)) {
       console.log("[CLOUD RUN FIX] Found rawBody, reconstructing stream...");
       console.log("[CLOUD RUN FIX] rawBody length:", rawBody.length);
-      
+
       // Create a readable stream from the buffer
       const stream = Readable.from(rawBody);
-      
+
       // Parse with busboy
       try {
         const busboy = Busboy({
@@ -60,11 +60,11 @@ export const cloudRunMultipartFix = (req: Request, res: Response, next: NextFunc
         busboy.on("file", (fieldname: string, file: any, info: any) => {
           fileCount++;
           console.log(`[CLOUD RUN FIX] File: ${fieldname}, ${info.filename}`);
-          
+
           const chunks: Buffer[] = [];
-          
+
           file.on("data", (data: Buffer) => chunks.push(data));
-          
+
           file.on("end", () => {
             const buffer = Buffer.concat(chunks);
             const multerFile: Express.Multer.File = {
@@ -86,16 +86,15 @@ export const cloudRunMultipartFix = (req: Request, res: Response, next: NextFunc
 
         busboy.on("finish", () => {
           console.log(`[CLOUD RUN FIX] Complete: ${fieldCount} fields, ${fileCount} files`);
-          console.log(`[CLOUD RUN FIX] Body type:`, typeof req.body);
-          console.log(`[CLOUD RUN FIX] Body keys:`, req.body ? Object.keys(req.body).slice(0, 10) : 'none');
-          console.log(`[CLOUD RUN FIX] Body.details exists:`, !!(req.body as any)?.details);
+          console.log("[CLOUD RUN FIX] Body type:", typeof req.body);
+          console.log("[CLOUD RUN FIX] Body keys:", req.body ? Object.keys(req.body).slice(0, 10) : "none");
+          console.log("[CLOUD RUN FIX] Body.details exists:", !!(req.body as any)?.details);
           if (files.length > 0) req.files = files;
           next();
         });
 
         stream.pipe(busboy);
         return;
-        
       } catch (err: any) {
         console.error("[CLOUD RUN FIX] Setup error:", err);
         return next(err);

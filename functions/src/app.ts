@@ -71,7 +71,7 @@ router.use("/v1/scan", scanRoutes);
 router.use("/v1/monitor", monitorRoutes);
 router.use("/v1/moldipedia", moldipediaRoutes);
 router.use("/v1/mold-case", moldCaseRoutes);
-router.use("/v1/mold-report", moldReportRoutes)
+router.use("/v1/mold-report", moldReportRoutes);
 router.use("/v1/curator", curatorRoutes);
 router.use("/v1/admin", adminRoutes);
 router.use("/v1/report", reportRoutes);
@@ -85,19 +85,23 @@ app.use("/api", router);
 app.use((err: any, req: Request, res: Response, next: NextFunction): void => {
   console.error("Global Error Handler Caught:", err);
   console.log("Request Headers:", JSON.stringify(req.headers, null, 2));
-  
+
   // Handle Multer/Busboy errors
-  if (err.message === "Unexpected end of form" || err.code === "UNEXPECTED_END_OF_FORM") {
+  if (
+    err.message === "Unexpected end of form" ||
+    err.code === "UNEXPECTED_END_OF_FORM"
+  ) {
     res.status(400).json({
       success: false,
-      message: "Multipart form upload error: unexpected end of form. This may be due to network issues, incomplete upload, or timeout.",
+      message:
+        "Multipart form upload error: unexpected end of form. This may be due to network issues, incomplete upload, or timeout.",
       error: err.message,
       contentLength: req.headers["content-length"],
       contentType: req.headers["content-type"],
     });
     return;
   }
-  
+
   // Handle other Multer errors
   if (err.name === "MulterError") {
     res.status(400).json({
@@ -108,7 +112,7 @@ app.use((err: any, req: Request, res: Response, next: NextFunction): void => {
     });
     return;
   }
-  
+
   // Generic error handler
   res.status(err.status || 500).json({
     success: false,
