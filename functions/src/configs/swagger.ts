@@ -29,9 +29,9 @@ const options = {
     },
   },
   apis: [
-    process.env.NODE_ENV === "production" 
-      ? "./lib/controllers/*.js" 
-      : "./src/controllers/*.ts"
+    process.env.NODE_ENV === "production" ?
+      "./lib/controllers/*.js" :
+      "./src/controllers/*.ts",
   ], // Path to your API files
 };
 
@@ -46,6 +46,10 @@ function isRunningInEmulator(): boolean {
            envOptions.firestoreEmulatorHost);
 }
 
+/**
+ * Setup Swagger UI documentation
+ * @param {Express} app - Express application instance
+ */
 export const setupSwagger = (app: Express) => {
   // Swagger UI options to disable "Try it out" for security
   const swaggerUiOptions = {
@@ -56,11 +60,14 @@ export const setupSwagger = (app: Express) => {
 
   if (isRunningInEmulator()) {
     // In Firebase emulator, use default swagger-ui-express behavior
-    // This lets swagger-ui-express handle the spec serving automatically
+    // This lets swagger-ui-express handle the spec serving
+    // automatically
     app.use("/api-docs", swaggerUi.serve);
     app.get("/api-docs", swaggerUi.setup(swaggerSpec, swaggerUiOptions));
   } else {
     // In local development, use the custom URL configuration
-    app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec, swaggerUiOptions));
+    app.use("/api-docs",
+      swaggerUi.serve,
+      swaggerUi.setup(swaggerSpec, swaggerUiOptions));
   }
 };

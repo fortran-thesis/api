@@ -35,7 +35,14 @@ export const swaggerSchemas = {
   // Auth Schemas
   RegisterRequest: {
     type: "object",
-    required: ["username", "email", "password", "firstName", "lastName", "address"],
+    required: [
+      "username",
+      "email",
+      "password",
+      "firstName",
+      "lastName",
+      "address",
+    ],
     properties: {
       username: {
         type: "string",
@@ -52,7 +59,8 @@ export const swaggerSchemas = {
         type: "string",
         format: "password",
         minLength: 8,
-        description: "Password (min 8 chars, must contain uppercase, lowercase, number, and special character)",
+        description: "Password (min 8 chars, must contain uppercase, " +
+          "lowercase, number, and special character)",
         example: "SecurePass123!",
       },
       firstName: {
@@ -449,7 +457,8 @@ export const swaggerSchemas = {
           nextPageToken: {
             type: "string",
             nullable: true,
-            description: "Token for the next page, null if no more pages",
+            description:
+              "Token for the next page, null if no more pages",
             example: "eyJsYXN0SWQiOiIxMjMifQ==",
           },
         },
@@ -460,7 +469,14 @@ export const swaggerSchemas = {
   // Mold Report Schemas
   MoldReport: {
     type: "object",
-    required: ["case_name", "date_observed", "user_id", "case_details", "host", "location"],
+    required: [
+      "case_name",
+      "date_observed",
+      "user_id",
+      "case_details",
+      "host",
+      "location",
+    ],
     properties: {
       case_name: {
         type: "string",
