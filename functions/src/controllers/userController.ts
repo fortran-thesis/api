@@ -45,10 +45,22 @@ import { getRoleCounts, getUsersByActiveStatus, getDisabledCounts } from "../ser
  *     responses:
  *       200:
  *         description: User found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UserResponse'
  *       404:
  *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponseError'
  *       500:
  *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponseError'
  */
 export const getUserById = async (req: Request, res: Response) => {
   try {
@@ -93,10 +105,22 @@ export const getUserByEmail = async (req: Request, res: Response) => {
    *     responses:
    *       200:
    *         description: User found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/UserResponse'
    *       404:
    *         description: User not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ApiResponseError'
    *       500:
    *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ApiResponseError'
    */
   try {
     const email = req.params.email;
@@ -134,10 +158,22 @@ export const getAllUsers = async (req: Request, res: Response) => {
    *     responses:
    *       200:
    *         description: List of users
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/PaginatedResult'
    *       403:
    *         description: Forbidden
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ApiResponseError'
    *       500:
    *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ApiResponseError'
    */
   const limit: number = parseInt(req.query.limit as string) || 10;
   const pageToken: string | undefined = req.query.pageToken as string | undefined;
