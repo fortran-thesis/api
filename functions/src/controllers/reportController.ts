@@ -182,10 +182,7 @@ export const patchReport = async (req: Request, res: Response) => {
    *         application/json:
    *           schema:
    *             type: object
-   *             properties:
-   *               details:
-   *                 type: object
-   *                 description: Report details to update
+   *             description: Partial Report object with fields to update
    *     responses:
    *       200:
    *         description: Successfully updated report

@@ -187,15 +187,15 @@ export const getAllArchivedMoldCases = async (
    *       - Requires authentication (Bearer token or session cookie)
    *     parameters:
    *       - in: query
-   *         name: page
-   *         schema:
-   *           type: string
-   *         description: Page number
-   *       - in: query
    *         name: limit
    *         schema:
+   *           type: integer
+   *         description: Number of items per page (default 10)
+   *       - in: query
+   *         name: pageToken
+   *         schema:
    *           type: string
-   *         description: Page size
+   *         description: Cursor token for pagination
    *     responses:
    *       200:
    *         description: List of archived mold folders

@@ -86,18 +86,18 @@ export const createScannedMold = async (req: Request, res: Response) => {
  *     security:
  *       - bearerAuth: []
  *       - cookieAuth: []
- *     description: Retrieve all scanned molds. Requires authentication (Bearer token or session cookie).
+ *     description: Retrieve all scanned molds with pagination. Requires authentication (Bearer token or session cookie).
  *     parameters:
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *         description: Page number
  *       - in: query
  *         name: limit
  *         schema:
  *           type: integer
- *         description: Page size
+ *         description: Number of items per page (default 10)
+ *       - in: query
+ *         name: pageToken
+ *         schema:
+ *           type: string
+ *         description: Cursor token for pagination
  *     responses:
  *       200:
  *         description: List of scanned molds

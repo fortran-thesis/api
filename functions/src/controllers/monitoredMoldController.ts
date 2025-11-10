@@ -107,10 +107,13 @@ export const getAllMonitoredMoldsByFolderId = async (
 ) => {
   const pageToken: string | undefined = req.query.pageToken as string | undefined;
   const limit: number = parseInt(req.query.limit as string) || 10;
-  const id: string = req.params.id;
+  const folderId: string = req.query.folderId as string;
   try {
+    if (!folderId) {
+      return sendError(res, "Folder ID is required", 400);
+    }
     const molds: PaginatedResult<MonitoredMold[]> | null = await retrieveAllMonitoredMolds(
-      id,
+      folderId,
       limit,
       pageToken
     );
