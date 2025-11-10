@@ -42,9 +42,9 @@ export const createMoldReport = async (req: Request, res: Response) => {
    *               details:
    *                 type: object
    *                 properties:
-   *                  date_observed:
-   *                    type: string
-   *                    format: date-time
+   *                   date_observed:
+   *                     type: string
+   *                     format: date-time
    *                   case_name:
    *                     type: string
    *                   user_id:
