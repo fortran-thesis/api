@@ -51,19 +51,58 @@ export const createMoldipedia = async (req: Request, res: Response) => {
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/MoldipediaResponse'
+   *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     title:
+ *                       type: string
+ *                     body:
+ *                       type: string
+ *                     author_id:
+ *                       type: string
+ *                     cover_photo:
+ *                       type: string
+ *                     tags:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                     created_at:
+ *                       type: string
+ *                       format: date-time
+ *                     updated_at:
+ *                       type: string
+ *                       format: date-time
    *       400:
    *         description: Validation error
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/ApiResponseError'
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
    *       500:
    *         description: Server error
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/ApiResponseError'
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
    */
   try {
     const details: Omit<Moldipedia, "cover_photo"> = req.body.details;
@@ -133,19 +172,57 @@ export const getAllMoldipedia = async (req: Request, res: Response) => {
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/PaginatedResult'
+   *               type: object
+ *               properties:
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     snapshot:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           title:
+ *                             type: string
+ *                           body:
+ *                             type: string
+ *                           author_id:
+ *                             type: string
+ *                           cover_photo:
+ *                             type: string
+ *                           tags:
+ *                             type: array
+ *                             items:
+ *                               type: string
+ *                           created_at:
+ *                             type: string
+ *                             format: date-time
+ *                           updated_at:
+ *                             type: string
+ *                             format: date-time
+   *                     nextPageToken:
+   *                       type: string
+   *                       nullable: true
    *       404:
    *         description: Not found
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/ApiResponseError'
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
    *       500:
    *         description: Server error
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/ApiResponseError'
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
    */
   const limit: number = parseInt(req.query.limit as string) || 10;
   const pageToken: string | undefined = req.query.pageToken as
@@ -189,19 +266,49 @@ export const getMoldipediaById = async (req: Request, res: Response) => {
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/MoldipediaResponse'
+   *               type: object
+ *               properties:
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     title:
+ *                       type: string
+ *                     body:
+ *                       type: string
+ *                     author_id:
+ *                       type: string
+ *                     cover_photo:
+ *                       type: string
+ *                     tags:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                     created_at:
+ *                       type: string
+ *                       format: date-time
+   *                     updated_at:
+   *                       type: string
+   *                       format: date-time
    *       404:
    *         description: Not found
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/ApiResponseError'
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
    *       500:
    *         description: Server error
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/ApiResponseError'
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
    */
   try {
     const id = req.params.id;
@@ -247,8 +354,36 @@ export const patchMoldipedia = async (req: Request, res: Response) => {
    *                 description: Moldipedia details to update
    *     responses:
    *       200:
-   *         description: Successfully updated moldipedia article
-   *       400:
+ *         description: Successfully updated moldipedia article
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     title:
+ *                       type: string
+ *                     body:
+ *                       type: string
+ *                     author_id:
+ *                       type: string
+ *                     cover_photo:
+ *                       type: string
+ *                     tags:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                     created_at:
+ *                       type: string
+ *                       format: date-time
+ *                     updated_at:
+ *                       type: string
+ *                       format: date-time
+ *       400:
    *         description: Validation error
    *       404:
    *         description: Not found
@@ -300,8 +435,15 @@ export const deleteMoldipedia = async (req: Request, res: Response) => {
    *         description: Moldipedia article ID
    *     responses:
    *       200:
-   *         description: Successfully deleted moldipedia article
-   *       500:
+ *         description: Successfully deleted moldipedia article
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: string
+ *       500:
    *         description: Server error
    */
   try {
@@ -345,8 +487,15 @@ export const softDeleteMoldipedia = async (req: Request, res: Response) => {
    *         description: Moldipedia article ID
    *     responses:
    *       200:
-   *         description: Successfully soft deleted moldipedia article
-   *       500:
+ *         description: Successfully soft deleted moldipedia article
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: string
+ *       500:
    *         description: Server error
    */
   try {
@@ -358,3 +507,14 @@ export const softDeleteMoldipedia = async (req: Request, res: Response) => {
     return defaultError(res);
   }
 };
+
+
+
+
+
+
+
+
+
+
+

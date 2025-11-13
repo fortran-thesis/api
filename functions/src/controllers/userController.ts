@@ -46,19 +46,39 @@ import {APIUser, PaginatedResult, UserDetails} from "../types/types";
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/UserResponse'
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     username:
+ *                       type: string
+ *                     email:
+ *                       type: string
+ *                     role:
+ *                       type: string
+ *                     is_active:
+ *                       type: boolean
  *       404:
  *         description: User not found
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponseError'
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
  *       500:
  *         description: Server error
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponseError'
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
  */
 export const getUserById = async (req: Request, res: Response) => {
   try {
@@ -106,19 +126,39 @@ export const getUserByEmail = async (req: Request, res: Response) => {
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/UserResponse'
+   *               type: object
+ *               properties:
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     username:
+ *                       type: string
+ *                     email:
+ *                       type: string
+ *                     role:
+ *                       type: string
+ *                     is_active:
+ *                       type: boolean
    *       404:
    *         description: User not found
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/ApiResponseError'
+   *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
    *       500:
    *         description: Server error
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/ApiResponseError'
+   *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
    */
   try {
     const email = req.params.email;
@@ -165,13 +205,19 @@ export const getAllUsers = async (req: Request, res: Response) => {
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/ApiResponseError'
+   *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
    *       500:
    *         description: Server error
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/ApiResponseError'
+   *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
    */
   const limit: number = parseInt(req.query.limit as string) || 10;
   const pageToken: string | undefined = req.query.pageToken as string | undefined;
@@ -518,3 +564,9 @@ export const softDeleteUser = async (req: Request, res: Response) => {
     return defaultError(res);
   }
 };
+
+
+
+
+
+

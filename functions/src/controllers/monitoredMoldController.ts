@@ -36,6 +36,34 @@ import {StorageFolder, generateStoragePath} from "../configs/storage";
  *     responses:
  *       200:
  *         description: Successfully created monitored mold
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     moldipedia_id:
+ *                       type: string
+ *                     user_id:
+ *                       type: string
+ *                     location:
+ *                       type: string
+ *                     image_url:
+ *                       type: string
+ *                     notes:
+ *                       type: string
+ *                     is_active:
+ *                       type: boolean
+ *                     created_at:
+ *                       type: string
+ *                       format: date-time
+ *                     updated_at:
+ *                       type: string
+ *                       format: date-time
  *       400:
  *         description: Invalid photo or validation error
  *       500:
@@ -96,6 +124,13 @@ export const createMonitoredMold = async (req: Request, res: Response) => {
  *     responses:
  *       200:
  *         description: List of monitored molds
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
  *       404:
  *         description: Failed to retrieve monitored molds
  *       500:
@@ -147,6 +182,34 @@ export const getAllMonitoredMoldsByFolderId = async (
  *     responses:
  *       200:
  *         description: Monitored mold retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     moldipedia_id:
+ *                       type: string
+ *                     user_id:
+ *                       type: string
+ *                     location:
+ *                       type: string
+ *                     image_url:
+ *                       type: string
+ *                     notes:
+ *                       type: string
+ *                     is_active:
+ *                       type: boolean
+ *                     created_at:
+ *                       type: string
+ *                       format: date-time
+ *                     updated_at:
+ *                       type: string
+ *                       format: date-time
  *       404:
  *         description: Monitored mold not found
  *       500:
@@ -194,6 +257,13 @@ export const getMonitoredMoldById = async (req: Request, res: Response) => {
  *     responses:
  *       200:
  *         description: Successfully updated monitored mold
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: object
  *       400:
  *         description: Validation error
  *       404:
@@ -234,6 +304,13 @@ export const patchMonitoredMold = async (req: Request, res: Response) => {
  *     responses:
  *       200:
  *         description: Successfully deleted monitored mold
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: string
  *       500:
  *         description: Server error
  */
@@ -268,6 +345,13 @@ export const deleteMonitoredMold = async (req: Request, res: Response) => {
  *     responses:
  *       200:
  *         description: Successfully soft deleted monitored mold
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: string
  *       500:
  *         description: Server error
  */
@@ -281,3 +365,9 @@ export const softDeleteMonitoredMold = async (req: Request, res: Response) => {
     return defaultError(res);
   }
 };
+
+
+
+
+
+

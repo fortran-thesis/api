@@ -42,10 +42,57 @@ import {
  *     responses:
  *       200:
  *         description: Successfully created scanned mold
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     moldipedia_id:
+ *                       type: string
+ *                     user_id:
+ *                       type: string
+ *                     image_url:
+ *                       type: string
+ *                     is_active:
+ *                       type: boolean
+ *                     created_at:
+ *                       type: string
+ *                       format: date-time
+ *                     updated_at:
+ *                       type: string
+ *                       format: date-time
  *       400:
  *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
  *       500:
  *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
  */
 export const createScannedMold = async (req: Request, res: Response) => {
   try {
@@ -101,10 +148,62 @@ export const createScannedMold = async (req: Request, res: Response) => {
  *     responses:
  *       200:
  *         description: List of scanned molds
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     snapshot:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           moldipedia_id:
+ *                             type: string
+ *                           user_id:
+ *                             type: string
+ *                           image_url:
+ *                             type: string
+ *                           is_active:
+ *                             type: boolean
+ *                           created_at:
+ *                             type: string
+ *                             format: date-time
+ *                     nextPageToken:
+ *                       type: string
+ *                       nullable: true
  *       404:
  *         description: Not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
  *       500:
  *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
  */
 export const getAllScannedMolds = async (req: Request, res: Response) => {
   const limit: number = parseInt(req.query.limit as string) || 10;
@@ -142,6 +241,13 @@ export const getAllScannedMolds = async (req: Request, res: Response) => {
  *     responses:
  *       200:
  *         description: Scanned mold
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: object
  *       404:
  *         description: Not found
  *       500:
@@ -189,6 +295,13 @@ export const getScannedMoldById = async (req: Request, res: Response) => {
  *     responses:
  *       200:
  *         description: Successfully updated scanned mold
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: object
  *       400:
  *         description: Validation error
  *       404:
@@ -234,6 +347,13 @@ export const patchScannedMold = async (req: Request, res: Response) => {
  *     responses:
  *       200:
  *         description: Successfully deleted scanned mold
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: string
  *       500:
  *         description: Server error
  */
@@ -273,6 +393,13 @@ export const deleteScannedMold = async (req: Request, res: Response) => {
  *     responses:
  *       200:
  *         description: Successfully soft deleted scanned mold
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: string
  *       500:
  *         description: Server error
  */
@@ -291,3 +418,9 @@ export const softDeleteScannedMold = async (req: Request, res: Response) => {
     return defaultError(res);
   }
 };
+
+
+
+
+
+

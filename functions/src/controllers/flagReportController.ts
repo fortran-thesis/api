@@ -29,14 +29,72 @@ export const createFlagReport = async (req: Request, res: Response) => {
    *       content:
    *         application/json:
    *           schema:
-   *             $ref: '#/components/schemas/CreateFlagReportDTO'
+   *             type: object
+   *             properties:
+   *               content_id:
+   *                 type: string
+   *                 description: ID of the content being flagged
+   *               content_type:
+   *                 type: string
+   *                 description: Type of content (e.g., "mold", "moldipedia")
+   *               reason:
+   *                 type: string
+   *                 description: Reason for flagging
+   *               details:
+   *                 type: string
+   *                 description: Additional details
    *     responses:
    *       200:
    *         description: Successfully created flag report
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     content_id:
+   *                       type: string
+   *                     content_type:
+   *                       type: string
+   *                     reporter_id:
+   *                       type: string
+   *                     reason:
+   *                       type: string
+   *                     details:
+   *                       type: string
+   *                       nullable: true
+   *                     status:
+   *                       type: string
+   *                       enum: [unresolved, resolved]
    *       400:
-   *         description: Error
+   *         description: Validation error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
    *       500:
    *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
    */
   try {
     const details = req.body;
@@ -89,8 +147,51 @@ export const getAllFlagReports = async (req: Request, res: Response) => {
    *     responses:
    *       200:
    *         description: List of flag reports
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     snapshot:
+   *                       type: array
+   *                       items:
+   *                         type: object
+   *                         properties:
+   *                           content_id:
+   *                             type: string
+   *                           content_type:
+   *                             type: string
+   *                           reporter_id:
+   *                             type: string
+   *                           reason:
+   *                             type: string
+   *                           details:
+   *                             type: string
+   *                             nullable: true
+   *                           status:
+   *                             type: string
+   *                             enum: [unresolved, resolved]
+   *                     nextPageToken:
+   *                       type: string
+   *                       nullable: true
    *       500:
    *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
    */
   const limit: number = parseInt(req.query.limit as string) || 10;
   const pageToken: string | undefined = req.query.pageToken as
@@ -128,10 +229,55 @@ export const getFlagReportById = async (req: Request, res: Response) => {
    *     responses:
    *       200:
    *         description: Flag report
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     content_id:
+   *                       type: string
+   *                     content_type:
+   *                       type: string
+   *                     reporter_id:
+   *                       type: string
+   *                     reason:
+   *                       type: string
+   *                     details:
+   *                       type: string
+   *                       nullable: true
+   *                     status:
+   *                       type: string
+   *                       enum: [unresolved, resolved]
    *       404:
    *         description: Not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
    *       500:
    *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
    */
   try {
     const id = req.params.id;
@@ -179,10 +325,41 @@ export const patchFlagReport = async (req: Request, res: Response) => {
    *     responses:
    *       200:
    *         description: Successfully updated flag report
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   type: boolean
+   *                   description: Update success status
    *       404:
    *         description: Not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
    *       500:
    *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
    */
   try {
     const id: string = req.params.id;
@@ -226,10 +403,41 @@ export const deleteFlagReport = async (req: Request, res: Response) => {
    *     responses:
    *       200:
    *         description: Successfully deleted flag report
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   type: string
+   *                   example: "Successfully deleted flag report"
    *       404:
    *         description: Not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
    *       500:
    *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
    */
   try {
     const id: string = req.params.id;
@@ -263,10 +471,41 @@ export const softDeleteFlagReport = async (req: Request, res: Response) => {
    *     responses:
    *       200:
    *         description: Successfully soft deleted flag report
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   type: string
+   *                   example: "Successfully soft deleted flag report."
    *       404:
    *         description: Not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
    *       500:
    *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
    */
   try {
     const id: string = req.params.id;
@@ -278,3 +517,9 @@ export const softDeleteFlagReport = async (req: Request, res: Response) => {
     return defaultError(res);
   }
 };
+
+
+
+
+
+

@@ -27,28 +27,78 @@ export const createReport = async (req: Request, res: Response) => {
    *     requestBody:
    *       required: true
    *       content:
-   *         application/json:
-   *           schema:
-   *             $ref: '#/components/schemas/Report'
-   *     responses:
-   *       200:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - reporter_id
+ *               - reported_user_id
+ *               - reason
+ *             properties:
+ *               reporter_id:
+ *                 type: string
+ *                 description: ID of the user creating the report
+ *               reported_user_id:
+ *                 type: string
+ *                 description: ID of the reported user
+ *               reason:
+ *                 type: string
+ *                 enum: [spam, harassment, inappropriate_content, other]
+ *                 description: Reason for the report
+ *               details:
+ *                 type: string
+ *                 description: Additional details about the report
+ *     responses:
+ *       200:
    *         description: Successfully created report
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/ReportResponse'
+   *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     reporter_id:
+ *                       type: string
+ *                     reported_user_id:
+ *                       type: string
+ *                     reason:
+ *                       type: string
+ *                     details:
+ *                       type: string
+ *                     created_at:
+ *                       type: string
+ *                       format: date-time
    *       400:
    *         description: Validation error
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/ApiResponseError'
+   *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
    *       500:
    *         description: Server error
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/ApiResponseError'
+   *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
    */
   try {
     const details: Omit<Report, "created_at"> = req.body;
@@ -83,31 +133,72 @@ export const getAllReports = async (req: Request, res: Response) => {
    *         name: limit
    *         schema:
    *           type: integer
-   *         description: Page size
+   *           default: 10
+   *         description: Number of items per page
    *       - in: query
    *         name: pageToken
    *         schema:
    *           type: string
-   *         description: Cursor token
+   *         description: Cursor token for pagination
    *     responses:
    *       200:
    *         description: List of reports
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/PaginatedResult'
+   *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     snapshot:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           reporter_id:
+ *                             type: string
+ *                           reported_user_id:
+ *                             type: string
+ *                           reason:
+ *                             type: string
+ *                           details:
+ *                             type: string
+ *                           created_at:
+ *                             type: string
+ *                             format: date-time
+ *                     nextPageToken:
+ *                       type: string
+ *                       nullable: true
    *       404:
    *         description: Not found
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/ApiResponseError'
+   *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
    *       500:
    *         description: Server error
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/ApiResponseError'
+   *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
    */
   const limit: number = parseInt(req.query.limit as string) || 10;
   const pageToken: string | undefined = req.query.pageToken as string | undefined;
@@ -139,13 +230,57 @@ export const getReportById = async (req: Request, res: Response) => {
    *         schema:
    *           type: string
    *         description: Report ID
-   *     responses:
-   *       200:
-   *         description: Report
-   *       404:
-   *         description: Not found
+ *     responses:
+ *       200:
+ *         description: Report retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     reporter_id:
+ *                       type: string
+ *                     reported_user_id:
+ *                       type: string
+ *                     reason:
+ *                       type: string
+ *                     details:
+ *                       type: string
+ *                     created_at:
+ *                       type: string
+ *                       format: date-time
+ *       404:
+ *         description: Not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
    *       500:
    *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
    */
   try {
     const id = req.params.id;
@@ -183,15 +318,78 @@ export const patchReport = async (req: Request, res: Response) => {
    *           schema:
    *             type: object
    *             description: Partial Report object with fields to update
-   *     responses:
-   *       200:
-   *         description: Successfully updated report
-   *       400:
-   *         description: Validation error
+ *             properties:
+ *               reporter_id:
+ *                 type: string
+ *               reported_user_id:
+ *                 type: string
+ *               reason:
+ *                 type: string
+ *               details:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Successfully updated report
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     reporter_id:
+ *                       type: string
+ *                     reported_user_id:
+ *                       type: string
+ *                     reason:
+ *                       type: string
+ *                     details:
+ *                       type: string
+ *                     created_at:
+ *                       type: string
+ *                       format: date-time
+ *       400:
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
    *       404:
    *         description: Not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
    *       500:
    *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
    */
   try {
     const id: string = req.params.id;
@@ -228,11 +426,32 @@ export const deleteReport = async (req: Request, res: Response) => {
    *         schema:
    *           type: string
    *         description: Report ID
-   *     responses:
-   *       200:
-   *         description: Successfully deleted report
-   *       500:
-   *         description: Server error
+ *     responses:
+ *       200:
+ *         description: Successfully deleted report
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: string
+ *                   example: "Successfully deleted report"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
    */
   try {
     const id: string = req.params.id;
@@ -267,11 +486,32 @@ export const softDeleteReport = async (req: Request, res: Response) => {
    *         schema:
    *           type: string
    *         description: Report ID
-   *     responses:
-   *       200:
-   *         description: Successfully soft deleted report
-   *       500:
-   *         description: Server error
+ *     responses:
+ *       200:
+ *         description: Successfully soft deleted report
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: string
+ *                   example: "Successfully soft deleted report."
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
    */
   try {
     const id: string = req.params.id;
@@ -287,3 +527,9 @@ export const softDeleteReport = async (req: Request, res: Response) => {
     return defaultError(res);
   }
 };
+
+
+
+
+
+

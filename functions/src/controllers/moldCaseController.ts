@@ -1,4 +1,4 @@
-import {Request, Response} from "express";
+﻿import {Request, Response} from "express";
 import {devLog} from "../utils/dev";
 import {defaultError, sendError, sendSuccess} from "../utils/response";
 import {MoldCase, PaginatedResult} from "../types/types";
@@ -32,34 +32,89 @@ export const createMoldCase = async (req: Request, res: Response) => {
    *     requestBody:
    *       required: true
    *       content:
-   *         multipart/form-data:
+   *         application/json:
    *           schema:
    *             type: object
    *             properties:
-   *               details:
-   *                 type: object
-   *                 description: MoldCase DTO. See MoldCase interface for properties.
-   *                 properties:
-   *                   user_id:
-   *                     type: string
-   *                   name:
-   *                     type: string
-   *                   photo_url:
-   *                     type: string
-   *                   identified_mold:
-   *                     type: string
-   *                   is_archived:
-   *                     type: boolean
-   *               photo:
+   *               user_id:
    *                 type: string
-   *                 format: binary
+   *               mycologist_id:
+   *                 type: string
+   *               name:
+   *                 type: string
+   *               mold_report_id:
+   *                 type: string
+   *               photo_url:
+   *                 type: string
+   *               priority:
+   *                 type: string
+   *                 enum: [low, medium, high]
+   *               start_date:
+   *                 type: string
+   *                 format: date-time
+   *               end_date:
+   *                 type: string
+   *                 format: date-time
+   *               is_archived:
+   *                 type: boolean
    *     responses:
    *       200:
    *         description: Successfully created mold folder
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     mycologist_id:
+   *                       type: string
+   *                     name:
+   *                       type: string
+   *                     mold_report_id:
+   *                       type: string
+   *                     photo_url:
+   *                       type: string
+   *                       nullable: true
+   *                     priority:
+   *                       type: string
+   *                       enum: [low, medium, high]
+   *                     start_date:
+   *                       type: string
+   *                       format: date-time
+   *                     end_date:
+   *                       type: string
+   *                       format: date-time
+   *                     is_archived:
+   *                       type: boolean
    *       400:
    *         description: Validation error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
    *       500:
    *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
    */
   try {
     // Accept body directly (no multipart) or from body.details if present
@@ -102,12 +157,81 @@ export const getAllMoldCases = async (req: Request, res: Response) => {
    *     responses:
    *       200:
    *         description: List of mold folders
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     snapshot:
+   *                       type: array
+   *                       items:
+   *                         type: object
+   *                         properties:
+   *                           mycologist_id:
+   *                             type: string
+   *                           name:
+   *                             type: string
+   *                           mold_report_id:
+   *                             type: string
+   *                           photo_url:
+   *                             type: string
+   *                             nullable: true
+   *                           priority:
+   *                             type: string
+   *                             enum: [low, medium, high]
+   *                           start_date:
+   *                             type: string
+   *                             format: date-time
+   *                           end_date:
+   *                             type: string
+   *                             format: date-time
+   *                           is_archived:
+   *                             type: boolean
+   *                     nextPageToken:
+   *                       type: string
+   *                       nullable: true
    *       401:
    *         description: Unauthorized
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
    *       404:
    *         description: Not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
    *       500:
    *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
    */
   const limit: number = parseInt(req.query.limit as string) || 10;
   const pageToken: string | undefined = req.query.pageToken as string | undefined;
@@ -149,12 +273,81 @@ export const getAssignedMoldCases = async (req: Request, res: Response) => {
    *     responses:
    *       200:
    *         description: List of assigned mold cases
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     snapshot:
+   *                       type: array
+   *                       items:
+   *                         type: object
+   *                         properties:
+   *                           mycologist_id:
+   *                             type: string
+   *                           name:
+   *                             type: string
+   *                           mold_report_id:
+   *                             type: string
+   *                           photo_url:
+   *                             type: string
+   *                             nullable: true
+   *                           priority:
+   *                             type: string
+   *                             enum: [low, medium, high]
+   *                           start_date:
+   *                             type: string
+   *                             format: date-time
+   *                           end_date:
+   *                             type: string
+   *                             format: date-time
+   *                           is_archived:
+   *                             type: boolean
+   *                     nextPageToken:
+   *                       type: string
+   *                       nullable: true
    *       401:
    *         description: Unauthorized (not a curator)
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
    *       404:
    *         description: Not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
    *       500:
    *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
    */
   const limit: number = parseInt(req.query.limit as string) || 10;
   const pageToken: string | undefined = req.query.pageToken as string | undefined;
@@ -199,12 +392,81 @@ export const getAllArchivedMoldCases = async (
    *     responses:
    *       200:
    *         description: List of archived mold folders
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     snapshot:
+   *                       type: array
+   *                       items:
+   *                         type: object
+   *                         properties:
+   *                           mycologist_id:
+   *                             type: string
+   *                           name:
+   *                             type: string
+   *                           mold_report_id:
+   *                             type: string
+   *                           photo_url:
+   *                             type: string
+   *                             nullable: true
+   *                           priority:
+   *                             type: string
+   *                             enum: [low, medium, high]
+   *                           start_date:
+   *                             type: string
+   *                             format: date-time
+   *                           end_date:
+   *                             type: string
+   *                             format: date-time
+   *                           is_archived:
+   *                             type: boolean
+   *                     nextPageToken:
+   *                       type: string
+   *                       nullable: true
    *       401:
    *         description: Unauthorized
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
    *       404:
    *         description: Not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
    *       500:
    *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
    */
   const limit: number = parseInt(req.query.limit as string) || 10;
   const pageToken: string | undefined = req.query.pageToken as string | undefined;
@@ -246,18 +508,85 @@ export const patchMoldCase = async (req: Request, res: Response) => {
    *           schema:
    *             type: object
    *             properties:
-   *               details:
-   *                 type: object
-   *                 description: Mold folder details to update
+   *               name:
+   *                 type: string
+   *               photo_url:
+   *                 type: string
+   *               priority:
+   *                 type: string
+   *                 enum: [low, medium, high]
+   *               is_archived:
+   *                 type: boolean
    *     responses:
    *       200:
    *         description: Successfully updated mold folder
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     mycologist_id:
+   *                       type: string
+   *                     name:
+   *                       type: string
+   *                     mold_report_id:
+   *                       type: string
+   *                     photo_url:
+   *                       type: string
+   *                       nullable: true
+   *                     priority:
+   *                       type: string
+   *                       enum: [low, medium, high]
+   *                     start_date:
+   *                       type: string
+   *                       format: date-time
+   *                     end_date:
+   *                       type: string
+   *                       format: date-time
+   *                     is_archived:
+   *                       type: boolean
    *       400:
    *         description: Validation error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
    *       404:
    *         description: Not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
    *       500:
    *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
    */
   try {
     const id: string = req.params.id;
@@ -297,8 +626,29 @@ export const deleteMoldCase = async (req: Request, res: Response) => {
    *     responses:
    *       200:
    *         description: Successfully deleted mold folder
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   type: string
+   *                   example: "Successfully deleted mold case"
    *       500:
    *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
    */
   try {
     const id: string = req.params.id;
@@ -332,8 +682,29 @@ export const softDeleteMoldCase = async (req: Request, res: Response) => {
    *     responses:
    *       200:
    *         description: Successfully soft deleted mold folder
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   type: string
+   *                   example: "Successfully soft deleted mold case."
    *       500:
    *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
    */
   try {
     const id: string = req.params.id;
@@ -365,10 +736,61 @@ export const softDeleteMoldCase = async (req: Request, res: Response) => {
  *     responses:
  *       200:
  *         description: Mold case retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     mycologist_id:
+ *                       type: string
+ *                     name:
+ *                       type: string
+ *                     mold_report_id:
+ *                       type: string
+ *                     photo_url:
+ *                       type: string
+ *                       nullable: true
+ *                     priority:
+ *                       type: string
+ *                       enum: [low, medium, high]
+ *                     start_date:
+ *                       type: string
+ *                       format: date-time
+ *                     end_date:
+ *                       type: string
+ *                       format: date-time
+ *                     is_archived:
+ *                       type: boolean
  *       404:
  *         description: No mold case found for this report
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
  *       500:
  *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
  */
 export const getMoldCaseByReportId = async (req: Request, res: Response) => {
   /**
@@ -409,7 +831,36 @@ export const getMoldCaseByReportId = async (req: Request, res: Response) => {
  *         multipart/form-data:
  *           schema:
  *             type: object
+ *             required:
+ *               - type
  *             properties:
+ *               type:
+ *                 type: string
+ *                 enum: [vivo, vitro]
+ *                 description: Cultivation type (vivo for in vivo, vitro for in vitro)
+ *               characteristics:
+ *                 oneOf:
+ *                   - type: object
+ *                     description: For vivo cultivation
+ *                     properties:
+ *                       lesion_size:
+ *                         type: number
+ *                         description: Lesion size in millimeters
+ *                       lesion_color:
+ *                         type: string
+ *                         description: Lesion color description
+ *                   - type: object
+ *                     description: For vitro cultivation
+ *                     properties:
+ *                       colony_diameter:
+ *                         type: number
+ *                         description: Colony diameter in millimeters
+ *                       colony_color:
+ *                         type: string
+ *                         description: Colony color description
+ *               additional_info:
+ *                 type: string
+ *                 description: Additional observations about the cultivation
  *               image:
  *                 type: string
  *                 format: binary
@@ -417,10 +868,88 @@ export const getMoldCaseByReportId = async (req: Request, res: Response) => {
  *     responses:
  *       200:
  *         description: Cultivation log added successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     mycologist_id:
+ *                       type: string
+ *                     name:
+ *                       type: string
+ *                     mold_report_id:
+ *                       type: string
+ *                     photo_url:
+ *                       type: string
+ *                       nullable: true
+ *                     priority:
+ *                       type: string
+ *                       enum: [low, medium, high]
+ *                     start_date:
+ *                       type: string
+ *                       format: date-time
+ *                     end_date:
+ *                       type: string
+ *                       format: date-time
+ *                     is_archived:
+ *                       type: boolean
+ *                     cultivation_logs:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           type:
+ *                             type: string
+ *                             enum: [vivo, vitro]
+ *                           image_url:
+ *                             type: string
+ *                             nullable: true
+ *                           characteristics:
+ *                             type: object
+ *                           additional_info:
+ *                             type: string
+ *                     cultivation_details:
+ *                       type: object
+ *                       nullable: true
+ *                       properties:
+ *                         growth_medium:
+ *                           type: string
+ *                         in_vivo_details:
+ *                           type: object
+ *                         in_vitro_details:
+ *                           type: object
  *       400:
  *         description: Failed to add cultivation log
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
  *       500:
  *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
  */
 export const addCultivationLog = async (req: Request, res: Response) => {
   /**
@@ -479,14 +1008,100 @@ export const addCultivationLog = async (req: Request, res: Response) => {
  *         application/json:
  *           schema:
  *             type: object
- *             description: Cultivation details to update
+ *             properties:
+ *               cultivation_details:
+ *                 type: object
+ *                 properties:
+ *                   growth_medium:
+ *                     type: string
+ *                     description: Growth medium used for cultivation
+ *                   in_vivo_details:
+ *                     type: object
+ *                     description: In vivo cultivation details
+ *                     properties:
+ *                       environmental_temperature:
+ *                         type: number
+ *                         description: Environmental temperature in Celsius
+ *                   in_vitro_details:
+ *                     type: object
+ *                     description: In vitro cultivation details
+ *                     properties:
+ *                       incubation_temperature:
+ *                         type: number
+ *                         description: Incubation temperature in Celsius
  *     responses:
  *       200:
  *         description: Cultivation details updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     mycologist_id:
+ *                       type: string
+ *                     name:
+ *                       type: string
+ *                     mold_report_id:
+ *                       type: string
+ *                     photo_url:
+ *                       type: string
+ *                       nullable: true
+ *                     priority:
+ *                       type: string
+ *                       enum: [low, medium, high]
+ *                     start_date:
+ *                       type: string
+ *                       format: date-time
+ *                     end_date:
+ *                       type: string
+ *                       format: date-time
+ *                     is_archived:
+ *                       type: boolean
+ *                     cultivation_logs:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     cultivation_details:
+ *                       type: object
+ *                       properties:
+ *                         growth_medium:
+ *                           type: string
+ *                         in_vivo_details:
+ *                           type: object
+ *                         in_vitro_details:
+ *                           type: object
  *       400:
  *         description: Failed to update cultivation details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
  *       500:
  *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
  */
 export const updateCultivationDetails = async (req: Request, res: Response) => {
   /**
@@ -535,18 +1150,79 @@ export const updateCultivationDetails = async (req: Request, res: Response) => {
  *               type:
  *                 type: string
  *                 enum: [vivo, vitro]
- *                 description: Cultivation type (vivo or vitro)
+ *                 description: Cultivation type (vivo for in vivo, vitro for in vitro)
  *               image:
  *                 type: string
  *                 format: binary
- *                 description: Cultivation image to analyze
+ *                 description: Cultivation image to analyze (JPEG or PNG)
  *     responses:
  *       200:
  *         description: Image analyzed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     type:
+ *                       type: string
+ *                       enum: [vivo, vitro]
+ *                       description: Cultivation type analyzed
+ *                     characteristics:
+ *                       oneOf:
+ *                         - type: object
+ *                           description: Vivo analysis characteristics
+ *                           properties:
+ *                             lesion_size:
+ *                               type: number
+ *                               description: Lesion size in millimeters
+ *                             lesion_color:
+ *                               type: string
+ *                               description: Predominant lesion color
+ *                         - type: object
+ *                           description: Vitro analysis characteristics
+ *                           properties:
+ *                             colony_diameter:
+ *                               type: number
+ *                               description: Colony diameter in millimeters
+ *                             colony_color:
+ *                               type: string
+ *                               description: Predominant colony color
+ *                     additional_info:
+ *                       type: string
+ *                       description: Additional observations about the cultivation
+ *                     confidence:
+ *                       type: string
+ *                       description: Confidence level of the analysis (percentage)
  *       400:
  *         description: Invalid cultivation type or no image provided
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
  *       500:
  *         description: Failed to analyze image
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
  */
 export const analyzeCultivationLogImage = async (req: Request, res: Response) => {
   /**
@@ -581,4 +1257,11 @@ export const analyzeCultivationLogImage = async (req: Request, res: Response) =>
     return defaultError(res);
   }
 };
+
+
+
+
+
+
+
 

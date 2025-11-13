@@ -28,27 +28,72 @@ export const createSystemRequest = async (req: Request, res: Response) => {
    *       required: true
    *       content:
    *         application/json:
-   *           schema:
-   *             $ref: '#/components/schemas/SystemRequest'
-   *     responses:
-   *       200:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - type
+ *               - message
+ *             properties:
+ *               type:
+ *                 type: string
+ *                 enum: [feedback, bug]
+ *                 description: Type of system request
+ *               message:
+ *                 type: string
+ *                 description: Message content
+ *               userId:
+ *                 type: string
+ *                 description: Optional user ID
+ *     responses:
+ *       200:
    *         description: Successfully created system request
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/SystemRequestResponse'
+   *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     type:
+ *                       type: string
+ *                       enum: [feedback, bug]
+ *                     message:
+ *                       type: string
+ *                     userId:
+ *                       type: string
+ *                     created_at:
+ *                       type: string
+ *                       format: date-time
    *       400:
    *         description: Validation error
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/ApiResponseError'
+   *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
    *       500:
    *         description: Server error
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/ApiResponseError'
+   *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
    */
   try {
     const details: Omit<SystemRequest, "created_at"> = req.body;
@@ -82,6 +127,7 @@ export const getAllSystemRequests = async (req: Request, res: Response) => {
    *         name: limit
    *         schema:
    *           type: integer
+   *           default: 10
    *         description: Number of items per page (default 10)
    *       - in: query
    *         name: pageToken
@@ -94,19 +140,58 @@ export const getAllSystemRequests = async (req: Request, res: Response) => {
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/PaginatedResult'
+   *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     snapshot:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           type:
+ *                             type: string
+ *                             enum: [feedback, bug]
+ *                           message:
+ *                             type: string
+ *                           userId:
+ *                             type: string
+ *                           created_at:
+ *                             type: string
+ *                             format: date-time
+ *                     nextPageToken:
+ *                       type: string
+ *                       nullable: true
    *       404:
    *         description: Not found
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/ApiResponseError'
+   *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
    *       500:
    *         description: Server error
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/ApiResponseError'
+   *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
    */
   const limit: number = parseInt(req.query.limit as string) || 10;
   const pageToken: string | undefined = req.query.pageToken as string | undefined;
@@ -140,23 +225,42 @@ export const getSystemRequestById = async (req: Request, res: Response) => {
    *         description: System request ID
    *     responses:
    *       200:
-   *         description: System request
+   *         description: System request retrieved successfully
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/SystemRequestResponse'
+   *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     type:
+ *                       type: string
+ *                       enum: [feedback, bug]
+ *                     message:
+ *                       type: string
+ *                     userId:
+ *                       type: string
+ *                     created_at:
+ *                       type: string
+ *                       format: date-time
    *       404:
    *         description: Not found
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/ApiResponseError'
-   *       500:
-   *         description: Server error
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/ApiResponseError'
+   *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
    */
   try {
     const id = req.params.id;
@@ -207,12 +311,65 @@ export const patchSystemRequest = async (req: Request, res: Response) => {
    *     responses:
    *       200:
    *         description: Successfully updated system request
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     id:
+   *                       type: string
+   *                     type:
+   *                       type: string
+   *                       enum: [feedback, bug]
+   *                     message:
+   *                       type: string
+   *                     userId:
+   *                       type: string
+   *                     created_at:
+   *                       type: string
+   *                       format: date-time
    *       400:
    *         description: Validation error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
    *       404:
    *         description: Not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
    *       500:
    *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
    */
   try {
     const id: string = req.params.id;
@@ -252,8 +409,29 @@ export const deleteSystemRequest = async (req: Request, res: Response) => {
    *     responses:
    *       200:
    *         description: Successfully deleted system request
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   type: string
+   *                   example: "Successfully deleted system request"
    *       500:
    *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
    */
   try {
     const id: string = req.params.id;
@@ -291,8 +469,29 @@ export const softDeleteSystemRequest = async (req: Request, res: Response) => {
    *     responses:
    *       200:
    *         description: Successfully soft deleted system request
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   type: string
+   *                   example: "Successfully soft deleted system request."
    *       500:
    *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
    */
   try {
     const id: string = req.params.id;
@@ -308,3 +507,9 @@ export const softDeleteSystemRequest = async (req: Request, res: Response) => {
     return defaultError(res);
   }
 };
+
+
+
+
+
+

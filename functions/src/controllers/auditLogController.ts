@@ -32,8 +32,78 @@ import {getAuditLogsByAction, getAllAuditLogs} from "../services/auditLogService
  *     responses:
  *       200:
  *         description: List of audit logs
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   oneOf:
+ *                     - type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           actor_id:
+ *                             type: string
+ *                             description: ID of the user who performed the action
+ *                           actor_role:
+ *                             type: string
+ *                             description: Role of the actor (USER, CURATOR, MYCOLOGIST, ADMIN)
+ *                           action:
+ *                             type: string
+ *                             description: Type of audit action performed
+ *                           description:
+ *                             type: string
+ *                             description: Description of the action
+ *                           timestamp:
+ *                             type: string
+ *                             format: date-time
+ *                             description: When the action was performed
+ *                           target_id:
+ *                             type: string
+ *                             nullable: true
+ *                             description: ID of the affected resource (optional)
+ *                     - type: object
+ *                       properties:
+ *                         snapshot:
+ *                           type: array
+ *                           items:
+ *                             type: object
+ *                             properties:
+ *                               actor_id:
+ *                                 type: string
+ *                               actor_role:
+ *                                 type: string
+ *                               action:
+ *                                 type: string
+ *                               description:
+ *                                 type: string
+ *                               timestamp:
+ *                                 type: string
+ *                                 format: date-time
+ *                               target_id:
+ *                                 type: string
+ *                                 nullable: true
+ *                         nextPageToken:
+ *                           type: string
+ *                           nullable: true
+ *                           description: Cursor token for fetching next page
  *       404:
  *         description: No audit logs found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                   example: "No audit logs found"
  *       500:
  *         description: Server error
  */
@@ -56,3 +126,9 @@ export const getAuditLogs = async (req: Request, res: Response) => {
     return defaultError(res);
   }
 };
+
+
+
+
+
+

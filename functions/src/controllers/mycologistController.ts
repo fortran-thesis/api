@@ -39,12 +39,57 @@ import {registerMycologist} from "../services/mycologistService";
  *     responses:
  *       200:
  *         description: Mycologist registered successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     userId:
+ *                       type: string
+ *                     message:
+ *                       type: string
  *       400:
  *         description: Validation error or registration failed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
  *       401:
  *         description: Unauthorized (not admin)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
  *       500:
  *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
  */
 export const registerMycologistController = async (
   req: Request,
@@ -64,3 +109,9 @@ export const registerMycologistController = async (
     return defaultError(res);
   }
 };
+
+
+
+
+
+

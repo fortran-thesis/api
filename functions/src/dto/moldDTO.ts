@@ -10,10 +10,10 @@ export const MoldIdSchema = z.object({
 });
 
 export const MoldSchema = z.object({
-  name: z
+  moldName: z
     .string({required_error: "Name is required. "})
     .nonempty({message: "Name is required "}),
-  mold_details: z.object({
+  details: z.object({
     info: z.object({
       description: z.string().optional(),
       taxonomy: z.object({

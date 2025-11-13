@@ -32,8 +32,30 @@ import {AuditAction} from "../types/enums";
  *     responses:
  *       200:
  *         description: Successfully disabled user
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: string
+ *                   example: "Successfully disabled user."
  *       400:
  *         description: Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                   example: "Failed to disable user."
  *       500:
  *         description: Server error
  */
@@ -82,8 +104,30 @@ export const disableUser = async (req: Request, res: Response) => {
  *     responses:
  *       200:
  *         description: Successfully enabled user
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: string
+ *                   example: "Successfully enabled user."
  *       400:
  *         description: Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                   example: "Failed to enable user."
  *       500:
  *         description: Server error
  */
@@ -132,8 +176,30 @@ export const enableUser = async (req: Request, res: Response) => {
  *     responses:
  *       200:
  *         description: Successfully banned user
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: string
+ *                   example: "Successfully banned user."
  *       400:
  *         description: Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                   example: "Failed to ban user."
  *       500:
  *         description: Server error
  */
@@ -154,3 +220,9 @@ export const banUserController = async (req: Request, res: Response) => {
     return defaultError(res);
   }
 };
+
+
+
+
+
+

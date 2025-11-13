@@ -27,7 +27,7 @@ export const createMoldReport = async (req: Request, res: Response) => {
    * /api/v1/mold-reports:
    *   post:
    *     summary: Create a new mold report
-   *     tags: [MoldReports]
+   *     tags: [MoldReport]
    *     security:
    *       - bearerAuth: []
    *       - cookieAuth: []
@@ -77,6 +77,44 @@ export const createMoldReport = async (req: Request, res: Response) => {
    *     responses:
    *       200:
    *         description: Successfully created mold report
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     id:
+   *                       type: string
+   *                     case_name:
+   *                       type: string
+   *                     date_observed:
+   *                       type: string
+   *                       format: date-time
+   *                     user_id:
+   *                       type: string
+   *                     assigned_mycologist_id:
+   *                       type: string
+   *                       nullable: true
+   *                     host:
+   *                       type: string
+   *                     location:
+   *                       type: string
+   *                     status:
+   *                       type: string
+   *                       enum: [pending, "in progress", resolved, rejected]
+   *                     case_details:
+   *                       type: array
+   *                       items:
+   *                         type: object
+   *                         properties:
+   *                           description:
+   *                             type: string
+   *                           cover_photo:
+   *                             type: array
+   *                             items:
+   *                               type: string
    *       400:
    *         description: Validation error
    *       500:
@@ -133,6 +171,29 @@ export const createMoldReport = async (req: Request, res: Response) => {
  *     responses:
  *       200:
  *         description: Status counts retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: integer
+ *                       description: Total number of reports
+ *                     pending:
+ *                       type: integer
+ *                       description: Number of pending reports
+ *                     in_progress:
+ *                       type: integer
+ *                       description: Number of in-progress reports
+ *                     resolved:
+ *                       type: integer
+ *                       description: Number of resolved reports
+ *                     closed:
+ *                       type: integer
+ *                       description: Number of closed/rejected reports
  *       500:
  *         description: Server error
  */
@@ -176,6 +237,74 @@ export const getMoldReportCountsController = async (
  *     responses:
  *       200:
  *         description: List of mold reports
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     snapshot:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           case_name:
+ *                             type: string
+ *                           date_observed:
+ *                             type: string
+ *                             format: date-time
+ *                           user_id:
+ *                             type: string
+ *                           assigned_mycologist_id:
+ *                             type: string
+ *                             nullable: true
+ *                           host:
+ *                             type: string
+ *                           location:
+ *                             type: string
+ *                           status:
+ *                             type: string
+ *                             enum: [pending, "in progress", resolved, rejected]
+ *                           case_details:
+ *                             type: array
+ *                             items:
+ *                               type: object
+ *                               properties:
+ *                                 description:
+ *                                   type: string
+ *                                 cover_photo:
+ *                                   type: array
+ *                                   items:
+ *                                     type: string
+ *                           reporter:
+ *                             type: object
+ *                             properties:
+ *                               id:
+ *                                 type: string
+ *                               name:
+ *                                 type: string
+ *                           metadata:
+ *                             type: object
+ *                             properties:
+ *                               created_at:
+ *                                 type: string
+ *                                 format: date-time
+ *                               updated_at:
+ *                                 type: string
+ *                                 format: date-time
+ *                                 nullable: true
+ *                               deleted_at:
+ *                                 type: string
+ *                                 format: date-time
+ *                                 nullable: true
+ *                     nextPageToken:
+ *                       type: string
+ *                       nullable: true
+ *                       description: Token for fetching next page of results
  *       404:
  *         description: Failed to retrieve mold reports
  *       500:
@@ -221,6 +350,43 @@ export const getAllMoldReports = async (req: Request, res: Response) => {
  *     responses:
  *       200:
  *         description: List of user's mold reports
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     snapshot:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           case_name:
+ *                             type: string
+ *                           date_observed:
+ *                             type: string
+ *                             format: date-time
+ *                           assigned_mycologist_id:
+ *                             type: string
+ *                             nullable: true
+ *                           host:
+ *                             type: string
+ *                           location:
+ *                             type: string
+ *                           status:
+ *                             type: string
+ *                             enum: [pending, "in progress", resolved, rejected]
+ *                           case_details:
+ *                             type: array
+ *                             items:
+ *                               type: object
+ *                     nextPageToken:
+ *                       type: string
+ *                       nullable: true
  *       401:
  *         description: Unauthorized
  *       404:
@@ -278,6 +444,32 @@ export const getAllMoldReportsByUser = async (req: Request, res: Response) => {
  *     responses:
  *       200:
  *         description: List of archived mold reports
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     snapshot:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           case_name:
+ *                             type: string
+ *                           date_observed:
+ *                             type: string
+ *                           status:
+ *                             type: string
+ *                           case_details:
+ *                             type: array
+ *                     nextPageToken:
+ *                       type: string
+ *                       nullable: true
  *       401:
  *         description: Unauthorized
  *       404:
@@ -330,6 +522,34 @@ export const getAllArchivedMoldReports = async (
  *     responses:
  *       200:
  *         description: List of unassigned mold reports
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     snapshot:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           case_name:
+ *                             type: string
+ *                           date_observed:
+ *                             type: string
+ *                           status:
+ *                             type: string
+ *                             enum: [pending]
+ *                           assigned_mycologist_id:
+ *                             type: string
+ *                             nullable: true
+ *                     nextPageToken:
+ *                       type: string
+ *                       nullable: true
  *       404:
  *         description: Failed to retrieve unassigned mold reports
  *       500:
@@ -390,6 +610,53 @@ export const getUnassignedMoldReports = async (req: Request, res: Response) => {
  *     responses:
  *       200:
  *         description: Case detail added successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     case_name:
+ *                       type: string
+ *                     date_observed:
+ *                       type: string
+ *                       format: date
+ *                     user_id:
+ *                       type: string
+ *                     assigned_mycologist_id:
+ *                       type: string
+ *                       nullable: true
+ *                     host:
+ *                       type: string
+ *                     location:
+ *                       type: string
+ *                     status:
+ *                       type: string
+ *                       enum: [pending, in progress, resolved, rejected, closed]
+ *                     case_details:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           cover_photo:
+ *                             type: array
+ *                             items:
+ *                               type: string
+ *                           description:
+ *                             type: string
+ *                           timestamp:
+ *                             type: string
+ *                             format: date-time
+ *                     created_at:
+ *                       type: string
+ *                       format: date-time
+ *                     updated_at:
+ *                       type: string
+ *                       format: date-time
  *       400:
  *         description: Failed to add case detail
  *       404:
@@ -488,6 +755,42 @@ export const postCaseDetail = async (req: Request, res: Response) => {
  *     responses:
  *       200:
  *         description: Mycologist assigned successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     case_name:
+ *                       type: string
+ *                     date_observed:
+ *                       type: string
+ *                       format: date
+ *                     user_id:
+ *                       type: string
+ *                     assigned_mycologist_id:
+ *                       type: string
+ *                     host:
+ *                       type: string
+ *                     location:
+ *                       type: string
+ *                     status:
+ *                       type: string
+ *                       enum: [pending, in progress, resolved, rejected, closed]
+ *                     case_details:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     created_at:
+ *                       type: string
+ *                       format: date-time
+ *                     updated_at:
+ *                       type: string
+ *                       format: date-time
  *       400:
  *         description: Failed to assign mycologist
  *       500:
@@ -544,6 +847,43 @@ export const assignReport = async (req: Request, res: Response) => {
  *     responses:
  *       200:
  *         description: Report rejected successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     case_name:
+ *                       type: string
+ *                     date_observed:
+ *                       type: string
+ *                       format: date
+ *                     user_id:
+ *                       type: string
+ *                     assigned_mycologist_id:
+ *                       type: string
+ *                       nullable: true
+ *                     host:
+ *                       type: string
+ *                     location:
+ *                       type: string
+ *                     status:
+ *                       type: string
+ *                       enum: [rejected]
+ *                     case_details:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     created_at:
+ *                       type: string
+ *                       format: date-time
+ *                     updated_at:
+ *                       type: string
+ *                       format: date-time
  *       400:
  *         description: Failed to reject/close report
  *       500:
@@ -602,6 +942,50 @@ export const rejectReport = async (req: Request, res: Response) => {
  *     responses:
  *       200:
  *         description: List of assigned mold reports
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     snapshot:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           case_name:
+ *                             type: string
+ *                           date_observed:
+ *                             type: string
+ *                             format: date
+ *                           user_id:
+ *                             type: string
+ *                           assigned_mycologist_id:
+ *                             type: string
+ *                           host:
+ *                             type: string
+ *                           location:
+ *                             type: string
+ *                           status:
+ *                             type: string
+ *                             enum: [in progress, resolved]
+ *                           case_details:
+ *                             type: array
+ *                             items:
+ *                               type: object
+ *                           created_at:
+ *                             type: string
+ *                             format: date-time
+ *                           updated_at:
+ *                             type: string
+ *                             format: date-time
+ *                     nextPageToken:
+ *                       type: string
+ *                       nullable: true
  *       401:
  *         description: Unauthorized
  *       404:
@@ -649,6 +1033,16 @@ export const getAssignedMoldReports = async (req: Request, res: Response) => {
  *     responses:
  *       200:
  *         description: Count retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: number
  *       400:
  *         description: Missing mycologist id
  *       500:
@@ -693,6 +1087,53 @@ export const getAssignedReportsCountController = async (
  *     responses:
  *       200:
  *         description: Mold report retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     case_name:
+ *                       type: string
+ *                     date_observed:
+ *                       type: string
+ *                       format: date
+ *                     user_id:
+ *                       type: string
+ *                     assigned_mycologist_id:
+ *                       type: string
+ *                       nullable: true
+ *                     host:
+ *                       type: string
+ *                     location:
+ *                       type: string
+ *                     status:
+ *                       type: string
+ *                       enum: [pending, in progress, resolved, rejected, closed]
+ *                     case_details:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           cover_photo:
+ *                             type: array
+ *                             items:
+ *                               type: string
+ *                           description:
+ *                             type: string
+ *                           timestamp:
+ *                             type: string
+ *                             format: date-time
+ *                     created_at:
+ *                       type: string
+ *                       format: date-time
+ *                     updated_at:
+ *                       type: string
+ *                       format: date-time
  *       404:
  *         description: Failed to retrieve mold report
  *       500:
@@ -737,6 +1178,43 @@ export const getMoldReportById = async (req: Request, res: Response) => {
  *     responses:
  *       200:
  *         description: Mold report updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     case_name:
+ *                       type: string
+ *                     date_observed:
+ *                       type: string
+ *                       format: date
+ *                     user_id:
+ *                       type: string
+ *                     assigned_mycologist_id:
+ *                       type: string
+ *                       nullable: true
+ *                     host:
+ *                       type: string
+ *                     location:
+ *                       type: string
+ *                     status:
+ *                       type: string
+ *                       enum: [pending, in progress, resolved, rejected, closed]
+ *                     case_details:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     created_at:
+ *                       type: string
+ *                       format: date-time
+ *                     updated_at:
+ *                       type: string
+ *                       format: date-time
  *       404:
  *         description: Failed to update mold report
  *       500:
@@ -775,6 +1253,13 @@ export const patchMoldReport = async (req: Request, res: Response) => {
  *     responses:
  *       200:
  *         description: Mold report deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: string
  *       500:
  *         description: Server error
  */
@@ -809,6 +1294,13 @@ export const deleteMoldReport = async (req: Request, res: Response) => {
  *     responses:
  *       200:
  *         description: Mold report soft deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: string
  *       500:
  *         description: Server error
  */
@@ -822,3 +1314,7 @@ export const softDeleteMoldReport = async (req: Request, res: Response) => {
     return defaultError(res);
   }
 };
+
+
+
+
