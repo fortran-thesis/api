@@ -82,7 +82,7 @@ export const findMoldCasesByPriority = async (
   try {
     const result = await getDocumentsByField(collection, "priority", priority);
     if (!result) return [];
-    
+
     // Extract mold_report_id from each case
     const reportIds: string[] = [];
     result.forEach((doc) => {
@@ -91,7 +91,7 @@ export const findMoldCasesByPriority = async (
         reportIds.push(data.mold_report_id);
       }
     });
-    
+
     return reportIds;
   } catch (err) {
     devLog(err);

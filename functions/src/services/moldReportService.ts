@@ -429,7 +429,7 @@ export const searchAndFilterMoldReports = async (
     // If priority is specified, get report IDs from mold cases first
     if (priority) {
       reportIds = await findMoldCasesByPriority(priority);
-      
+
       // If no cases match the priority, return empty result
       if (!reportIds || reportIds.length === 0) {
         return {
@@ -456,7 +456,7 @@ export const searchAndFilterMoldReports = async (
     let reportList = await Promise.all(
       raw.map(async (r) => {
         const nr = normalizeDateObserved(r) as unknown as MoldReport & any;
-        
+
         // Enrich with reporter info
         try {
           const authUser = await getAuthUserById(nr.user_id);

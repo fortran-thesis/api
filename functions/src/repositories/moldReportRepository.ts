@@ -212,11 +212,11 @@ export const findMoldReportsBySearch = async (
   try {
     const queryModifier = (q: FirebaseFirestore.Query) => {
       let query = q.where("is_archived", "==", false);
-      
+
       if (status) {
         query = query.where("status", "==", status);
       }
-      
+
       // If priority filter is used (reportIds provided), filter by document IDs
       // Note: Firestore 'in' operator has a limit of 10 items, so we handle this in the service layer
       if (reportIds && reportIds.length > 0) {
@@ -224,7 +224,7 @@ export const findMoldReportsBySearch = async (
         const idsToQuery = reportIds.slice(0, 10);
         query = query.where(FieldPath.documentId(), "in", idsToQuery);
       }
-      
+
       return query;
     };
 
