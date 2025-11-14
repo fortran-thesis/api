@@ -199,3 +199,46 @@ export const countReportsByAssignedMycologist = async (
     return null;
   }
 };
+
+export const findMoldReportsBySearch = async (
+  limit: number,
+  token?: string,
+  status?: string,
+  reportIds?: string[]
+): Promise<{
+  snapshot: FirebaseFirestore.QuerySnapshot;
+  nextPageToken: string | null;
+} | null> => {
+  try {
+    const queryModifier = (q: FirebaseFirestore.Query) => {
+      let query = q.where("is_archived", "==", false);
+      
+      if (status) {
+        query = query.where("status", "==", status);
+      }
+      
+      // If priority filter is used (reportIds provided), filter by document IDs
+      // Note: Firestore 'in' operator has a limit of 10 items, so we handle this in the service layer
+      if (reportIds && reportIds.length > 0) {
+        // Take only first 10 for Firestore 'in' limitation
+        const idsToQuery = reportIds.slice(0, 10);
+        query = query.where(FieldPath.documentId(), "in", idsToQuery);
+      }
+      
+      return query;
+    };
+
+    const paged = await getPaginatedDocuments(
+      collection,
+      limit,
+      token,
+      ["metadata.created_at", FieldPath.documentId()],
+      {queryModifier}
+    );
+
+    return paged;
+  } catch (err) {
+    devLog(err);
+    return null;
+  }
+};

@@ -40,3 +40,11 @@ export const AssignMoldReportSchema = z.object({
   assigned_mycologist_id: z.string({required_error: "Assigned mycologist ID is required."}).min(1),
   status: z.string().optional(),
 });
+
+export const SearchMoldReportsQuerySchema = z.object({
+  search: z.string().optional(),
+  status: z.enum(["pending", "in progress", "resolved", "rejected"]).optional(),
+  priority: z.enum(["low", "medium", "high"]).optional(),
+  limit: z.string().regex(/^\d+$/).optional(),
+  pageToken: z.string().optional(),
+});

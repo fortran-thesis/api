@@ -17,6 +17,7 @@ import {
   getMoldReportStatusCounts,
   retrieveAllMoldReports,
   getAssignedReportsCount,
+  searchAndFilterMoldReports,
 } from "../services/moldReportService";
 import {createLog} from "../utils/logging";
 import {AuditAction} from "../types/enums";
@@ -1309,6 +1310,132 @@ export const softDeleteMoldReport = async (req: Request, res: Response) => {
     const id: string = req.params.id;
     await softRemoveMoldReport(id);
     return sendSuccess(res, "Successfully soft deleted mold report.");
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
+/**
+ * @swagger
+ * /api/v1/mold-report/search:
+ *   get:
+ *     summary: Search and filter mold reports
+ *     tags: [MoldReport]
+ *     security:
+ *       - bearerAuth: []
+ *       - cookieAuth: []
+ *     description: |
+ *       Search and filter mold reports by multiple criteria. All parameters are optional.
+ *       Requires authentication. Admin users see all reports, regular users see only their own.
+ *       When priority is specified, it filters reports that have associated mold cases with that priority.
+ *     parameters:
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search term for case name, host, location, reporter name, or status (ignored when priority is set)
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [pending, "in progress", resolved, rejected]
+ *         description: Filter by report status
+ *       - in: query
+ *         name: priority
+ *         schema:
+ *           type: string
+ *           enum: [low, medium, high]
+ *         description: Filter by mold case priority (searches mold_cases collection)
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of items per page
+ *       - in: query
+ *         name: pageToken
+ *         schema:
+ *           type: string
+ *         description: Cursor token for pagination
+ *     responses:
+ *       200:
+ *         description: Filtered and searched mold report list
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     snapshot:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           case_name:
+ *                             type: string
+ *                           date_observed:
+ *                             type: string
+ *                             format: date-time
+ *                           host:
+ *                             type: string
+ *                           location:
+ *                             type: string
+ *                           status:
+ *                             type: string
+ *                           reporter:
+ *                             type: object
+ *                             properties:
+ *                               id:
+ *                                 type: string
+ *                               name:
+ *                                 type: string
+ *                           mold_case:
+ *                             type: object
+ *                             properties:
+ *                               priority:
+ *                                 type: string
+ *                     nextPageToken:
+ *                       type: string
+ *                       nullable: true
+ *       400:
+ *         description: Invalid query parameters
+ *       500:
+ *         description: Failed to retrieve mold reports
+ */
+export const searchMoldReports = async (req: Request, res: Response) => {
+  try {
+    const searchQuery: string | undefined = req.query.search as
+      | string
+      | undefined;
+    const status: string | undefined = req.query.status as string | undefined;
+    const priority: string | undefined = req.query.priority as
+      | string
+      | undefined;
+    const limit: number = parseInt(req.query.limit as string) || 10;
+    const pageToken: string | undefined = req.query.pageToken as
+      | string
+      | undefined;
+
+    const result: PaginatedResult<MoldReport[]> | null =
+      await searchAndFilterMoldReports(
+        searchQuery,
+        status,
+        priority,
+        limit,
+        pageToken
+      );
+
+    if (!result) return sendError(res, "Failed to retrieve mold reports", 500);
+
+    return sendSuccess(res, result);
   } catch (error) {
     devLog(error);
     return defaultError(res);

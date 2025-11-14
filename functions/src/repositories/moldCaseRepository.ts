@@ -75,6 +75,29 @@ export const findAssignedMoldCases = async (
     return null;
   }
 };
+
+export const findMoldCasesByPriority = async (
+  priority: string
+): Promise<string[]> => {
+  try {
+    const result = await getDocumentsByField(collection, "priority", priority);
+    if (!result) return [];
+    
+    // Extract mold_report_id from each case
+    const reportIds: string[] = [];
+    result.forEach((doc) => {
+      const data = doc.data();
+      if (data?.mold_report_id) {
+        reportIds.push(data.mold_report_id);
+      }
+    });
+    
+    return reportIds;
+  } catch (err) {
+    devLog(err);
+    return [];
+  }
+};
 export const updateMoldCase = async (
   uid: string,
   updatedData: Partial<MoldCase>

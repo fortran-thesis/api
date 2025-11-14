@@ -14,6 +14,7 @@ import {
   MoldReportUpdateSchema,
   CaseDetailCreateSchema,
   AssignMoldReportSchema,
+  SearchMoldReportsQuerySchema,
 } from "../dto/reportDTO";
 import {
   createMoldReport,
@@ -31,6 +32,7 @@ import {
   getAllMoldReportsByUser,
   assignReport,
   rejectReport,
+  searchMoldReports,
 } from "../controllers/moldReportController";
 import {Role} from "../types/enums";
 
@@ -151,6 +153,16 @@ router.get(
   validateQuery(PaginationQuerySchema),
   async (req: Request, res: Response) => {
     await getAllMoldReportsByUser(req, res);
+  }
+);
+
+// Search endpoint - place before dynamic routes
+router.get(
+  "/search",
+  verifyUser(),
+  validateQuery(SearchMoldReportsQuerySchema),
+  async (req: Request, res: Response) => {
+    await searchMoldReports(req, res);
   }
 );
 

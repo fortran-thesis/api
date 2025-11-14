@@ -20,7 +20,9 @@ import {
   countTotalReports,
   findAllMoldReportsByUser,
   countReportsByAssignedMycologist,
-} from "../repositories/moldReportRepository";
+  findMoldReportsBySearch,
+} from "../repositories/moldReportRepository.js";
+import {findMoldCasesByPriority} from "../repositories/moldCaseRepository.js";
 import {
   APIUser,
   MoldReport,
@@ -408,6 +410,120 @@ export const getAssignedReportsCount = async (
   try {
     const count = await countReportsByAssignedMycologist(mycologistId);
     return typeof count === "number" ? count : 0;
+  } catch (error) {
+    devLog(error);
+    return null;
+  }
+};
+
+export const searchAndFilterMoldReports = async (
+  searchQuery: string | undefined,
+  status: string | undefined,
+  priority: string | undefined,
+  limit: number,
+  token?: string
+): Promise<PaginatedResult<MoldReport[]> | null> => {
+  try {
+    let reportIds: string[] | undefined;
+
+    // If priority is specified, get report IDs from mold cases first
+    if (priority) {
+      reportIds = await findMoldCasesByPriority(priority);
+      
+      // If no cases match the priority, return empty result
+      if (!reportIds || reportIds.length === 0) {
+        return {
+          snapshot: [],
+          nextPageToken: null,
+        };
+      }
+    }
+
+    // Fetch from repository with status filter and optional priority-based IDs
+    const result = await findMoldReportsBySearch(
+      priority && reportIds ? Math.min(limit * 3, reportIds.length) : limit * 3,
+      token,
+      status,
+      reportIds
+    );
+
+    if (!result || !result.snapshot) return null;
+
+    // Convert Firestore results
+    const raw = queryToJson<MoldReport>(result.snapshot);
+
+    // Normalize dates and enrich in parallel
+    let reportList = await Promise.all(
+      raw.map(async (r) => {
+        const nr = normalizeDateObserved(r) as unknown as MoldReport & any;
+        
+        // Enrich with reporter info
+        try {
+          const authUser = await getAuthUserById(nr.user_id);
+          if (authUser) {
+            nr.reporter = {
+              id: authUser.id,
+              name:
+                authUser.details.displayName ||
+                authUser.user.first_name + " " + authUser.user.last_name,
+            };
+          }
+        } catch (e) {
+          devLog(e, "ENRICH_REPORT_USER");
+        }
+
+        // Enrich with mold case priority (always try to fetch, may not exist yet)
+        try {
+          const moldCase = await retrieveMoldCaseByReportId(nr.id);
+          if (moldCase) {
+            nr.mold_case = {
+              priority: moldCase.priority,
+            };
+          } else {
+            // No mold case yet - will show as "unassigned" on frontend
+            nr.mold_case = null;
+          }
+        } catch (e) {
+          devLog(e, "ENRICH_REPORT_CASE");
+          nr.mold_case = null;
+        }
+
+        // Transform cover photos to signed URLs
+        if (nr.case_details) {
+          nr.case_details = await transformCoverPhotos(nr.case_details);
+        }
+
+        return nr as MoldReport;
+      })
+    );
+
+    // Apply search filter if query provided (only if priority is not specified)
+    if (searchQuery && searchQuery.trim() && !priority) {
+      const query = searchQuery.toLowerCase().trim();
+      reportList = reportList.filter((report: any) => {
+        const caseName = report.case_name?.toLowerCase() || "";
+        const host = report.host?.toLowerCase() || "";
+        const location = report.location?.toLowerCase() || "";
+        const reporterName = report.reporter?.name?.toLowerCase() || "";
+        const reportStatus = report.status?.toLowerCase() || "";
+
+        return (
+          caseName.includes(query) ||
+          host.includes(query) ||
+          location.includes(query) ||
+          reporterName.includes(query) ||
+          reportStatus.includes(query)
+        );
+      });
+    }
+
+    // Trim results to requested limit
+    const trimmedResults = reportList.slice(0, limit);
+
+    return {
+      snapshot: trimmedResults,
+      nextPageToken: reportList.length > limit ? result.nextPageToken : null,
+    };
   } catch (error) {
     devLog(error);
     return null;
