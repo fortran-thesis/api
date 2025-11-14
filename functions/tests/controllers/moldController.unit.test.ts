@@ -67,25 +67,14 @@ describe("moldController (unit)", () => {
         growth_stage: "Early",
       };
 
-      const mockFiles = [
-        {originalname: "photo1.jpg", buffer: Buffer.from("photo1")},
-        {originalname: "photo2.jpg", buffer: Buffer.from("photo2")},
-      ] as Express.Multer.File[];
-
-      const mockUploadedUrls = [
-        "http://example.com/photo1.jpg",
-        "http://example.com/photo2.jpg",
-      ];
       const mockCreatedMold = {
         id: "test-mold-id",
-        ...moldDetails,
-        photo_url: mockUploadedUrls,
+        name: "Test Mold",
+        mold_details: moldDetails,
       };
 
-      mockReq.body = {details: moldDetails};
-      mockReq.files = mockFiles;
+      mockReq.body = {moldName: "Test Mold", details: moldDetails};
 
-      mockStorageLib.uploadFiles.mockResolvedValue(mockUploadedUrls);
       mockMoldService.addMoldToFirestore.mockResolvedValue(
         mockCreatedMold as any
       );
@@ -93,13 +82,13 @@ describe("moldController (unit)", () => {
 
       await moldController.createMold(mockReq as Request, mockRes as Response);
 
-      expect(mockStorageLib.uploadFiles).toHaveBeenCalledWith(
-        mockFiles,
-        moldDetails.name
-      );
       expect(mockMoldService.addMoldToFirestore).toHaveBeenCalledWith({
-        ...moldDetails,
-        photo_url: mockUploadedUrls,
+        name: "Test Mold",
+        mold_details: moldDetails,
+      });
+      expect(mockMoldService.addMoldToFirestore).toHaveBeenCalledWith({
+        name: "Test Mold",
+        mold_details: moldDetails,
       });
       expect(mockLoggingUtils.createLog).toHaveBeenCalledWith(
         "test-user-id",
@@ -121,10 +110,8 @@ describe("moldController (unit)", () => {
         growth_stage: "Early",
       };
 
-      mockReq.body = {details: moldDetails};
-      mockReq.files = [];
+      mockReq.body = {moldName: "Test Mold", details: moldDetails};
 
-      mockStorageLib.uploadFiles.mockResolvedValue([]);
       mockMoldService.addMoldToFirestore.mockResolvedValue(null);
 
       await moldController.createMold(mockReq as Request, mockRes as Response);
@@ -143,10 +130,9 @@ describe("moldController (unit)", () => {
         growth_stage: "Early",
       };
 
-      mockReq.body = {details: moldDetails};
-      mockReq.files = [];
+      mockReq.body = {moldName: "Test Mold", details: moldDetails};
 
-      mockStorageLib.uploadFiles.mockRejectedValue(new Error("Upload failed"));
+      mockMoldService.addMoldToFirestore.mockRejectedValue(new Error("Service failed"));
 
       await moldController.createMold(mockReq as Request, mockRes as Response);
 

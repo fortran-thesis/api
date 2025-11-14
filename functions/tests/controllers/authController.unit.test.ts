@@ -63,6 +63,10 @@ describe("authController (unit)", () => {
         username: "testuser",
         email: "test@example.com",
         password: "password123",
+        firstName: "Test",
+        lastName: "User",
+        address: "123 Test St",
+        phoneNumber: "1234567890",
       };
 
       const mockResult = {
@@ -78,7 +82,11 @@ describe("authController (unit)", () => {
       expect(mockAuthService.registerUser).toHaveBeenCalledWith(
         userData.username,
         userData.email,
-        userData.password
+        userData.password,
+        userData.firstName,
+        userData.lastName,
+        userData.address,
+        userData.phoneNumber
       );
       expect(mockResponseUtils.sendSuccess).toHaveBeenCalledWith(
         mockRes,
@@ -91,6 +99,10 @@ describe("authController (unit)", () => {
         username: "testuser",
         email: "test@example.com",
         password: "password123",
+        firstName: "Test",
+        lastName: "User",
+        address: "123 Test St",
+        phoneNumber: "1234567890",
       };
 
       const mockResult = {
@@ -106,12 +118,13 @@ describe("authController (unit)", () => {
       expect(mockAuthService.registerUser).toHaveBeenCalledWith(
         userData.username,
         userData.email,
-        userData.password
+        userData.password,
+        userData.firstName,
+        userData.lastName,
+        userData.address,
+        userData.phoneNumber
       );
-      expect(mockResponseUtils.sendError).toHaveBeenCalledWith(
-        mockRes,
-        mockResult.error
-      );
+      expect(mockResponseUtils.defaultError).toHaveBeenCalledWith(mockRes);
     });
 
     it("should handle service errors", async () => {
@@ -156,7 +169,7 @@ describe("authController (unit)", () => {
       expect(mockRes.cookie).toHaveBeenCalledWith("session", mockCookie, {
         httpOnly: true,
         secure: false,
-        sameSite: "strict",
+        sameSite: "lax",
         maxAge: 3600000,
       });
       expect(mockResponseUtils.sendSuccess).toHaveBeenCalledWith(

@@ -1,29 +1,50 @@
+import { describe, it, expect, afterAll, jest, beforeEach } from "@jest/globals";
+
+// Mock the redis config BEFORE importing the utils
+jest.mock("../../../src/configs/redis", () => {
+  const mockGet = jest.fn();
+  const mockSet = jest.fn();
+  const mockDel = jest.fn();
+  const mockScan = jest.fn();
+  const mockQuit = jest.fn(async () => true);
+  const mockDestroy = jest.fn(async () => true);
+
+  const mockRedisInstance = {
+    isOpen: true,
+    get: mockGet,
+    set: mockSet,
+    del: mockDel,
+    scan: mockScan,
+    quit: mockQuit,
+    destroy: mockDestroy,
+  };
+
+  return {
+    redis: mockRedisInstance,
+    redisReady: Promise.resolve(),
+    ensureRedisConnection: jest.fn(async () => mockRedisInstance),
+  };
+});
+
+// Import redis config and utils AFTER the mock
+import { redis } from "../../../src/configs/redis";
 import {
   getCache,
   setCache,
   deleteCache,
   deleteCachePattern,
 } from "../../../src/utils/redis";
-import { describe, it, expect, afterAll, jest } from "@jest/globals";
-jest.mock("../../../src/configs/redis", () => ({
-  redis: {
-    isOpen: true,
-    get: jest.fn(async (key) =>
-      key === "test" ? JSON.stringify({ foo: "bar" }) : null
-    ),
-    set: jest.fn(async () => true),
-    del: jest.fn(async () => true),
-    scan: jest.fn(async () => ({ cursor: "0", keys: ["test"] })),
-    quit: jest.fn(async () => true),
-    destroy: jest.fn(async () => true),
-  },
-  redisReady: Promise.resolve(),
-  ensureRedisConnection: jest.fn(async () => {}),
-}));
-
-import { redis } from "../../../src/configs/redis";
 
 describe("redis utils (unit)", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    // Reset mock implementations
+    (redis.get as jest.Mock).mockResolvedValue(JSON.stringify({ foo: "bar" }));
+    (redis.set as jest.Mock).mockResolvedValue("OK");
+    (redis.del as jest.Mock).mockResolvedValue(1);
+    (redis.scan as jest.Mock).mockResolvedValue({ cursor: "0", keys: ["test"] });
+  });
+
   it("should set cache", async () => {
     await expect(setCache("test", { foo: "bar" }, 60)).resolves.toBeUndefined();
     expect(redis.set).toHaveBeenCalledWith(

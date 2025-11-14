@@ -111,7 +111,6 @@ describe("authService (unit)", () => {
 
   describe("changePassword", () => {
     it("should change password successfully", async () => {
-      mockRedisGet.mockResolvedValue("test@example.com");
       const mockAuthUser = {
         id: "user123",
         user: {username: "test"},
@@ -119,18 +118,28 @@ describe("authService (unit)", () => {
       };
       mockGetAuthUserByEmail.mockResolvedValue(mockAuthUser);
       mockUpdateUser.mockResolvedValue(true);
-      mockRedisDel.mockResolvedValue(1);
+
+      // Mock ensureRedisConnection to return the mocked redis instance
+      const mockRedisInstance = {
+        get: jest.fn().mockResolvedValue("test@example.com"),
+        del: jest.fn().mockResolvedValue(1),
+      };
+      jest.spyOn(require("../../../src/configs/redis"), "ensureRedisConnection").mockResolvedValue(mockRedisInstance);
 
       const result = await authService.changePassword("token123", "newPass123");
 
       expect(result.success).toBe(true);
       expect(result.data).toBe("Password changed successfully!");
       expect(mockUpdateUser).toHaveBeenCalled();
-      expect(mockRedisDel).toHaveBeenCalledWith("token:token123");
+      expect(mockRedisInstance.del).toHaveBeenCalledWith("token:token123");
     });
 
     it("should return error for invalid token", async () => {
-      mockRedisGet.mockResolvedValue(null);
+      // Mock ensureRedisConnection to return the mocked redis instance with null email
+      const mockRedisInstance = {
+        get: jest.fn().mockResolvedValue(null),
+      };
+      jest.spyOn(require("../../../src/configs/redis"), "ensureRedisConnection").mockResolvedValue(mockRedisInstance);
 
       const result = await authService.changePassword("invalid", "newPass123");
 

@@ -29,14 +29,14 @@ const ensureRedisConnection = async (): Promise<RedisClientType<any>> => {
   if (!redis) {
     redis = createRedisClient();
   }
-  
+
   if (!redisReady) {
     redisReady = redis.connect().catch((err) => {
       console.error("Failed to connect to Redis:", err);
       return redis as RedisClientType<any>;
     });
   }
-  
+
   return redisReady;
 };
 
