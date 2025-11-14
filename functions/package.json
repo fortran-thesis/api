@@ -5,7 +5,7 @@
     "lint": "eslint --ext .js,.ts .",
     "type-check": "tsc --noEmit",
     "build": "tsc && xcopy /E /I /Y src\\configs\\*.json lib\\configs\\",
-    "build:linux": "tsc && cp -r src/configs/*.json lib/configs/",
+    "build:linux": "tsc && cp src/configs/firebase-config.json lib/configs/",
     "local-dev": "ts-node-dev --respawn --transpile-only src/local.ts",
     "emulator-dev": "npm run build && firebase emulators:start",
     "build:watch": "tsc --watch",
