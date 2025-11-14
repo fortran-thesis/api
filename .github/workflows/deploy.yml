@@ -62,7 +62,7 @@ jobs:
 
       - name: Decode and setup Service Account
         run: |
-          cd functions
+          cd functions/src/configs
           echo "${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}" | base64 --decode > firebase-config.json
 
       - name: Create environment file
@@ -86,4 +86,4 @@ jobs:
       - name: Deploy to Firebase
         run: cd functions && npx firebase deploy --only functions --token ${{ secrets.FIREBASE_TOKEN }}
         env:
-          GOOGLE_APPLICATION_CREDENTIALS: ./functions/firebase-config.json
+          GOOGLE_APPLICATION_CREDENTIALS: ./functions/configs/firebase-config.json
