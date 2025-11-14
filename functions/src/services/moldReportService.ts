@@ -38,19 +38,19 @@ const transformCoverPhotos = async (
   caseDetails: Array<any>
 ): Promise<Array<any>> => {
   if (!Array.isArray(caseDetails)) return caseDetails;
-  
+
   return Promise.all(
     caseDetails.map(async (detail) => {
       if (!detail.cover_photo || !Array.isArray(detail.cover_photo)) {
         return detail;
       }
-      
+
       const transformedPhotos = await Promise.all(
         detail.cover_photo.map((photoPath: string) =>
           transformToSignedUrl(photoPath)
         )
       );
-      
+
       return {
         ...detail,
         cover_photo: transformedPhotos.filter((url) => url !== null),
@@ -169,12 +169,12 @@ export const retrieveAllMoldReports = async (
         } catch (e) {
           devLog(e, "ENRICH_REPORT_CASE");
         }
-        
+
         // Transform cover photos to signed URLs
         if (nr.case_details) {
           nr.case_details = await transformCoverPhotos(nr.case_details);
         }
-        
+
         return nr as MoldReport;
       })
     );
@@ -208,6 +208,7 @@ export const retrieveAllMoldReportsByUser = async (
     if (!docs) throw new Error("No mold reports found.");
     const raw = queryToJson<MoldReport>(docs.snapshot);
     // Remove user_id from each report
+    // eslint-disable-next-line
     const sanitized = raw.map(({user_id, ...rest}) => rest) as Omit<
       MoldReport,
       "user_id"
@@ -242,12 +243,12 @@ export const retrieveMoldReportById = async (
     } catch (e) {
       devLog(e, "ENRICH_REPORT_USER");
     }
-    
+
     // Transform cover photos to signed URLs
     if (nr.case_details) {
       nr.case_details = await transformCoverPhotos(nr.case_details);
     }
-    
+
     return nr;
   } catch (error) {
     devLog(error);

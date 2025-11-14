@@ -25,12 +25,12 @@ import {transformToSignedUrl} from "../utils/storageTransform";
 // Helper function to transform MoldCase photo_url and cultivation_logs image_urls
 const transformMoldCaseImages = async (moldCase: MoldCase): Promise<MoldCase> => {
   const transformed = {...moldCase};
-  
+
   // Transform photo_url if present
   if (transformed.photo_url) {
     transformed.photo_url = await transformToSignedUrl(transformed.photo_url);
   }
-  
+
   // Transform cultivation_logs image_urls if present
   if (transformed.cultivation_logs && Array.isArray(transformed.cultivation_logs)) {
     transformed.cultivation_logs = await Promise.all(
@@ -40,7 +40,7 @@ const transformMoldCaseImages = async (moldCase: MoldCase): Promise<MoldCase> =>
       }))
     );
   }
-  
+
   return transformed;
 };
 
@@ -222,7 +222,7 @@ export const retrieveMoldCaseById = async (
     } catch (e) {
       /* ignore */
     }
-    
+
     // Transform photo URL and cultivation log image URLs
     return await transformMoldCaseImages(copy as MoldCase);
   } catch (error) {
@@ -266,7 +266,7 @@ export const retrieveMoldCaseByReportId = async (
     if (raw.end_date && typeof (raw.end_date as any).toDate === "function") {
       normalized.end_date = (raw.end_date as any).toDate().toISOString();
     }
-    
+
     // Transform photo URL and cultivation log image URLs
     return await transformMoldCaseImages(normalized as MoldCase);
   } catch (error) {

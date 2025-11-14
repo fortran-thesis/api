@@ -1,0 +1,89 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [add, main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-and-lint:
+    name: Test, Lint & Type Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: functions
+
+      - name: Run type check
+        run: npm run type-check
+        working-directory: functions
+
+      - name: Run lint
+        run: npm run lint
+        working-directory: functions
+
+      - name: Run unit tests
+        run: npm run test:unit
+        working-directory: functions
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: functions/coverage/
+
+  deploy:
+    name: Deploy to Firebase
+    needs: test-and-lint
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: functions
+
+      - name: Decode and setup Service Account
+        run: |
+          cd functions
+          echo "${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}" | base64 --decode > firebase-config.json
+
+      - name: Create environment file
+        run: |
+          cd functions
+          cat > .env << EOF
+          NODE_ENV=${{ secrets.NODE_ENV }}
+          IS_TESTING=${{ secrets.IS_TESTING }}
+          USE_MAILHOG=${{ secrets.USE_MAILHOG }}
+          ENCRYPTION_KEY=${{ secrets.ENCRYPTION_KEY }}
+          REDIS_HOST=${{ secrets.REDIS_HOST }}
+          REDIS_PORT=${{ secrets.REDIS_PORT }}
+          REDIS_USERNAME=${{ secrets.REDIS_USERNAME }}
+          REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}
+          GEMINI_CULTIVATION_LOG_API_KEY=${{ secrets.GEMINI_CULTIVATION_LOG_API_KEY }}
+          MOLDIFY_EMAIL=${{ secrets.MOLDIFY_EMAIL }}
+          MOLDIFY_PASSWORD=${{ secrets.MOLDIFY_PASSWORD }}
+          THESIS_FIREBASE_CLIENT_API=${{ secrets.THESIS_FIREBASE_CLIENT_API }}
+          MAIN_PROJECT_API_KEY=${{ secrets.MAIN_PROJECT_API_KEY }}
+
+      - name: Deploy to Firebase
+        run: cd functions && npx firebase deploy --only functions --token ${{ secrets.FIREBASE_TOKEN }}
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ./functions/firebase-config.json

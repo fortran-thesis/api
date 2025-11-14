@@ -131,3 +131,11 @@ export const UserDetailsSchema = z.object({
 });
 
 export const UserDetailsUpdateSchema = UserDetailsSchema.partial();
+
+export const SearchUsersQuerySchema = z.object({
+  search: z.string().optional(),
+  role: z.string().optional(),
+  status: z.enum(["active", "disabled"]).optional(),
+  limit: z.string().regex(/^\d+$/).optional(),
+  pageToken: z.string().optional(),
+});

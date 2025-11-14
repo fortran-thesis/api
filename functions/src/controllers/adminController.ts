@@ -222,7 +222,3 @@ export const banUserController = async (req: Request, res: Response) => {
 };
 
 
-
-
-
-

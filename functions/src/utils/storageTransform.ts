@@ -12,7 +12,7 @@ export const transformToSignedUrl = async (
   expiresInSeconds = 3600
 ): Promise<string | null> => {
   if (!filePath) return null;
-  
+
   try {
     const signedUrl = await getSignedUrl(filePath, expiresInSeconds);
     return signedUrl || filePath; // Fallback to original path if signed URL fails
@@ -33,7 +33,7 @@ export const transformImageUrl = async <T extends {image_url?: string | null}>(
   expiresInSeconds = 3600
 ): Promise<T> => {
   if (!obj.image_url) return obj;
-  
+
   const signedUrl = await transformToSignedUrl(obj.image_url, expiresInSeconds);
   return {
     ...obj,

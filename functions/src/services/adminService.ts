@@ -77,7 +77,6 @@ export const banUser = async (
 
 export const approveCurator = async (
   id: string,
-  isApproved: boolean
 ): Promise<ApiResponse<string>> => {
   try {
     const userSnap = await findFirestoreUserById(id);

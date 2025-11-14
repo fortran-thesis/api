@@ -134,10 +134,10 @@ export const updateMoldInFirestore = async (
   try {
     const result: WriteResult | null = await updateMold(id, details);
     if (!result) throw new Error("Failed to update mold.");
-    
+
     // Invalidate cache using new cache manager (invalidates item + all lists)
     await handlePatchCache(RESOURCE, id);
-    
+
     const updatedMold = await retrieveMoldById(id);
     return updatedMold;
   } catch (error) {
@@ -150,7 +150,7 @@ export const softRemoveMold = async (id: string): Promise<void> => {
   try {
     const result: WriteResult | null = await softDeleteMold(id);
     if (!result) throw new Error("Failed to delete mold");
-    
+
     // Invalidate cache using new cache manager (invalidates item + all lists)
     await handleDeleteCache(RESOURCE, id);
   } catch (error) {
@@ -162,7 +162,7 @@ export const removeMold = async (id: string): Promise<void> => {
   try {
     const result: WriteResult | null = await deleteMold(id);
     if (!result) throw new Error("Failed to delete mold");
-    
+
     // Invalidate cache using new cache manager (invalidates item + all lists)
     await handleDeleteCache(RESOURCE, id);
   } catch (error) {

@@ -24,7 +24,7 @@ import {devLog} from "../utils/dev";
 import {Timestamp} from "firebase-admin/firestore";
 import {sendEmail} from "../utils/email";
 import {getDocumentIdByField} from "../lib/firestore";
-import {redis, ensureRedisConnection} from "../configs/redis";
+import {ensureRedisConnection} from "../configs/redis";
 import {generateCode} from "../utils/code";
 import {v4 as uuidv4} from "uuid";
 import {
@@ -279,7 +279,7 @@ export const generateVerificationCode = async (
   try {
     // Generate a random 4-digit code, zero-padded (e.g., '0004', '0348')
     const code = generateCode();
-    await ensureRedisConnection();
+    const redis = await ensureRedisConnection();
     // Always overwrite the code in Redis, even if one already exists
     await redis.set(`verify:${email}`, code, {EX: 600});
     return code;
@@ -294,7 +294,7 @@ export const checkVerificationCode = async (
   code: string
 ): Promise<string | null> => {
   try {
-    await ensureRedisConnection();
+    const redis = await ensureRedisConnection();
     const storedCode = await redis.get(`verify:${email}`);
     if (!storedCode || storedCode !== code) return null;
     await redis.del(`verify:${email}`);
@@ -336,7 +336,7 @@ export const changePassword = async (
   newPassword: string
 ): Promise<ApiResponse<string>> => {
   try {
-    await ensureRedisConnection();
+    const redis = await ensureRedisConnection();
     const email = await redis.get(`token:${redisToken}`);
     if (!email) {
       devLog(`changePassword: Invalid or expired token: ${redisToken}`);
@@ -360,7 +360,7 @@ export const forgetUsername = async (
   redisToken: string
 ): Promise<ApiResponse<string>> => {
   try {
-    await ensureRedisConnection();
+    const redis = await ensureRedisConnection();
     const email = await redis.get(`token:${redisToken}`);
     if (!email) return {success: false, data: "Invalid or expired token!"};
     const user = await getAuthUserByEmail(email);

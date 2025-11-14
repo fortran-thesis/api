@@ -509,12 +509,3 @@ export const softDeleteMoldipedia = async (req: Request, res: Response) => {
 };
 
 
-
-
-
-
-
-
-
-
-

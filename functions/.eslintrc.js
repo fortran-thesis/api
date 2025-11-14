@@ -21,6 +21,7 @@ module.exports = {
     "/lib/**/*", // Ignore built files.
     "/generated/**/*", // Ignore generated files.
     "/tests/**/*", // Ignore test files.
+    "/src/local.ts",
   ],
   plugins: [
     "@typescript-eslint",
@@ -35,5 +36,6 @@ module.exports = {
     "require-jsdoc": "off",
     "max-len": ["error", {code: 180, ignoreComments: true}],
     "@typescript-eslint/no-explicit-any": "off",
+    "@typescript-eslint/no-empty-function": "off",
   },
 };

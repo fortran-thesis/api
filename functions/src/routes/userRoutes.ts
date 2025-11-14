@@ -13,8 +13,9 @@ import {
   getRoleCountsController,
   getUsersByActiveController,
   getDisabledCountsController,
+  searchUsers,
 } from "../controllers/userController";
-import {EmailSchema, UserDetailsUpdateSchema, UserIdSchema} from "../dto/dto";
+import {EmailSchema, UserDetailsUpdateSchema, UserIdSchema, SearchUsersQuerySchema} from "../dto/dto";
 import {
   validateBody,
   validateParams,
@@ -31,6 +32,16 @@ router.get(
   validateQuery(PaginationQuerySchema),
   async (req: Request, res: Response) => {
     getAllUsers(req, res);
+  }
+);
+
+// Search and filter users - place before dynamic routes
+router.get(
+  "/search",
+  verifyUser(Role.ADMIN),
+  validateQuery(SearchUsersQuerySchema),
+  async (req: Request, res: Response) => {
+    searchUsers(req, res);
   }
 );
 

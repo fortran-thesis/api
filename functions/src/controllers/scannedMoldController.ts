@@ -420,7 +420,3 @@ export const softDeleteScannedMold = async (req: Request, res: Response) => {
 };
 
 
-
-
-
-

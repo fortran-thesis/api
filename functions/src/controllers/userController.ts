@@ -10,7 +10,7 @@ import {
   retrieveAllUsers,
   retrieveUserByEmail,
   retrieveUserById,
-  retrieveUsersByRole, getRoleCounts, getUsersByActiveStatus, getDisabledCounts} from "../services/userService";
+  retrieveUsersByRole, getRoleCounts, getUsersByActiveStatus, getDisabledCounts, searchAndFilterUsers} from "../services/userService";
 import {APIUser, PaginatedResult, UserDetails} from "../types/types";
 
 /**
@@ -565,8 +565,98 @@ export const softDeleteUser = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * @swagger
+ * /api/v1/user/search:
+ *   get:
+ *     summary: Search and filter users
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *       - cookieAuth: []
+ *     description: |
+ *       Search and filter users by multiple criteria. All parameters are optional.
+ *       Requires admin role.
+ *     parameters:
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search term for username, email, first name, or last name
+ *       - in: query
+ *         name: role
+ *         schema:
+ *           type: string
+ *         description: Filter by user role (e.g., 'farmer', 'mycologist', 'curator', 'admin')
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [active, disabled]
+ *         description: Filter by account status (active or disabled)
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of items per page
+ *       - in: query
+ *         name: pageToken
+ *         schema:
+ *           type: string
+ *         description: Cursor token for pagination
+ *     responses:
+ *       200:
+ *         description: Filtered and searched user list
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     snapshot:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     nextPageToken:
+ *                       type: string
+ *                       nullable: true
+ *       400:
+ *         description: Invalid query parameters
+ *       500:
+ *         description: Failed to retrieve users
+ */
+export const searchUsers = async (req: Request, res: Response) => {
+  try {
+    const searchQuery: string | undefined = req.query.search as string | undefined;
+    const role: string | undefined = req.query.role as string | undefined;
+    const statusParam: string | undefined = req.query.status as string | undefined;
+    const limit: number = parseInt(req.query.limit as string) || 10;
+    const pageToken: string | undefined = req.query.pageToken as string | undefined;
 
+    // Convert status string to boolean (undefined if not provided)
+    let active: boolean | undefined;
+    if (statusParam) {
+      if (statusParam.toLowerCase() === "active") {
+        active = true;
+      } else if (statusParam.toLowerCase() === "disabled") {
+        active = false;
+      }
+    }
 
+    const result = await searchAndFilterUsers(searchQuery, role, active, limit, pageToken);
+    if (!result) return sendError(res, "Failed to retrieve users", 500);
 
+    return sendSuccess(res, result);
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
 
 

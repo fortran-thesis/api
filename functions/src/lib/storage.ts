@@ -36,7 +36,7 @@ export const uploadFile = async (
     const options: any = {};
     if (contentType) options.metadata = {contentType};
     await file.save(data, options);
-    
+
     // Return the file path (to be stored in DB)
     // Use getSignedUrl() when you need to display/access the file
     return filePath;
@@ -116,14 +116,14 @@ export const getSignedUrl = async (
 ): Promise<string | null> => {
   try {
     const file = getFileRef(filePath, bucketName);
-    
+
     // Check if file exists first
     const [exists] = await file.exists();
     if (!exists) {
       devLog(`File does not exist: ${filePath}`);
       return null;
     }
-    
+
     // Generate signed URL with explicit expiration date
     const [url] = await file.getSignedUrl({
       action: "read",

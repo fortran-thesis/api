@@ -111,7 +111,3 @@ export const registerMycologistController = async (
 };
 
 
-
-
-
-

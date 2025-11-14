@@ -55,10 +55,10 @@ export const retrieveAllScannedMolds = async (
       await findAllScannedMolds(limit, token);
     if (!docs) throw new Error("No scanned molds found.");
     const items = queryToJson<WithMetadata<ScannedMold>>(docs.snapshot);
-    
+
     // Transform file paths to signed URLs
     const itemsWithSignedUrls = await transformImageUrls(items);
-    
+
     return {
       snapshot: itemsWithSignedUrls,
       nextPageToken: docs.nextPageToken,
@@ -76,7 +76,7 @@ export const retrieveScannedMoldById = async (
     const doc: DocumentSnapshot | null = await findScannedMoldById(id);
     if (!doc) throw new Error("No scanned mold found.");
     const mold = documentToJson<WithMetadata<ScannedMold>>(doc);
-    
+
     // Transform file path to signed URL
     return await transformImageUrl(mold);
   } catch (error) {

@@ -58,10 +58,10 @@ export const retrieveAllMonitoredMolds = async (
       );
     if (!molds) throw new Error("No monitored molds found.");
     const items = queryToJson<MonitoredMold>(molds.snapshot);
-    
+
     // Transform file paths to signed URLs
     const itemsWithSignedUrls = await transformImageUrls(items);
-    
+
     return {
       snapshot: itemsWithSignedUrls,
       nextPageToken: molds.nextPageToken,
@@ -79,7 +79,7 @@ export const retrieveMonitoredMoldById = async (
     const mold: DocumentSnapshot | null = await findMonitoredMoldById(id);
     if (!mold) throw new Error("No monitored mold found.");
     const molds = documentToJson<MonitoredMold>(mold);
-    
+
     // Transform file path to signed URL
     return await transformImageUrl(molds);
   } catch (error) {

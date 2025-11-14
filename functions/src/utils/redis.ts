@@ -1,9 +1,9 @@
-import {redis, ensureRedisConnection} from "../configs/redis";
+import {ensureRedisConnection} from "../configs/redis";
 import {devLog} from "./dev";
 
 export const getCache = async <T>(key: string): Promise<T | null> => {
   try {
-    await ensureRedisConnection();
+    const redis = await ensureRedisConnection();
     const data = await redis.get(key);
     if (!data) return null;
     return JSON.parse(data) as T;
@@ -19,7 +19,7 @@ export const setCache = async <T extends object>(
   ttl: number
 ): Promise<void> => {
   try {
-    await ensureRedisConnection();
+    const redis = await ensureRedisConnection();
     await redis.set(key, JSON.stringify(value), {EX: ttl});
   } catch (err) {
     devLog("Redis setCache error:" + err);
@@ -28,7 +28,7 @@ export const setCache = async <T extends object>(
 
 export const deleteCache = async (key: string): Promise<void> => {
   try {
-    await ensureRedisConnection();
+    const redis = await ensureRedisConnection();
     await redis.del(key);
   } catch (err) {
     devLog("Redis deleteCache error:" + err);
@@ -37,7 +37,7 @@ export const deleteCache = async (key: string): Promise<void> => {
 
 export const deleteCachePattern = async (pattern: string) => {
   try {
-    await ensureRedisConnection();
+    const redis = await ensureRedisConnection();
     let cursor = "0";
     const keys: string[] = [];
     do {

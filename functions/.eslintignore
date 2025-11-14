@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+
+# Coverage reports
+coverage/
+
+# Config files
+jest.config.js
+webpack.config.js
+
+# Environment
+.env
+.env.*
+
+# Generated files
+firebase-config.json
+
+# Test files (if you want to skip linting tests)
+**/*.test.ts
+**/*.spec.ts

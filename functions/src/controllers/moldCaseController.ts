@@ -1259,9 +1259,3 @@ export const analyzeCultivationLogImage = async (req: Request, res: Response) =>
 };
 
 
-
-
-
-
-
-

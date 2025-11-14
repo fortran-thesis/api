@@ -278,3 +278,130 @@ export const getDisabledCounts = async (): Promise<{
     return null;
   }
 };
+
+/**
+ * Search and filter users by multiple criteria.
+ * Supports searching by name/email and filtering by role and active status.
+ *
+ * @param searchQuery - Optional search term to filter by username, email, first_name, or last_name
+ * @param role - Optional role filter (e.g., 'farmer', 'mycologist')
+ * @param active - Optional active status filter (true = active, false = disabled)
+ * @param limit - Number of results per page
+ * @param token - Pagination token
+ * @returns Paginated and filtered user results
+ */
+export const searchAndFilterUsers = async (
+  searchQuery: string | undefined,
+  role: string | undefined,
+  active: boolean | undefined,
+  limit: number,
+  token?: string
+): Promise<PaginatedResult<APIUser[]> | null> => {
+  try {
+    // Build cache query params - only cache first page (no token)
+    const cacheQuery = {
+      search: searchQuery || "",
+      role: role || "",
+      active: active !== undefined ? active.toString() : "",
+      limit,
+      token: token || "first",
+    };
+    const shouldCache = false; // Only cache first page
+
+    // Check cache first (only for first page)
+    if (shouldCache) {
+      const cached = await getCachedList<PaginatedResult<APIUser[]>>(
+        `${RESOURCE}-search`, // Different cache namespace to avoid conflicts
+        cacheQuery
+      );
+      if (cached) return cached;
+    }
+
+    // Fetch from repository WITHOUT using the cached retrieveUsersByRole/retrieveAllUsers
+    // to avoid cache pollution
+    let result: {snapshot: FirebaseFirestore.QuerySnapshot; nextPageToken: string | null} | null;
+
+    if (role) {
+      result = await findUsersByRole(role, limit * 3, token); // Get extra for filtering
+    } else {
+      result = await findAllUsers(limit * 3, token);
+    }
+
+    if (!result || !result.snapshot) return null;
+
+    // Convert Firestore results to APIUser format
+    const firestoreList: WithId<User>[] = queryToJson<User>(result.snapshot);
+    const identifiers = firestoreList.map((user) => ({uid: user.id}));
+    const authUsers = await getAuth().getUsers(identifiers);
+
+    let userList: APIUser[] = firestoreList.map((firestoreUser) => {
+      const authUser = authUsers.users.find(
+        (u: any) => u.uid === firestoreUser.id
+      );
+      return {
+        id: firestoreUser.id,
+        user: {
+          username: firestoreUser.username,
+          first_name: firestoreUser.first_name,
+          last_name: firestoreUser.last_name,
+          address: firestoreUser.address,
+          role: firestoreUser.role,
+          is_banned: firestoreUser.is_banned,
+        },
+        details: {
+          email: authUser?.email ?? "",
+          displayName: authUser?.displayName ?? "",
+          photo_url: authUser?.photoURL ?? "",
+          disabled: !!authUser?.disabled,
+          phone_number: authUser?.phoneNumber,
+        },
+      };
+    });
+
+    // Apply active/disabled filter if specified
+    if (active !== undefined) {
+      userList = userList.filter((u) => {
+        const disabled = !!u.details?.disabled;
+        return active ? !disabled : disabled;
+      });
+    }
+
+    // Apply search filter if query provided
+    if (searchQuery && searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      userList = userList.filter((u) => {
+        const username = u.user?.username?.toLowerCase() || "";
+        const email = u.details?.email?.toLowerCase() || "";
+        const firstName = u.user?.first_name?.toLowerCase() || "";
+        const lastName = u.user?.last_name?.toLowerCase() || "";
+        const fullName = `${firstName} ${lastName}`.trim();
+
+        return (
+          username.includes(query) ||
+          email.includes(query) ||
+          firstName.includes(query) ||
+          lastName.includes(query) ||
+          fullName.includes(query)
+        );
+      });
+    }
+
+    // Trim results to requested limit
+    const trimmedResults = userList.slice(0, limit);
+
+    const paginatedResult = {
+      snapshot: trimmedResults,
+      nextPageToken: userList.length > limit ? result.nextPageToken : null,
+    };
+
+    // Cache the result (only first page) in separate namespace
+    if (shouldCache) {
+      await cacheList(`${RESOURCE}-search`, paginatedResult, cacheQuery, {ttl: TTL});
+    }
+
+    return paginatedResult;
+  } catch (error) {
+    devLog(error);
+    return null;
+  }
+};
