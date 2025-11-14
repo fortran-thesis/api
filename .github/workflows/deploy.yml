@@ -86,4 +86,4 @@ jobs:
       - name: Deploy to Firebase
         run: cd functions && npx firebase deploy --only functions --token ${{ secrets.FIREBASE_TOKEN }}
         env:
-          GOOGLE_APPLICATION_CREDENTIALS: ./functions/configs/firebase-config.json
+          GOOGLE_APPLICATION_CREDENTIALS: ./src/configs/firebase-config.json
