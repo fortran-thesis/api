@@ -21,8 +21,8 @@ import {
   findAllMoldReportsByUser,
   countReportsByAssignedMycologist,
   findMoldReportsBySearch,
-} from "../repositories/moldReportRepository.js";
-import {findMoldCasesByPriority} from "../repositories/moldCaseRepository.js";
+} from "../repositories/moldReportRepository";
+import {findMoldCasesByPriority} from "../repositories/moldCaseRepository";
 import {
   APIUser,
   MoldReport,
