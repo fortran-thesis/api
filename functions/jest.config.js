@@ -6,4 +6,8 @@ module.exports = {
   transform: {
     '^.+\\.ts$': 'ts-jest',
   },
+  collectCoverageFrom: ['src/**/*.ts'],
+  coveragePathIgnorePatterns: ['/node_modules/'],
+  testPathIgnorePatterns: ['/node_modules/'],
+  silent: true,
 };
