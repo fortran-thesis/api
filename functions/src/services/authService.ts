@@ -293,7 +293,7 @@ export const updateUserProfile = async (
     // Do not write `photo_url` to Firestore user document (leave original types unchanged)
 
     // Run both updates if provided
-    let authResult = true;
+    const authResult = true;
     if (Object.keys(authUpdate).length > 0) {
       const details = await getAuth().updateUser(id, authUpdate);
       if (!details) throw new Error("Error updating user in Firebase Auth.");
