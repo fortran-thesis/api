@@ -84,6 +84,6 @@ jobs:
         run: npm install -g firebase-tools
 
       - name: Deploy to Firebase
-        run: cd functions && firebase deploy --only functions --token ${{ secrets.FIREBASE_TOKEN }} --debug=false
+        run: cd functions && firebase deploy --only functions --token ${{ secrets.FIREBASE_TOKEN }}
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ./src/configs/firebase-config.json
