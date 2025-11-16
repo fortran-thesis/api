@@ -5,6 +5,7 @@ import {findFirestoreUserById} from "../repositories/userRepository";
 import {concurrent} from "../utils/concurrent";
 import {devLog} from "../utils/dev";
 import {envOptions} from "../configs/environment";
+import {transformToSignedUrl} from "../utils/storageTransform";
 
 const auth = getAuth(firebase);
 
@@ -21,6 +22,13 @@ export const getAuthUserById = async (uid: string): Promise<WithId<APIUser> | nu
     if (!user || !firestoreUser) {
       throw new Error("User does not exist in Firebase Authentication.");
     }
+    // Prefer Firebase Auth `photoURL` (which stores the storage path), transform it to a signed URL for client
+    let finalPhotoUrl = "";
+    if (user.photoURL) {
+      const signed = await transformToSignedUrl(user.photoURL);
+      finalPhotoUrl = signed || user.photoURL;
+    }
+
     return {
       id: user.uid,
       user: {
@@ -34,7 +42,7 @@ export const getAuthUserById = async (uid: string): Promise<WithId<APIUser> | nu
       details: {
         email: user.email,
         displayName: user.displayName,
-        photo_url: user.photoURL ?? "",
+        photo_url: finalPhotoUrl,
         disabled: user.disabled,
         phone_number: user.phoneNumber,
       },
@@ -51,6 +59,13 @@ export const getAuthUserByEmail = async (email: string): Promise<WithId<APIUser>
     const firestoreUserDocs = await findFirestoreUserById(user.uid);
     if (!user || !firestoreUserDocs) throw new Error("User does not exist in Firebase Authentication.");
     const firestoreUser = firestoreUserDocs.data() as User;
+    // Prefer Firebase Auth `photoURL` and transform it to a signed URL for client
+    let finalPhotoUrl = "";
+    if (user.photoURL) {
+      const signed = await transformToSignedUrl(user.photoURL);
+      finalPhotoUrl = signed || user.photoURL;
+    }
+
     return {
       id: user.uid,
       user: {
@@ -64,7 +79,7 @@ export const getAuthUserByEmail = async (email: string): Promise<WithId<APIUser>
       details: {
         email: user.email,
         displayName: user.displayName,
-        photo_url: user.photoURL ?? "",
+        photo_url: finalPhotoUrl,
         disabled: user.disabled,
         phone_number: user.phoneNumber,
       },

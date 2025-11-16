@@ -1,5 +1,6 @@
 import {Request, Response, Router} from "express";
 import {verifyUser} from "../middlewares/verification";
+import {parseMultipartJson} from "../middlewares/parseMultipartJson";
 import {Role} from "../types/enums";
 import {
   deleteUser,
@@ -8,6 +9,7 @@ import {
   getUserById,
   getUserProfile,
   patchUser,
+  patchUserProfile,
   softDeleteUser,
   getAllMycologists,
   getRoleCountsController,
@@ -15,7 +17,7 @@ import {
   getDisabledCountsController,
   searchUsers,
 } from "../controllers/userController";
-import {EmailSchema, UserDetailsUpdateSchema, UserIdSchema, SearchUsersQuerySchema} from "../dto/dto";
+import {EmailSchema, UserDetailsUpdateSchema, UserIdSchema, SearchUsersQuerySchema, UserProfileUpdateSchema} from "../dto/dto";
 import {
   validateBody,
   validateParams,
@@ -23,6 +25,7 @@ import {
 } from "../middlewares/validation";
 import {PaginationQuerySchema} from "../dto/paginationDTO";
 import {sanitizeBody, sanitizeParams} from "../middlewares/sanitation";
+import {upload} from "../middlewares/upload";
 
 const router = Router();
 
@@ -50,6 +53,17 @@ router.get(
 router.get("/profile", verifyUser(), async (req: Request, res: Response) => {
   getUserProfile(req, res);
 });
+router.patch(
+  "/profile",
+  verifyUser(),
+  upload.single("photo"),
+  parseMultipartJson(["details"]),
+  sanitizeBody,
+  validateBody(UserProfileUpdateSchema),
+  async (req: Request, res: Response) => {
+    patchUserProfile(req, res);
+  }
+);
 router.get(
   "/counts/roles",
   verifyUser(Role.ADMIN),
@@ -110,7 +124,7 @@ router.patch(
   validateParams(UserIdSchema),
   sanitizeBody,
   validateBody(UserDetailsUpdateSchema),
-  verifyUser(),
+  verifyUser(Role.ADMIN),
   async (req: Request, res: Response) => {
     patchUser(req, res);
   }

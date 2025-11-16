@@ -15,10 +15,12 @@ jest.mock("../../src/configs/redis", () => ({
   redis: {},
   redisReady: Promise.resolve(),
 }));
+jest.mock("../../src/lib/storage");
 
 const mockUserService = userService as jest.Mocked<typeof userService>;
 const mockAuthService = authService as jest.Mocked<typeof authService>;
 const mockResponseUtils = responseUtils as jest.Mocked<typeof responseUtils>;
+const mockStorage = require("../../src/lib/storage") as any;
 
 describe("userController (unit)", () => {
   let mockReq: Partial<Request>;
@@ -265,6 +267,40 @@ describe("userController (unit)", () => {
         mockRes as any,
         "Failed to update user. Try again later"
       );
+    });
+  });
+
+  describe("patchUserProfile", () => {
+    it("should successfully update profile with photo uploaded", async () => {
+      const userId = "test-user-id";
+      const details = { firstName: "Karl" };
+      (mockReq as any).user = { id: userId } as any;
+      mockReq.body = details;
+      (mockReq as any).files = [{ originalname: "pic.jpg", buffer: Buffer.from("test") }] as any;
+
+      (mockStorage.uploadFiles as any).mockResolvedValue(["users/123_pic.jpg"]);
+      mockAuthService.updateUserProfile.mockResolvedValue(true);
+      const updatedUser = { id: userId, user: { username: "karl" }, details: { email: "karl@test", photo_url: "https://signed.url" } };
+      mockUserService.retrieveUserById.mockResolvedValue(updatedUser as any);
+
+      await userController.patchUserProfile(mockReq as Request, mockRes as Response);
+
+      expect(mockStorage.uploadFiles).toHaveBeenCalled();
+      expect(mockAuthService.updateUserProfile).toHaveBeenCalledWith(userId, expect.objectContaining({ photo_url: "users/123_pic.jpg" }));
+      expect(mockUserService.retrieveUserById).toHaveBeenCalledWith(userId);
+      expect(mockResponseUtils.sendSuccess).toHaveBeenCalledWith(mockRes as any, updatedUser);
+    });
+
+    it("should return 400 when update fails", async () => {
+      const userId = "test-user-id";
+      (mockReq as any).user = { id: userId } as any;
+      mockReq.body = { firstName: "Karl" };
+
+      mockAuthService.updateUserProfile.mockResolvedValue(false);
+
+      await userController.patchUserProfile(mockReq as Request, mockRes as Response);
+
+      expect(mockResponseUtils.sendError).toHaveBeenCalledWith(mockRes as any, "Failed to update user profile", 400);
     });
   });
 

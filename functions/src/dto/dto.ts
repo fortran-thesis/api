@@ -81,18 +81,7 @@ export const EmailSchema = z.object({
 export const ChangePasswordSchema = z.object({
   oldPassword: z
     .string({required_error: "Password is required"})
-    .nonempty({message: "Password is required"})
-    .min(8, {message: "Password must be at least 8 characters long"})
-    .regex(/[a-z]/, {
-      message: "Password must contain at least one lowercase letter",
-    })
-    .regex(/[A-Z]/, {
-      message: "Password must contain at least one uppercase letter",
-    })
-    .regex(/[0-9]/, {message: "Password must contain at least one number"})
-    .regex(/[^A-Za-z0-9]/, {
-      message: "Password must contain at least one special character",
-    }),
+    .nonempty({message: "Password is required"}),
   newPassword: z
     .string({required_error: "Password is required"})
     .nonempty({message: "Password is required"})
@@ -131,6 +120,16 @@ export const UserDetailsSchema = z.object({
 });
 
 export const UserDetailsUpdateSchema = UserDetailsSchema.partial();
+
+export const UserProfileUpdateSchema = z.object({
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+  email: z.string().email().optional(),
+  displayName: z.string().optional(),
+  address: z.string().optional(),
+  phoneNumber: z.string().optional(),
+  photo_url: z.string().optional(),
+}).partial();
 
 export const SearchUsersQuerySchema = z.object({
   search: z.string().optional(),

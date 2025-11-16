@@ -16,6 +16,9 @@ jest.mock("firebase-admin/auth", () => ({
 jest.mock("../../../src/repositories/userRepository", () => ({
   findFirestoreUserById: jest.fn(),
 }));
+jest.mock("../../../src/utils/storageTransform", () => ({
+  transformToSignedUrl: (jest.fn().mockResolvedValue("https://signed.url") as any),
+}));
 
 describe("auth lib (unit)", () => {
   describe("getAuthUserBy (id or email)", () => {
@@ -25,18 +28,24 @@ describe("auth lib (unit)", () => {
         email: "mocked@example.com",
         disabled: false,
         displayName: "mocked",
-        photoURL: "",
+        photoURL: "users/123_pic.jpg",
       });
       (findFirestoreUserById as jest.Mock<any>).mockResolvedValue({
-        username: "mocked",
-        is_banned: false,
-        role: Role.USER,
+        data: () => ({
+          username: "mocked",
+          is_banned: false,
+          role: Role.USER,
+          first_name: "Mock",
+          last_name: "User",
+          address: "123 Main St",
+        }),
       });
 
       const resultId = await authLib.getAuthUserById("mocked");
       expect(
         resultId && resultId.id && resultId.user && resultId.details
       ).toBeDefined();
+      expect((resultId as any).details.photo_url).toBe("https://signed.url");
 
       const resultEmail = await authLib.getAuthUserByEmail("mocked");
       expect(
@@ -52,6 +61,8 @@ describe("auth lib (unit)", () => {
         displayName: "mocked",
         photoURL: "",
       });
+      // Return null to simulate missing Firestore user document
+      (findFirestoreUserById as jest.Mock<any>).mockResolvedValue(null);
 
       const resultId = await authLib.getAuthUserById("mocked");
       expect(resultId).toBeNull();
@@ -61,10 +72,14 @@ describe("auth lib (unit)", () => {
 
     it("should return null if auth is not found", async () => {
       (findFirestoreUserById as jest.Mock<any>).mockResolvedValue({
-        username: "mocked",
-        is_banned: false,
-        role: Role.USER,
+        data: () => ({
+          username: "mocked",
+          is_banned: false,
+          role: Role.USER,
+        }),
       });
+      // Simulate no auth record
+      (getAuth().getUser as jest.Mock<any>).mockResolvedValue(null);
 
       const resultId = await authLib.getAuthUserById("mocked");
       expect(resultId).toBeNull();
@@ -80,6 +95,9 @@ describe("auth lib (unit)", () => {
         username: "mocked",
         is_banned: false,
         role: Role.USER,
+        first_name: "Mock",
+        last_name: "User",
+        address: "123 Main St",
       },
       details: {
         email: "mocked@example.com",

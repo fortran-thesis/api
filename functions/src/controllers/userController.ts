@@ -3,8 +3,11 @@ import {
   removeUser,
   softRemoveUser,
   updateUser,
+  updateUserProfile,
 } from "../services/authService";
 import {devLog} from "../utils/dev";
+import {uploadFiles} from "../lib/storage";
+import {StorageFolder} from "../configs/storage";
 import {defaultError, sendError, sendSuccess} from "../utils/response";
 import {
   retrieveAllUsers,
@@ -469,6 +472,85 @@ export const patchUser = async (req: Request, res: Response) => {
       return sendError(res, "Failed to update user. Try again later");
     }
     return sendSuccess(res, "Successfully updated user.");
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
+/**
+ * @swagger
+ * /api/v1/user/profile:
+ *   patch:
+ *     summary: Update authenticated user's profile
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *       - cookieAuth: []
+ *     description: Update the authenticated user's profile (name, email, address, phone, photo_url). Requires authentication.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               details:
+ *                 type: object
+ *                 properties:
+ *                   firstName:
+ *                     type: string
+ *                   lastName:
+ *                     type: string
+ *                   email:
+ *                     type: string
+ *                   displayName:
+ *                     type: string
+ *                   address:
+ *                     type: string
+ *                   phoneNumber:
+ *                     type: string
+ *               photo:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Successfully updated profile
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
+export const patchUserProfile = async (req: Request, res: Response) => {
+  try {
+    const id = req.user?.id;
+    if (!id) return sendError(res, "Unauthenticated", 401);
+    const details = req.body as any;
+    const photos: Express.Multer.File[] | undefined = req.files as
+      | Express.Multer.File[]
+      | undefined;
+    let uploadedPhotoPath: string | undefined;
+    if (photos && photos.length > 0) {
+      const uploaded = await uploadFiles(photos, StorageFolder.USERS);
+      if (!uploaded || uploaded.length === 0) return sendError(res, "Invalid photo, please upload a different image.", 400);
+      uploadedPhotoPath = uploaded[0];
+    }
+    const updated = await updateUserProfile(id, {
+      firstName: details.firstName,
+      lastName: details.lastName,
+      email: details.email,
+      displayName: details.displayName,
+      address: details.address,
+      phoneNumber: details.phoneNumber,
+      photo_url: uploadedPhotoPath || details.photo_url,
+    });
+    if (!updated) return sendError(res, "Failed to update user profile", 400);
+    // Return the updated user profile
+    const updatedUser = await retrieveUserById(id);
+    if (!updatedUser) return sendError(res, "Failed to retrieve updated user", 500);
+    return sendSuccess(res, updatedUser);
   } catch (error) {
     devLog(error);
     return defaultError(res);

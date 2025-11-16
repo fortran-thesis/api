@@ -247,6 +247,73 @@ export const updateUser = async (
   }
 };
 
+export const updateUserProfile = async (
+  id: string,
+  profile: Partial<{
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    displayName?: string;
+    address?: string;
+    phoneNumber?: string;
+    photo_url?: string;
+  }>
+): Promise<boolean> => {
+  try {
+    // Update Firebase Auth fields
+    const authUpdate: UpdateRequest = {};
+    if (profile.email !== undefined) authUpdate.email = profile.email;
+    if (profile.displayName !== undefined) authUpdate.displayName = profile.displayName;
+    if (profile.photo_url !== undefined) authUpdate.photoURL = profile.photo_url;
+
+    // Normalize phone number if provided (E.164 PH normalization)
+    const normalizePH = (raw?: string): string | undefined => {
+      if (!raw) return undefined;
+      let p = raw.trim();
+      p = p.replace(/[^0-9+]/g, "");
+      if (p.startsWith("+63")) return p;
+      if (p.startsWith("+")) return p;
+      if (p.startsWith("63")) return `+${p}`;
+      if (p.startsWith("0")) return `+63${p.slice(1)}`;
+      return `+63${p}`;
+    };
+
+    // Update Firebase Auth phone number if provided
+    if (profile.phoneNumber !== undefined) {
+      const normalized = normalizePH(profile.phoneNumber);
+      if (normalized) authUpdate.phoneNumber = normalized;
+    }
+
+    // Update Firestore user fields
+    const firestoreUpdate: any = {};
+    if (profile.firstName !== undefined) firestoreUpdate.first_name = profile.firstName;
+    if (profile.lastName !== undefined) firestoreUpdate.last_name = profile.lastName;
+    if (profile.address !== undefined) firestoreUpdate.address = profile.address;
+    if (profile.phoneNumber !== undefined) firestoreUpdate.phone_number = normalizePH(profile.phoneNumber) || profile.phoneNumber;
+    // Do not write `photo_url` to Firestore user document (leave original types unchanged)
+
+    // Run both updates if provided
+    let authResult = true;
+    if (Object.keys(authUpdate).length > 0) {
+      const details = await getAuth().updateUser(id, authUpdate);
+      if (!details) throw new Error("Error updating user in Firebase Auth.");
+    }
+
+    if (Object.keys(firestoreUpdate).length > 0) {
+      const updated = await updateFirestoreUser(id, firestoreUpdate);
+      if (!updated) throw new Error("Error updating user in Firestore.");
+    }
+
+    // Invalidate cache for user and lists
+    await handlePatchCache("users", id, true);
+
+    return authResult;
+  } catch (error) {
+    devLog(error);
+    return false;
+  }
+};
+
 export const softRemoveUser = async (id: string): Promise<void> => {
   try {
     await getAuth().updateUser(id, {disabled: true});

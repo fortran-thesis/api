@@ -194,6 +194,19 @@ describe("authService (unit)", () => {
     });
   });
 
+  describe("updateUserProfile", () => {
+    it("should normalize phone number and update both Auth and Firestore", async () => {
+      mockUpdateUser.mockResolvedValue(true);
+      mockUpdateFirestoreUser.mockResolvedValue(true);
+
+      const result = await authService.updateUserProfile("user123", { phoneNumber: "09171234567" });
+
+      expect(result).toBe(true);
+      expect(mockUpdateUser).toHaveBeenCalledWith("user123", expect.objectContaining({ phoneNumber: "+639171234567" }));
+      expect(mockUpdateFirestoreUser).toHaveBeenCalledWith("user123", expect.objectContaining({ phone_number: "+639171234567" }));
+    });
+  });
+
   describe("removeUser", () => {
     it("should hard delete user", async () => {
       mockDeleteUser.mockResolvedValue(true);
