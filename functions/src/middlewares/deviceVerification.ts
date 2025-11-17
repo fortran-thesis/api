@@ -6,7 +6,7 @@ import {devLog} from "../utils/dev";
 /**
  * Middleware to verify that a user's role is allowed on the requested device
  * Should be used after verifyUser() middleware
- * 
+ *
  * Usage: app.post('/api/v1/auth/login', verifyDevice(), loginUser)
  */
 export const verifyDevice = () => async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -62,6 +62,7 @@ export const verifyDeviceAccess = () => async (req: Request, res: Response, next
 
 // Extend Express Request type to include deviceType
 declare global {
+    // eslint-disable-next-line
   namespace Express {
     interface Request {
       deviceType?: DeviceType;
