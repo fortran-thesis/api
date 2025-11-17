@@ -46,7 +46,8 @@ export const cloudRunMultipartFix = (req: Request, res: Response, next: NextFunc
           },
         });
 
-        req.body = req.body || {};
+        // IMPORTANT: Reset body completely to avoid corrupted pre-parsed data
+        req.body = {};
         const files: Express.Multer.File[] = [];
         let fieldCount = 0;
         let fileCount = 0;
