@@ -12,6 +12,7 @@ import {
   updateFirestoreUser,
 } from "../repositories/userRepository";
 import {Role} from "../types/enums";
+import {DeviceType, canAccessDevice} from "../types/device";
 import {
   ApiResponse,
   APIUser,
@@ -193,11 +194,18 @@ export const identifyUser = async (
 };
 
 export const authenticateUser = async (
-  token: string
+  token: string,
+  deviceType?: DeviceType
 ): Promise<string | null> => {
   try {
     const user: WithId<APIUser> | null = await verifyToken(token);
     if (!user) throw new Error("Invalidated token for user.");
+
+    // If device type is provided, check if user's role can access this device
+    if (deviceType && !canAccessDevice(user.user.role, deviceType)) {
+      throw new Error(`Role '${user.user.role}' cannot access device '${deviceType}'`);
+    }
+
     return await generateCookie(token);
   } catch (error) {
     devLog(error);

@@ -183,8 +183,12 @@ export const loginUser = async (req: Request, res: Response) => {
 
     const token: string | null = await identifyUser(username, password);
     if (!token) return sendError(res, "Incorrect credentials");
-    const cookie: string | null = await authenticateUser(token);
-    if (!cookie) return sendError(res, "Incorrect credentials");
+
+    // Get device type from request (query param, header, or User-Agent)
+    const deviceType = (req as any).deviceType;
+
+    const cookie: string | null = await authenticateUser(token, deviceType);
+    if (!cookie) return sendError(res, "Your role is not permitted to access this application", 403);
 
     res.cookie("session", cookie, {
       httpOnly: true,
@@ -266,8 +270,12 @@ export const oAuth = async (req: Request, res: Response) => {
     if (!process.success) {
       return sendError(res, "Something went wrong registering user.");
     }
-    const cookie: string | null = await authenticateUser(token);
-    if (!cookie) return sendError(res, "Incorrect credentials");
+
+    // Get device type from request (query param, header, or User-Agent)
+    const deviceType = (req as any).deviceType;
+
+    const cookie: string | null = await authenticateUser(token, deviceType);
+    if (!cookie) return sendError(res, "Your role is not permitted to access this application", 403);
 
     res.cookie("session", cookie, {
       httpOnly: true,

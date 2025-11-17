@@ -23,6 +23,7 @@ import {
   sendCodeLimiter,
   verifyCodeLimiter,
 } from "../configs/limit";
+import {verifyDevice} from "../middlewares/deviceVerification";
 import rateLimit from "express-rate-limit";
 import {verifyUser} from "../middlewares/verification";
 
@@ -39,6 +40,7 @@ router.post(
 
 router.post(
   "/login",
+  verifyDevice(),
   sanitizeBody,
   validateBody(LoginSchema),
   async (req: Request, res: Response) => {
@@ -48,6 +50,7 @@ router.post(
 
 router.post(
   "/login/oauth",
+  verifyDevice(),
   async (req: Request, res: Response) => {
     oAuth(req, res);
   }
