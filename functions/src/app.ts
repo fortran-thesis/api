@@ -26,20 +26,34 @@ import {cloudRunMultipartFix} from "./middlewares/cloudRunMultipartFix";
 
 const app = express();
 
-// CRITICAL: This must be the FIRST middleware to handle Cloud Run stream consumption
-app.use(cloudRunMultipartFix);
-
-// Log all incoming requests to diagnose stream consumption
+// CRITICAL: Capture raw body BEFORE any middleware for multipart forms in Cloud Run
+// Cloud Run/Firebase Functions v2 consume the stream, so we need to buffer it first
 app.use((req, res, next) => {
-  if (req.headers["content-type"]?.includes("multipart/form-data")) {
-    console.log("[APP] Multipart request detected, stream state:", {
-      readable: req.readable,
-      readableEnded: req.readableEnded,
+  const contentType = req.headers["content-type"] || "";
+  if (contentType.includes("multipart/form-data")) {
+    const chunks: Buffer[] = [];
+    req.on("data", (chunk: Buffer) => {
+      chunks.push(chunk);
     });
+    req.on("end", () => {
+      (req as any).rawBody = Buffer.concat(chunks);
+      console.log("[RAW BODY CAPTURE] Captured", (req as any).rawBody.length, "bytes");
+      next();
+    });
+    req.on("error", (err) => {
+      console.error("[RAW BODY CAPTURE] Error:", err);
+      next(err);
+    });
+  } else {
+    next();
   }
-  next();
 });
 
+// CRITICAL: Parse multipart/form-data using the captured rawBody
+// This MUST come after raw body capture but before any other middleware
+app.use(cloudRunMultipartFix);
+
+// Apply security headers early (but after multipart fix to avoid interfering with parsing)
 app.use(helmet());
 app.use(cors(corsOptions));
 app.use(cookieParser());
@@ -48,7 +62,8 @@ app.use(cookieParser());
 app.use((req, res, next) => {
   const contentType = req.headers["content-type"] || "";
   if (contentType.includes("multipart/form-data")) {
-    // Skip body parsing for multipart - let multer handle it
+    // Skip body parsing for multipart - cloudRunMultipartFix already handled it
+    console.log("[APP] Skipping body parser for multipart request");
     return next();
   }
   // Apply JSON and URL-encoded parsers for other content types
