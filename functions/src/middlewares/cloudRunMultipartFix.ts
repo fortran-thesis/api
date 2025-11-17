@@ -5,9 +5,10 @@ const Busboy = require("busboy");
 
 /**
  * Fix for Firebase Functions / Cloud Run consuming the request stream.
- * This reconstructs the stream from the rawBody if it exists.
+ * This reconstructs the stream from the rawBody buffer.
  *
- * IMPORTANT: Requires preserveRawBody: true in Firebase Functions v2 config
+ * IMPORTANT: Requires the raw body capture middleware to run first in app.ts
+ * That middleware buffers the multipart stream before any other middleware consumes it.
  */
 export const cloudRunMultipartFix = (req: Request, res: Response, next: NextFunction) => {
   const contentType = req.headers["content-type"] || "";
@@ -23,13 +24,13 @@ export const cloudRunMultipartFix = (req: Request, res: Response, next: NextFunc
     readableFlowing: req.readableFlowing,
   });
 
-  // Firebase Functions attaches rawBody to the request when preserveRawBody is enabled
+  // The raw body should be captured by the raw body capture middleware in app.ts
   const rawBody = (req as any).rawBody;
 
   if (!rawBody || !Buffer.isBuffer(rawBody)) {
     console.error("[CLOUD RUN FIX] No rawBody found!");
-    console.error("[CLOUD RUN FIX] Make sure preserveRawBody: true is set in onRequest config");
-    return next(new Error("Raw body not available. Check Firebase Functions configuration."));
+    console.error("[CLOUD RUN FIX] Make sure the raw body capture middleware is enabled in app.ts");
+    return next(new Error("Request stream consumed without rawBody"));
   }
 
   console.log("[CLOUD RUN FIX] Found rawBody, reconstructing stream...");
