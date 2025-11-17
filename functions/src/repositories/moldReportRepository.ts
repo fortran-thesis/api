@@ -242,3 +242,22 @@ export const findMoldReportsBySearch = async (
     return null;
   }
 };
+
+export const countReportsByDateRange = async (
+  startTimestamp: any,
+  endTimestamp: any
+): Promise<number | null> => {
+  try {
+    const db = getFirestore(firebase);
+    const snap = await db
+      .collection(collection)
+      .where("is_archived", "==", false)
+      .where("metadata.created_at", ">=", startTimestamp)
+      .where("metadata.created_at", "<", endTimestamp)
+      .get();
+    return snap.size;
+  } catch (err) {
+    devLog(err);
+    return null;
+  }
+};

@@ -6,6 +6,7 @@ import {
 } from "firebase-admin/firestore";
 import {documentToJson, queryToJson} from "../lib/firestore";
 import {devLog} from "../utils/dev";
+import {cacheItem, getCachedItem} from "../utils/cacheManager";
 import {
   addMoldReport,
   deleteMoldReport,
@@ -21,6 +22,7 @@ import {
   findAllMoldReportsByUser,
   countReportsByAssignedMycologist,
   findMoldReportsBySearch,
+  countReportsByDateRange,
 } from "../repositories/moldReportRepository";
 import {findMoldCasesByPriority} from "../repositories/moldCaseRepository";
 import {
@@ -524,6 +526,46 @@ export const searchAndFilterMoldReports = async (
       snapshot: trimmedResults,
       nextPageToken: reportList.length > limit ? result.nextPageToken : null,
     };
+  } catch (error) {
+    devLog(error);
+    return null;
+  }
+};
+
+export const getMoldReportMonthlyTotals = async (year?: number): Promise<Array<{month: string; total: number}> | null> => {
+  try {
+    const currentYear = year || new Date().getFullYear();
+    const cacheKey = `mold-report-monthly-${currentYear}`;
+
+    // Try to get from cache
+    const cached = await getCachedItem<Array<{month: string; total: number}>>("mold-reports", cacheKey);
+    if (cached) {
+      devLog(`[CACHE] Hit monthly totals for ${currentYear}`);
+      return cached;
+    }
+
+    const monthlyTotals: Array<{month: string; total: number}> = [];
+
+    for (let month = 0; month < 12; month++) {
+      const startDate = new Date(currentYear, month, 1);
+      const endDate = new Date(currentYear, month + 1, 1);
+
+      const startTimestamp = Timestamp.fromDate(startDate);
+      const endTimestamp = Timestamp.fromDate(endDate);
+
+      const count = await countReportsByDateRange(startTimestamp, endTimestamp);
+      const monthName = startDate.toLocaleString("default", {month: "long", year: "numeric"});
+
+      monthlyTotals.push({
+        month: monthName,
+        total: count ?? 0,
+      });
+    }
+
+    // Cache result for 1 hour
+    await cacheItem("mold-reports", cacheKey, monthlyTotals, {ttl: 3600});
+
+    return monthlyTotals;
   } catch (error) {
     devLog(error);
     return null;

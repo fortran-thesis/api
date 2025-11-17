@@ -18,9 +18,11 @@ import {
   retrieveAllMoldReports,
   getAssignedReportsCount,
   searchAndFilterMoldReports,
+  getMoldReportMonthlyTotals,
 } from "../services/moldReportService";
 import {createLog} from "../utils/logging";
 import {AuditAction} from "../types/enums";
+import {getCombinedTotalCounts, getMoldCasePriorityBreakdown} from "../services/moldCaseService";
 
 export const createMoldReport = async (req: Request, res: Response) => {
   /**
@@ -1442,4 +1444,252 @@ export const searchMoldReports = async (req: Request, res: Response) => {
   }
 };
 
+export const getMoldReportMonthlyTotalsController = async (req: Request, res: Response) => {
+  /**
+   * @swagger
+   * /api/v1/mold-report/counts/monthly:
+   *   get:
+   *     summary: Get monthly mold report totals for a year
+   *     tags: [MoldReport]
+   *     security:
+   *       - bearerAuth: []
+   *       - cookieAuth: []
+   *     description: Retrieve mold report counts for all 12 months of a given year (defaults to current year). Requires authentication.
+   *     parameters:
+   *       - in: query
+   *         name: year
+   *         schema:
+   *           type: integer
+   *         description: Year to retrieve (defaults to current year)
+   *     responses:
+   *       200:
+   *         description: Monthly totals retrieved successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       month:
+   *                         type: string
+   *                         example: "January 2025"
+   *                       total:
+   *                         type: integer
+   *                         example: 15
+   *       400:
+   *         description: Invalid year parameter
+   *       401:
+   *         description: Not authenticated
+   *       500:
+   *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
+   */
+  try {
+    const year = req.query.year ? parseInt(req.query.year as string) : undefined;
 
+    if (year && (isNaN(year) || year < 1900 || year > 2100)) {
+      return sendError(res, "Invalid year parameter", 400);
+    }
+
+    const monthlyTotals = await getMoldReportMonthlyTotals(year);
+    if (!monthlyTotals) {
+      return sendError(res, "Failed to retrieve monthly totals", 500);
+    }
+
+    return sendSuccess(res, monthlyTotals);
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
+/**
+ * @swagger
+ * /api/v1/dashboard/counts/totals:
+ *   get:
+ *     summary: Get combined total counts for dashboard
+ *     tags: [Dashboard]
+ *     security:
+ *       - bearerAuth: []
+ *       - cookieAuth: []
+ *     description: |
+ *       Retrieve combined total counts including:
+ *       - User counts by role (farmer, mycologist, curator, admin)
+ *       - User active/inactive status counts
+ *       - Mold report status counts (total, pending, in_progress, resolved, closed)
+ *       - Mold case priority breakdown (low, medium, high)
+ *       Results are cached for 1 hour.
+ *     responses:
+ *       200:
+ *         description: Combined counts retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     users:
+ *                       type: object
+ *                       example: {"farmer": 10, "mycologist": 5, "curator": 3, "admin": 1}
+ *                       description: User counts grouped by role
+ *                     userStatus:
+ *                       type: object
+ *                       properties:
+ *                         active:
+ *                           type: integer
+ *                           example: 15
+ *                         inactive:
+ *                           type: integer
+ *                           example: 4
+ *                       description: Active and inactive user counts
+ *                     moldReports:
+ *                       type: object
+ *                       properties:
+ *                         total:
+ *                           type: integer
+ *                           example: 50
+ *                         pending:
+ *                           type: integer
+ *                           example: 10
+ *                         in_progress:
+ *                           type: integer
+ *                           example: 20
+ *                         resolved:
+ *                           type: integer
+ *                           example: 15
+ *                         closed:
+ *                           type: integer
+ *                           example: 5
+ *                       description: Mold report counts by status
+ *                     moldCases:
+ *                       type: object
+ *                       properties:
+ *                         low:
+ *                           type: integer
+ *                           example: 25
+ *                         medium:
+ *                           type: integer
+ *                           example: 18
+ *                         high:
+ *                           type: integer
+ *                           example: 7
+ *                       description: Mold case counts by priority
+ *       401:
+ *         description: Not authenticated
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ */
+export const getCombinedTotalCountsController = async (req: Request, res: Response) => {
+  try {
+    const counts = await getCombinedTotalCounts();
+    if (!counts) {
+      return sendError(res, "Failed to retrieve combined counts", 500);
+    }
+
+    return sendSuccess(res, counts);
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
+/**
+ * @swagger
+ * /api/v1/mold-report/counts/priorities:
+ *   get:
+ *     summary: Get mold case priority breakdown counts
+ *     tags: [MoldReport]
+ *     security:
+ *       - bearerAuth: []
+ *       - cookieAuth: []
+ *     description: |
+ *       Retrieve mold case counts broken down by priority level:
+ *       - low: Low priority cases
+ *       - medium: Medium priority cases
+ *       - high: High priority cases
+ *       Results are cached for 1 hour.
+ *     responses:
+ *       200:
+ *         description: Priority breakdown retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     low:
+ *                       type: integer
+ *                       example: 25
+ *                       description: Count of low priority cases
+ *                     medium:
+ *                       type: integer
+ *                       example: 18
+ *                       description: Count of medium priority cases
+ *                     high:
+ *                       type: integer
+ *                       example: 7
+ *                       description: Count of high priority cases
+ *       401:
+ *         description: Not authenticated
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ */
+export const getMoldCasePriorityBreakdownController = async (req: Request, res: Response) => {
+  try {
+    const breakdown = await getMoldCasePriorityBreakdown();
+    if (!breakdown) {
+      return sendError(res, "Failed to retrieve priority breakdown", 500);
+    }
+
+    return sendSuccess(res, breakdown);
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};

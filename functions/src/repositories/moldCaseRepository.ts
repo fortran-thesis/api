@@ -159,3 +159,24 @@ export const updateCultivationDetails = async (
     return null;
   }
 };
+
+/**
+ * Count mold cases by priority level
+ * @returns Promise with counts for low, medium, and high priority cases
+ */
+export const countCasesByPriority = async (): Promise<{low: number; medium: number; high: number} | null> => {
+  try {
+    const lowCases = await findMoldCasesByPriority("low");
+    const mediumCases = await findMoldCasesByPriority("medium");
+    const highCases = await findMoldCasesByPriority("high");
+
+    return {
+      low: lowCases.length,
+      medium: mediumCases.length,
+      high: highCases.length,
+    };
+  } catch (err) {
+    devLog(err);
+    return null;
+  }
+};

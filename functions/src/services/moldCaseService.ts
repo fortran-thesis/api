@@ -18,9 +18,14 @@ import {
   updateMoldCase as updateMoldCaseRepo,
   appendCultivationLog,
   updateCultivationDetails,
+  countCasesByPriority,
 } from "../repositories/moldCaseRepository";
 import {MoldCase, PaginatedResult, WithMetadata} from "../types/types";
 import {transformToSignedUrl} from "../utils/storageTransform";
+import {cacheItem, getCachedItem} from "../utils/cacheManager";
+import {getRoleCounts} from "./userService";
+import {getDisabledCounts} from "./userService";
+import {getMoldReportStatusCounts} from "./moldReportService";
 
 // Helper function to transform MoldCase photo_url and cultivation_logs image_urls
 const transformMoldCaseImages = async (moldCase: MoldCase): Promise<MoldCase> => {
@@ -377,6 +382,90 @@ export const updateCultivationDetailsInCase = async (
     // Fetch and return updated case
     const updated = await retrieveMoldCaseById(caseId);
     return updated;
+  } catch (error) {
+    devLog(error);
+    return null;
+  }
+};
+
+/**
+ * Get combined total counts for dashboard
+ * Includes user counts (by role, active/inactive), mold report status counts, and mold case priority counts
+ * Results are cached for 1 hour (3600 seconds)
+ */
+export const getCombinedTotalCounts = async (): Promise<{
+  users: Record<string, number> | null;
+  userStatus: {active: number; inactive: number} | null;
+  moldReports: {
+    total: number;
+    pending: number;
+    in_progress: number;
+    resolved: number;
+    closed: number;
+  } | null;
+  moldCases: {low: number; medium: number; high: number} | null;
+} | null> => {
+  try {
+    // Check cache first
+    const cacheKey = "combined-total-counts";
+    const cached = await getCachedItem<any>(
+      "dashboard",
+      cacheKey
+    );
+    if (cached) return cached;
+
+    // Cache miss - fetch all counts in parallel
+    const [roleCounts, userStatusCounts, reportCounts, caseCounts] = await Promise.all([
+      getRoleCounts(),
+      getDisabledCounts(),
+      getMoldReportStatusCounts(),
+      countCasesByPriority(),
+    ]);
+
+    const result = {
+      users: roleCounts,
+      userStatus: userStatusCounts,
+      moldReports: reportCounts,
+      moldCases: caseCounts,
+    };
+
+    // Cache the result for 1 hour
+    await cacheItem("dashboard", cacheKey, result, {ttl: 3600});
+
+    return result;
+  } catch (error) {
+    devLog(error);
+    return null;
+  }
+};
+
+/**
+ * Get mold case priority breakdown counts
+ * Returns counts for low, medium, and high priority cases
+ * Results are cached for 1 hour (3600 seconds)
+ */
+export const getMoldCasePriorityBreakdown = async (): Promise<{
+  low: number;
+  medium: number;
+  high: number;
+} | null> => {
+  try {
+    // Check cache first
+    const cacheKey = "priority-breakdown";
+    const cached = await getCachedItem<{low: number; medium: number; high: number}>(
+      "mold-cases",
+      cacheKey
+    );
+    if (cached) return cached;
+
+    // Cache miss - fetch priority counts
+    const counts = await countCasesByPriority();
+    if (!counts) return null;
+
+    // Cache the result for 1 hour
+    await cacheItem("mold-cases", cacheKey, counts, {ttl: 3600});
+
+    return counts;
   } catch (error) {
     devLog(error);
     return null;

@@ -33,6 +33,9 @@ import {
   assignReport,
   rejectReport,
   searchMoldReports,
+  getMoldReportMonthlyTotalsController,
+  getCombinedTotalCountsController,
+  getMoldCasePriorityBreakdownController,
 } from "../controllers/moldReportController";
 import {Role} from "../types/enums";
 
@@ -144,6 +147,30 @@ router.get(
   verifyUser(Role.ADMIN),
   async (req: Request, res: Response) => {
     await getMoldReportCountsController(req, res);
+  }
+);
+
+router.get(
+  "/counts/monthly",
+  verifyUser(),
+  async (req: Request, res: Response) => {
+    await getMoldReportMonthlyTotalsController(req, res);
+  }
+);
+
+router.get(
+  "/counts/totals",
+  verifyUser(),
+  async (req: Request, res: Response) => {
+    await getCombinedTotalCountsController(req, res);
+  }
+);
+
+router.get(
+  "/counts/priorities",
+  verifyUser(),
+  async (req: Request, res: Response) => {
+    await getMoldCasePriorityBreakdownController(req, res);
   }
 );
 
