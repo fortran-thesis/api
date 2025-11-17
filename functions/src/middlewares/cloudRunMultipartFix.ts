@@ -6,7 +6,7 @@ const Busboy = require("busboy");
 /**
  * Fix for Firebase Functions / Cloud Run consuming the request stream.
  * This reconstructs the stream from the rawBody if it exists.
- * 
+ *
  * IMPORTANT: Requires preserveRawBody: true in Firebase Functions v2 config
  */
 export const cloudRunMultipartFix = (req: Request, res: Response, next: NextFunction) => {
@@ -124,12 +124,12 @@ export const cloudRunMultipartFix = (req: Request, res: Response, next: NextFunc
 
       console.log(`[CLOUD RUN FIX] Complete: ${fieldCount} fields, ${fileCount} files`);
       console.log("[CLOUD RUN FIX] Body keys:", Object.keys(req.body));
-      
+
       if (files.length > 0) {
         req.files = files;
         console.log("[CLOUD RUN FIX] Attached files to req.files");
       }
-      
+
       next();
     });
 
