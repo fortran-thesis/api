@@ -37,19 +37,19 @@ export const getDeviceType = (req: any): DeviceType => {
 
   // Detect from User-Agent
   const userAgent = (req.headers["user-agent"] || "").toLowerCase();
-  
+
   // Mobile detection (stricter - look for specific mobile indicators)
-  if (userAgent.includes("mobile") || userAgent.includes("android") || userAgent.includes("iphone") || 
+  if (userAgent.includes("mobile") || userAgent.includes("android") || userAgent.includes("iphone") ||
       userAgent.includes("ipad") || userAgent.includes("windows phone") || userAgent.includes("blackberry")) {
     return DeviceType.MOBILE;
   }
-  
+
   // Web browser detection (Firefox, Chrome, Safari, Edge, Opera, etc.)
   if (userAgent.includes("firefox") || userAgent.includes("chrome") || userAgent.includes("safari") ||
       userAgent.includes("edg/") || userAgent.includes("opera") || userAgent.includes("trident")) {
     return DeviceType.WEBSITE;
   }
-  
+
   // If no User-Agent, check method and path hints
   // POST to /login without explicit mobile device = likely website
   if (req.method === "POST" && req.path?.includes("/login")) {
@@ -81,7 +81,7 @@ const isValidDeviceType = (device: string): boolean => {
 export const canAccessDevice = (role: string, deviceType: DeviceType): boolean => {
   const normalizedRole = role?.toLowerCase() ?? "";
   const allowedRoles = DEVICE_ROLE_MATRIX[deviceType] ?? [];
-  return allowedRoles.some(allowedRole => allowedRole.toLowerCase() === normalizedRole);
+  return allowedRoles.some((allowedRole) => allowedRole.toLowerCase() === normalizedRole);
 };
 
 /**
