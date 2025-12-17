@@ -10,7 +10,8 @@ export enum FirestoreCollection {
   MONITORED_MOLDS = "monitored_molds",
   REPORTS = "reports",
   SCANNED_MOLDS = "scanned_molds",
-  SYSTEM_REQUESTS = "system_requests"
+  SYSTEM_REQUESTS = "system_requests",
+  FAQ = "faq"
 }
 
 export function getCollectionName(collection: FirestoreCollection): string {
