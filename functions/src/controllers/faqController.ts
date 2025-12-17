@@ -64,7 +64,7 @@ export const createFAQ = async (req: Request, res: Response) => {
     if (!faq) return sendError(res, "Failed to create FAQ", 400);
     if (req.user) {
       const {id: actorId, user: {role}} = req.user;
-      createLog(actorId, role, AuditAction.CREATE, `Created FAQ`, faq.id);
+      createLog(actorId, role, AuditAction.CREATE, "Created FAQ", faq.id);
     }
     return sendSuccess(res, faq);
   } catch (error) {
@@ -231,7 +231,7 @@ export const patchFAQ = async (req: Request, res: Response) => {
     if (!updated) return sendError(res, "Failed to update FAQ", 400);
     if (req.user) {
       const {id: actorId, user: {role}} = req.user;
-      createLog(actorId, role, AuditAction.UPDATE, `Updated FAQ`, id);
+      createLog(actorId, role, AuditAction.UPDATE, "Updated FAQ", id);
     }
     return sendSuccess(res, updated);
   } catch (error) {
@@ -276,7 +276,7 @@ export const deleteFAQ = async (req: Request, res: Response) => {
     if (!result) return sendError(res, "Failed to delete FAQ", 400);
     if (req.user) {
       const {id: actorId, user: {role}} = req.user;
-      createLog(actorId, role, AuditAction.DELETE, `Deleted FAQ`, id);
+      createLog(actorId, role, AuditAction.DELETE, "Deleted FAQ", id);
     }
     return sendSuccess(res, {message: "FAQ deleted successfully"});
   } catch (error) {
@@ -321,7 +321,7 @@ export const softDeleteFAQ = async (req: Request, res: Response) => {
     if (!result) return sendError(res, "Failed to soft delete FAQ", 400);
     if (req.user) {
       const {id: actorId, user: {role}} = req.user;
-      createLog(actorId, role, AuditAction.SOFT_DELETE, `Soft deleted FAQ`, id);
+      createLog(actorId, role, AuditAction.SOFT_DELETE, "Soft deleted FAQ", id);
     }
     return sendSuccess(res, {message: "FAQ soft deleted successfully"});
   } catch (error) {

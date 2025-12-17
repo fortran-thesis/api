@@ -51,11 +51,11 @@ export enum AuditAction {
   UPDATE_FAQ = "update_faq",
   DELETE_FAQ = "delete_faq",
   SOFT_DELETE_FAQ = "soft_delete_faq",
-  
+
   CREATE_FEEDBACK = "create_feedback",
   UPDATE_FEEDBACK = "update_feedback",
   DELETE_FEEDBACK = "delete_feedback",
-  
+
   CREATE_CONTACT = "create_contact",
   UPDATE_CONTACT = "update_contact",
   DELETE_CONTACT = "delete_contact",
