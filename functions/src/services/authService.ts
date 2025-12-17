@@ -202,8 +202,13 @@ export const authenticateUser = async (
     if (!user) throw new Error("Invalidated token for user.");
 
     // If device type is provided, check if user's role can access this device
-    if (deviceType && !canAccessDevice(user.user.role, deviceType)) {
-      throw new Error(`Role '${user.user.role}' cannot access device '${deviceType}'`);
+    if (deviceType) {
+      devLog(`🔍 Device access check: Role='${user.user.role}', Device='${deviceType}'`);
+      if (!canAccessDevice(user.user.role, deviceType)) {
+        devLog(`❌ Access denied: Role '${user.user.role}' cannot access device '${deviceType}'`);
+        throw new Error(`Role '${user.user.role}' cannot access device '${deviceType}'`);
+      }
+      devLog(`✅ Device access granted for role '${user.user.role}' on device '${deviceType}'`);
     }
 
     return await generateCookie(token);
