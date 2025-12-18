@@ -1330,7 +1330,6 @@ export const searchAssignedMoldCases = async (req: Request, res: Response) => {
     const limit: number = parseInt(req.query.limit as string) || 10;
     const pageToken: string | undefined = req.query.pageToken as string | undefined;
 
-    
 
     const result = await findAssignedMoldCasesWithSearch(
       mycologistId,
