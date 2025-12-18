@@ -16,6 +16,7 @@ import {
 import {analyzeCultivationImage} from "../services/cultivationAnalysisService";
 import {uploadFile} from "../lib/storage";
 import {StorageFolder, generateStoragePath} from "../configs/storage";
+import {findAssignedMoldCasesWithSearch} from "../repositories/moldCaseRepository.js";
 
 export const createMoldCase = async (req: Request, res: Response) => {
   /**
@@ -1329,8 +1330,7 @@ export const searchAssignedMoldCases = async (req: Request, res: Response) => {
     const limit: number = parseInt(req.query.limit as string) || 10;
     const pageToken: string | undefined = req.query.pageToken as string | undefined;
 
-    // Import the search function from repository
-    const {findAssignedMoldCasesWithSearch} = await import("../repositories/moldCaseRepository");
+    
 
     const result = await findAssignedMoldCasesWithSearch(
       mycologistId,
@@ -1345,7 +1345,7 @@ export const searchAssignedMoldCases = async (req: Request, res: Response) => {
     }
 
     // Convert Firestore QuerySnapshot to JSON
-    const snapshot = result.snapshot.docs.map((doc) => ({
+    const snapshot = result.snapshot.docs.map((doc: FirebaseFirestore.QueryDocumentSnapshot<FirebaseFirestore.DocumentData>) => ({
       id: doc.id,
       ...doc.data(),
     }));

@@ -218,10 +218,8 @@ export const findAssignedMoldCasesWithSearch = async (
     }
 
     // Filter by search query on case name if provided
-    let filteredDocs = docs;
     if (searchQuery && searchQuery.trim()) {
       const queryLower = searchQuery.toLowerCase();
-      filteredDocs = docs;
       const filtered = docs.docs.filter((doc) => {
         const data = doc.data() as MoldCase;
         const caseName = data.name?.toLowerCase() || "";
