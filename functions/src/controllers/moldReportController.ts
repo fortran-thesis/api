@@ -689,7 +689,6 @@ export const postCaseDetail = async (req: Request, res: Response) => {
       }
       const updated = await updateMoldReportInFirestore(id, {
         status: "pending",
-        assigned_mycologist_id: null,
       });
       // Audit log
       if (actor) {

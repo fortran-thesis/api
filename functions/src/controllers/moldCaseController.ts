@@ -1258,4 +1258,104 @@ export const analyzeCultivationLogImage = async (req: Request, res: Response) =>
   }
 };
 
+/**
+ * @swagger
+ * /api/v1/mold-cases/search:
+ *   get:
+ *     summary: Search and filter assigned mold cases for mycologist
+ *     tags: [MoldCases]
+ *     security:
+ *       - bearerAuth: []
+ *       - cookieAuth: []
+ *     description: |
+ *       Search and filter mold cases assigned to the authenticated mycologist.
+ *       Supports searching by case name and filtering by priority.
+ *     parameters:
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search term for case name
+ *       - in: query
+ *         name: priority
+ *         schema:
+ *           type: string
+ *           enum: [low, medium, high]
+ *         description: Filter by mold case priority
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of items per page
+ *       - in: query
+ *         name: pageToken
+ *         schema:
+ *           type: string
+ *         description: Cursor token for pagination
+ *     responses:
+ *       200:
+ *         description: Filtered and searched mold cases
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     snapshot:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     nextPageToken:
+ *                       type: string
+ *       401:
+ *         description: Not authenticated
+ *       500:
+ *         description: Server error
+ */
+export const searchAssignedMoldCases = async (req: Request, res: Response) => {
+  try {
+    const mycologistId = req.user?.id;
+    if (!mycologistId) {
+      return sendError(res, "Not authenticated", 401);
+    }
 
+    const searchQuery: string | undefined = req.query.search as string | undefined;
+    const priority: string | undefined = req.query.priority as string | undefined;
+    const limit: number = parseInt(req.query.limit as string) || 10;
+    const pageToken: string | undefined = req.query.pageToken as string | undefined;
+
+    // Import the search function from repository
+    const {findAssignedMoldCasesWithSearch} = await import("../repositories/moldCaseRepository");
+
+    const result = await findAssignedMoldCasesWithSearch(
+      mycologistId,
+      searchQuery,
+      priority,
+      limit,
+      pageToken
+    );
+
+    if (!result) {
+      return sendError(res, "Failed to search mold cases", 500);
+    }
+
+    // Convert Firestore QuerySnapshot to JSON
+    const snapshot = result.snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
+    return sendSuccess(res, {
+      snapshot,
+      nextPageToken: result.nextPageToken,
+    });
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};

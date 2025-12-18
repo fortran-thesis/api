@@ -21,8 +21,8 @@ import {
   addCultivationLog,
   updateCultivationDetails,
   analyzeCultivationLogImage,
+  searchAssignedMoldCases,
 } from "../controllers/moldCaseController";
-
 const router = Router();
 
 router.post(
@@ -69,6 +69,15 @@ router.get(
   }
 );
 
+router.get(
+  "/search",
+  verifyUser(),
+  validateQuery(PaginationQuerySchema),
+  async (req: Request, res: Response) => {
+    await searchAssignedMoldCases(req, res);
+  }
+);
+
 router.patch(
   "/:id",
   verifyUser(),
@@ -83,6 +92,17 @@ router.post(
   verifyUser(),
   validateParams(MoldIdSchema),
   upload.single("image"),
+  // Parse form data - characteristics comes as JSON string from multipart
+  (req: Request, res: Response, next) => {
+    if (req.body.characteristics && typeof req.body.characteristics === "string") {
+      try {
+        req.body.characteristics = JSON.parse(req.body.characteristics);
+      } catch (e) {
+        // If JSON parsing fails, leave as is
+      }
+    }
+    next();
+  },
   validateBody(CultivationLogSchema),
   async (req: Request, res: Response) => {
     // controller expects param name caseId, the route uses :id so controller will read req.params.id

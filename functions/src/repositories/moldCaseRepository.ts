@@ -1,7 +1,7 @@
 // All references to moldFolderService and moldFolderRespository should now use moldCaseService and moldCaseRepository.
 
 // ...existing code...
-import {FieldPath, FieldValue} from "firebase-admin/firestore";
+import {FieldPath, FieldValue, getFirestore} from "firebase-admin/firestore";
 import {
   addDocument,
   getDocumentsByField,
@@ -14,6 +14,7 @@ import {
 import {MoldCase} from "../types/types";
 import {devLog} from "../utils/dev";
 import {FirestoreCollection, getCollectionName} from "../types/models/firestoreCollections";
+import {firebase} from "../configs/firebase";
 
 const collection: string = getCollectionName(FirestoreCollection.MOLD_CASES);
 
@@ -174,6 +175,76 @@ export const countCasesByPriority = async (): Promise<{low: number; medium: numb
       low: lowCases.length,
       medium: mediumCases.length,
       high: highCases.length,
+    };
+  } catch (err) {
+    devLog(err);
+    return null;
+  }
+};
+/**
+ * Search and filter mold cases assigned to a mycologist
+ * Supports searching by name and filtering by priority
+ */
+export const findAssignedMoldCasesWithSearch = async (
+  mycologistId: string,
+  searchQuery?: string,
+  priority?: string,
+  limit = 10,
+  token?: string
+): Promise<{ snapshot: FirebaseFirestore.QuerySnapshot; nextPageToken: string | null } | null> => {
+  try {
+    const db = getFirestore(firebase);
+
+    let query: FirebaseFirestore.Query = db.collection(collection)
+      .where("mycologist_id", "==", mycologistId)
+      .where("is_archived", "==", false);
+
+    // Filter by priority if provided
+    if (priority) {
+      query = query.where("priority", "==", priority);
+    }
+
+    // Order by creation date
+    query = query.orderBy("metadata.created_at", "desc").orderBy(FieldPath.documentId());
+
+    // Apply pagination
+    let docs = await query.limit(limit + 1).get();
+
+    if (token) {
+      const startDocSnapshot = await db.collection(collection).doc(token).get();
+      if (startDocSnapshot.exists) {
+        docs = await query.startAfter(startDocSnapshot).limit(limit + 1).get();
+      }
+    }
+
+    // Filter by search query on case name if provided
+    let filteredDocs = docs;
+    if (searchQuery && searchQuery.trim()) {
+      const queryLower = searchQuery.toLowerCase();
+      filteredDocs = docs;
+      const filtered = docs.docs.filter((doc) => {
+        const data = doc.data() as MoldCase;
+        const caseName = data.name?.toLowerCase() || "";
+        return caseName.includes(queryLower);
+      });
+
+      // Reconstruct QuerySnapshot-like object with filtered docs
+      return {
+        snapshot: {
+          docs: filtered.slice(0, limit),
+          size: filtered.length,
+          empty: filtered.length === 0,
+          query: docs.query,
+          docChanges: () => [],
+          forEach: (callback: any) => filtered.forEach((d) => callback({doc: () => d})),
+        } as any,
+        nextPageToken: filtered.length > limit ? filtered[limit - 1].id : null,
+      };
+    }
+
+    return {
+      snapshot: docs,
+      nextPageToken: docs.docs.length > limit ? docs.docs[limit - 1].id : null,
     };
   } catch (err) {
     devLog(err);
