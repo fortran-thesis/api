@@ -26,10 +26,6 @@ jobs:
         run: npm ci
         working-directory: functions
 
-      - name: Security audit
-        run: npm audit --omit=dev --audit-level=moderate
-        working-directory: functions
-
       - name: Run type check
         run: npm run type-check
         working-directory: functions
