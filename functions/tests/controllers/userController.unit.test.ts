@@ -271,12 +271,20 @@ describe("userController (unit)", () => {
   });
 
   describe("patchUserProfile", () => {
+    beforeEach(() => {
+      // Reset storage mock before each test
+      (mockStorage.uploadFiles as any).mockReset();
+    });
+
     it("should successfully update profile with photo uploaded", async () => {
       const userId = "test-user-id";
       const details = { firstName: "Karl" };
+      const files = [{ originalname: "pic.jpg", buffer: Buffer.from("test") }] as any;
+      
       (mockReq as any).user = { id: userId } as any;
       mockReq.body = details;
-      (mockReq as any).files = [{ originalname: "pic.jpg", buffer: Buffer.from("test") }] as any;
+      (mockReq as any).files = files;
+      (mockReq as any).headers = { "content-type": "multipart/form-data" };
 
       (mockStorage.uploadFiles as any).mockResolvedValue(["users/123_pic.jpg"]);
       mockAuthService.updateUserProfile.mockResolvedValue(true);
@@ -285,7 +293,10 @@ describe("userController (unit)", () => {
 
       await userController.patchUserProfile(mockReq as Request, mockRes as Response);
 
-      expect(mockStorage.uploadFiles).toHaveBeenCalled();
+      expect(mockStorage.uploadFiles).toHaveBeenCalledWith(
+        files,
+        expect.any(String)
+      );
       expect(mockAuthService.updateUserProfile).toHaveBeenCalledWith(userId, expect.objectContaining({ photo_url: "users/123_pic.jpg" }));
       expect(mockUserService.retrieveUserById).toHaveBeenCalledWith(userId);
       expect(mockResponseUtils.sendSuccess).toHaveBeenCalledWith(mockRes as any, updatedUser);
@@ -295,6 +306,8 @@ describe("userController (unit)", () => {
       const userId = "test-user-id";
       (mockReq as any).user = { id: userId } as any;
       mockReq.body = { firstName: "Karl" };
+      (mockReq as any).files = undefined;
+      (mockReq as any).headers = {};
 
       mockAuthService.updateUserProfile.mockResolvedValue(false);
 

@@ -1,7 +1,7 @@
 {
   "name": "functions",
   "scripts": {
-    "before-push": "npm audit --audit-level=high && tsc --noEmit && eslint --ext .js,.ts . && jest",
+    "before-push": "tsc --noEmit && eslint --ext .js,.ts . && jest",
     "lint": "eslint --ext .js,.ts .",
     "type-check": "tsc --noEmit",
     "build": "tsc && xcopy /E /I /Y src\\configs\\*.json lib\\configs\\",

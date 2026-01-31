@@ -165,7 +165,7 @@ describe("authController (unit)", () => {
         loginData.username,
         loginData.password
       );
-      expect(mockAuthService.authenticateUser).toHaveBeenCalledWith(mockToken);
+      expect(mockAuthService.authenticateUser).toHaveBeenCalledWith(mockToken, undefined);
       expect(mockRes.cookie).toHaveBeenCalledWith("session", mockCookie, {
         httpOnly: true,
         secure: false,
@@ -217,10 +217,11 @@ describe("authController (unit)", () => {
         loginData.username,
         loginData.password
       );
-      expect(mockAuthService.authenticateUser).toHaveBeenCalledWith(mockToken);
+      expect(mockAuthService.authenticateUser).toHaveBeenCalledWith(mockToken, undefined);
       expect(mockResponseUtils.sendError).toHaveBeenCalledWith(
         mockRes,
-        "Incorrect credentials"
+        "Your role is not permitted to access this application",
+        403
       );
     });
   });
