@@ -473,12 +473,20 @@ export const getAllArchivedMoldCases = async (
   const pageToken: string | undefined = req.query.pageToken as string | undefined;
   const uid: string | undefined = req.user?.id;
   try {
-    if (!uid) return sendError(res, "Unauthorized", 401);
+    if (!uid) {
+      devLog("getAllArchivedMoldCases: No UID found in req.user");
+      return sendError(res, "Unauthorized", 401);
+    }
+    devLog(`getAllArchivedMoldCases: Fetching archived cases for UID=${uid}, limit=${limit}`);
     const result: PaginatedResult<MoldCase[]> | null = await retrieveAllMoldCasesByUser(uid, limit, true, pageToken);
-    if (!result) return sendError(res, "Failed to retrieve mold cases", 404);
+    if (!result) {
+      devLog(`getAllArchivedMoldCases: retrieveAllMoldCasesByUser returned null for UID=${uid}`);
+      return sendError(res, "Failed to retrieve mold cases", 404);
+    }
+    devLog(`getAllArchivedMoldCases: Successfully retrieved ${result.snapshot.length} archived cases`);
     return sendSuccess(res, result);
   } catch (error) {
-    devLog(error);
+    devLog(error, "getAllArchivedMoldCases error:");
     return defaultError(res);
   }
 };
