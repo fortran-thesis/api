@@ -496,32 +496,96 @@ export const patchUser = async (req: Request, res: Response) => {
  *             type: object
  *             properties:
  *               details:
- *                 type: object
- *                 properties:
- *                   firstName:
- *                     type: string
- *                   lastName:
- *                     type: string
- *                   email:
- *                     type: string
- *                   displayName:
- *                     type: string
- *                   address:
- *                     type: string
- *                   phoneNumber:
- *                     type: string
+ *                 type: string
+ *                 description: JSON stringified object containing profile fields
+ *                 example: '{"firstName":"John","lastName":"Doe","email":"john@example.com","displayName":"John Doe","address":"123 Main St","phoneNumber":"+1234567890"}'
  *               photo:
  *                 type: string
  *                 format: binary
+ *                 description: Optional profile photo file (image/jpeg, image/png, image/webp)
  *     responses:
  *       200:
- *         description: Successfully updated profile
+ *         description: Successfully updated profile, returns updated user data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       example: "user123"
+ *                     user:
+ *                       type: object
+ *                       properties:
+ *                         username:
+ *                           type: string
+ *                         first_name:
+ *                           type: string
+ *                         last_name:
+ *                           type: string
+ *                         address:
+ *                           type: string
+ *                         role:
+ *                           type: string
+ *                           enum: [farmer, mycologist, admin]
+ *                         is_banned:
+ *                           type: boolean
+ *                     details:
+ *                       type: object
+ *                       properties:
+ *                         email:
+ *                           type: string
+ *                         displayName:
+ *                           type: string
+ *                         photo_url:
+ *                           type: string
+ *                           nullable: true
+ *                         disabled:
+ *                           type: boolean
+ *                         phone_number:
+ *                           type: string
  *       400:
- *         description: Validation error
+ *         description: Validation error or failed to update
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
  *       401:
- *         description: Unauthorized
+ *         description: Unauthorized - missing or invalid authentication
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
  *       500:
  *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
  */
 export const patchUserProfile = async (req: Request, res: Response) => {
   try {
