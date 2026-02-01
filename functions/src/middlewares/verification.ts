@@ -16,12 +16,20 @@ const verifyUserToken =
       try {
         const authHeader = req.headers.authorization;
         if (!authHeader || !authHeader.startsWith("Bearer ")) {
-          sendError(res, "Unauthorized", 401);
+          if (!res.headersSent) {
+            sendError(res, "Unauthorized", 401);
+          }
           return;
         }
 
         const idToken = authHeader.split(" ")[1];
         const user = await verifyToken(idToken);
+        if (!user) {
+          if (!res.headersSent) {
+            sendError(res, "Unauthorized", 401);
+          }
+          return;
+        }
         if (
           !user?.user.role ||
         (requiredRole &&
@@ -31,7 +39,9 @@ const verifyUserToken =
           devLog(
             "User role:" + user?.user.role + "\nRequired role:" + requiredRole
           );
-          sendError(res, "Forbidden", 403);
+          if (!res.headersSent) {
+            sendError(res, "Forbidden", 403);
+          }
           return;
         }
 
@@ -39,9 +49,10 @@ const verifyUserToken =
         req.user = user;
         next();
       } catch (error) {
-        devLog(error);
-        sendError(res, "Something went wrong.", 500);
-        return;
+        devLog(error, "verifyUserToken error:");
+        if (!res.headersSent) {
+          sendError(res, "Something went wrong.", 500);
+        }
       }
     };
 
@@ -57,11 +68,19 @@ const verifyUserCookie =
       try {
         const sessionCookie = req.cookies.session;
         if (!sessionCookie) {
-          sendError(res, "Unauthorized", 401);
+          if (!res.headersSent) {
+            sendError(res, "Unauthorized", 401);
+          }
           return;
         }
 
         const user = await verifyCookie(sessionCookie);
+        if (!user) {
+          if (!res.headersSent) {
+            sendError(res, "Unauthorized", 401);
+          }
+          return;
+        }
         if (
           !user?.user.role ||
         (requiredRole &&
@@ -71,7 +90,9 @@ const verifyUserCookie =
           devLog(
             "User role:" + user?.user.role + "\nRequired role:" + requiredRole
           );
-          sendError(res, "Forbidden", 403);
+          if (!res.headersSent) {
+            sendError(res, "Forbidden", 403);
+          }
           return;
         }
 
@@ -80,21 +101,30 @@ const verifyUserCookie =
         next();
         return;
       } catch (error) {
-        devLog(error);
-        sendError(res, "Something went wrong.", 500);
-        return;
+        devLog(error, "verifyUserCookie error:");
+        if (!res.headersSent) {
+          sendError(res, "Something went wrong.", 500);
+        }
       }
     };
 
 export const verifyUser =
   (requiredRole?: Role) =>
     async (req: Request, res: Response, next: NextFunction) => {
-      const authHeader = req.headers.authorization;
-      if (authHeader && authHeader.startsWith("Bearer ")) {
-      // Try token verification
-        await verifyUserToken(requiredRole)(req, res, next);
-      } else {
-      // Try cookie verification
-        await verifyUserCookie(requiredRole)(req, res, next);
+      try {
+        const authHeader = req.headers.authorization;
+        if (authHeader && authHeader.startsWith("Bearer ")) {
+          // Try token verification
+          await verifyUserToken(requiredRole)(req, res, next);
+        } else {
+          // Try cookie verification
+          await verifyUserCookie(requiredRole)(req, res, next);
+        }
+      } catch (error) {
+        devLog(error, "verifyUser middleware error:");
+        // Make sure we send JSON response, not HTML
+        if (!res.headersSent) {
+          sendError(res, "Authentication failed", 401);
+        }
       }
     };
