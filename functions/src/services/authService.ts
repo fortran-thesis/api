@@ -116,24 +116,29 @@ export const registerOAuthUser = async (
   uid: string
 ): Promise<ApiResponse<string>> => {
   try {
+    devLog(`🔵 registerOAuthUser: Starting for UID ${uid}`);
+
     // Check if Firestore user exists
     const firestoreUser = await findFirestoreUserById(uid);
     if (firestoreUser) {
       // User already exists in Firestore, treat as success
-      devLog(`✅ OAuth: Firestore user already exists for UID ${uid}`);
+      devLog(`✅ registerOAuthUser: Firestore user already exists for UID ${uid}`);
       return {
         success: true,
         data: "User already exists in Firestore.",
       };
     }
+    devLog(`🔍 registerOAuthUser: No Firestore user found for UID ${uid}, will create`);
 
     // User doesn't exist in Firestore, check Firebase Auth
     let userExistsInAuth = false;
     try {
       await getAuth().getUser(uid);
       userExistsInAuth = true;
+      devLog("✅ registerOAuthUser: User exists in Firebase Auth");
     } catch (err: any) {
       if (err.code !== "auth/user-not-found") throw err;
+      devLog("❌ registerOAuthUser: User not found in Firebase Auth");
     }
 
     if (!userExistsInAuth) {
@@ -156,9 +161,12 @@ export const registerOAuthUser = async (
       },
     };
 
+    devLog(`📝 registerOAuthUser: About to create user with role=${user.role}`);
     const details = await addUser(user, uid);
-    if (!details) throw new Error("Could not register user in Firestore!");
-    devLog(`✅ OAuth: Created Firestore user with UID ${uid} and role ${Role.USER}`);
+    devLog(`📝 registerOAuthUser: addUser returned: ${details ? "DocumentSnapshot" : "null"}`);
+
+    if (!details) throw new Error("Could not register user in Firestore! addUser returned null");
+    devLog(`✅ registerOAuthUser: Created Firestore user with UID ${uid} and role ${Role.USER}`);
     return {
       success: true,
       data: "Successfully created user in Firebase Firestore!",

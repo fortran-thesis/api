@@ -265,16 +265,16 @@ export const oAuth = async (req: Request, res: Response) => {
   try {
     const token: string = req.body.token;
     const deviceType = (req as any).deviceType;
-    
+
     devLog(`🔵 OAuth flow started: deviceType='${deviceType}'`);
-    
+
     const uid: string | null = await identifyOAuthUser(token);
     if (!uid) {
-      devLog(`❌ OAuth: Failed to identify user from token`);
+      devLog("❌ OAuth: Failed to identify user from token");
       return sendError(res, "Something went wrong identifying user.");
     }
     devLog(`✅ OAuth: Identified user with UID=${uid}`);
-    
+
     const process: ApiResponse<string> = await registerOAuthUser(uid);
     if (!process.success) {
       devLog(`❌ OAuth: Failed to register user: ${process.error}`);
@@ -284,10 +284,10 @@ export const oAuth = async (req: Request, res: Response) => {
 
     const cookie: string | null = await authenticateUser(token, deviceType);
     if (!cookie) {
-      devLog(`❌ OAuth: Authentication failed - likely role/device access issue`);
+      devLog("❌ OAuth: Authentication failed - likely role/device access issue");
       return sendError(res, "Your role is not permitted to access this application", 403);
     }
-    devLog(`✅ OAuth: Authentication successful, session cookie created`);
+    devLog("✅ OAuth: Authentication successful, session cookie created");
 
     res.cookie("session", cookie, {
       httpOnly: true,

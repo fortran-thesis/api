@@ -45,15 +45,26 @@ export const addDocument = async <T extends object>(
       },
     };
     if (uid) {
+      devLog(`📝 addDocument: Creating document in '${collection}' with UID=${uid}`);
       const ref = callFirebase(collection).doc(uid);
-      if ((await ref.get()).exists) throw new Error("User already exists");
+      const existsSnap = await ref.get();
+      if (existsSnap.exists) {
+        throw new Error("User already exists");
+      }
+      devLog("📝 addDocument: Document doesn't exist yet, calling set()");
       await ref.set(withMetadata);
-      return await ref.get();
+      const result = await ref.get();
+      devLog(`✅ addDocument: Successfully created document, exists=${result.exists}`);
+      return result;
     }
 
-    return await (await callFirebase(collection).add(withMetadata)).get();
+    devLog(`📝 addDocument: Creating auto-ID document in '${collection}'`);
+    const docRef = await callFirebase(collection).add(withMetadata);
+    const result = await docRef.get();
+    devLog(`✅ addDocument: Successfully created auto-ID document with ID=${result.id}`);
+    return result;
   } catch (error) {
-    devLog(error);
+    devLog(error, "ADD_DOCUMENT_ERROR");
     return null;
   }
 };
