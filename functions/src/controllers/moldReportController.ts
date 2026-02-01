@@ -124,24 +124,24 @@ export const createMoldReport = async (req: Request, res: Response) => {
    *         description: Server error
    */
   try {
-    console.log("[createMoldReport] Starting report creation");
+    devLog("[createMoldReport] Starting report creation");
     // After parseMultipartJson, details fields are promoted to root body
     const {description, ...details} = req.body;
     const photos: Express.Multer.File[] | undefined = req.files as
       | Express.Multer.File[]
       | undefined;
-    console.log(`[createMoldReport] Received ${photos?.length || 0} photos, case_name=${details.case_name}`);
+    devLog(`[createMoldReport] Received ${photos?.length || 0} photos, case_name=${details.case_name}`);
 
     let urls: string[] | null = null;
     if (photos && photos.length > 0) {
-      console.log(`[createMoldReport] Starting file upload for ${photos.length} photos`);
+      devLog(`[createMoldReport] Starting file upload for ${photos.length} photos`);
       const startTime = Date.now();
       const uploaded = await uploadFiles(photos, StorageFolder.MOLD_REPORTS);
       const duration = Date.now() - startTime;
-      console.log(`[createMoldReport] Upload completed in ${duration}ms, result: ${uploaded?.length || 0} files`);
+      devLog(`[createMoldReport] Upload completed in ${duration}ms, result: ${uploaded?.length || 0} files`);
 
       if (!uploaded || uploaded.length === 0) {
-        console.error("[createMoldReport] Upload failed - no files returned");
+        devLog("[createMoldReport] Upload failed - no files returned");
         return sendError(
           res,
           "Invalid photo, please upload a different image.",
@@ -173,7 +173,7 @@ export const createMoldReport = async (req: Request, res: Response) => {
       };
     }
 
-    console.log(`[createMoldReport] Creating firestore report with ${caseDetails.length} case details`);
+    devLog(`[createMoldReport] Creating firestore report with ${caseDetails.length} case details`);
     const moldReport: MoldReport | null = await addMoldReportToFirestore({
       ...details,
       assigned_mycologist_id: null,
@@ -183,13 +183,13 @@ export const createMoldReport = async (req: Request, res: Response) => {
     } as MoldReport);
 
     if (!moldReport) {
-      console.error("[createMoldReport] Failed to create firestore report");
+      devLog("[createMoldReport] Failed to create firestore report");
       return sendError(res, "Failed to create mold report", 400);
     }
-    console.log(`[createMoldReport] ✅ Report created successfully: ${moldReport.case_name}`);
+    devLog(`[createMoldReport] ✅ Report created successfully: ${moldReport.case_name}`);
     return sendSuccess(res, moldReport);
   } catch (error) {
-    console.error("[createMoldReport] ❌ Error:", error);
+    devLog("[createMoldReport] ❌ Error: " + error);
     devLog(error);
     return defaultError(res);
   }

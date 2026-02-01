@@ -6,6 +6,7 @@ import rateLimit from "express-rate-limit";
 import {corsOptions} from "./configs/cors";
 import {setupSwagger} from "./configs/swagger";
 import authRoutes from "./routes/authRoutes";
+import {devLog} from "./utils/dev";
 
 import userRoutes from "./routes/userRoutes";
 import mycologistRoutes from "./routes/mycologistRoutes";
@@ -28,10 +29,12 @@ import {cloudRunMultipartFix} from "./middlewares/cloudRunMultipartFix";
 
 const app = express();
 
-// Set timeout for large file uploads (3 minutes for the entire request)
+// Set timeout for large file uploads (9 minutes = 540 seconds, Cloud Run hard limit)
+// This is the maximum time allowed for an entire HTTP request in Cloud Run
 app.use((req, res, next) => {
-  req.setTimeout(180000); // 3 minutes
-  res.setTimeout(180000); // 3 minutes
+  devLog(`[TIMEOUT] Setting socket timeout to 540s (9 min) for request to ${req.path}`);
+  req.setTimeout(540000); // 9 minutes (Cloud Run hard limit)
+  res.setTimeout(540000); // 9 minutes (Cloud Run hard limit)
   next();
 });
 
@@ -41,16 +44,19 @@ app.use((req, res, next) => {
   const contentType = req.headers["content-type"] || "";
   if (contentType.includes("multipart/form-data")) {
     const chunks: Buffer[] = [];
+    const startTime = Date.now();
+    devLog("[RAW BODY CAPTURE] Starting to capture multipart request");
     req.on("data", (chunk: Buffer) => {
       chunks.push(chunk);
     });
     req.on("end", () => {
       (req as any).rawBody = Buffer.concat(chunks);
-      console.log("[RAW BODY CAPTURE] Captured", (req as any).rawBody.length, "bytes");
+      const duration = Date.now() - startTime;
+      devLog(`[RAW BODY CAPTURE] ✅ Captured ${(req as any).rawBody.length} bytes in ${duration}ms`);
       next();
     });
     req.on("error", (err) => {
-      console.error("[RAW BODY CAPTURE] Error:", err);
+      devLog(`[RAW BODY CAPTURE] ❌ Error: ${err}`);
       next(err);
     });
   } else {
@@ -72,7 +78,7 @@ app.use((req, res, next) => {
   const contentType = req.headers["content-type"] || "";
   if (contentType.includes("multipart/form-data")) {
     // Skip body parsing for multipart - cloudRunMultipartFix already handled it
-    console.log("[APP] Skipping body parser for multipart request");
+    devLog("[APP] Skipping body parser for multipart request");
     return next();
   }
   // Apply JSON and URL-encoded parsers for other content types
@@ -109,14 +115,15 @@ app.use("/api", router);
 
 // Global error handler for multipart/multer errors
 app.use((err: any, req: Request, res: Response, next: NextFunction): void => {
-  console.error("Global Error Handler Caught:", err);
-  console.log("Request Headers:", JSON.stringify(req.headers, null, 2));
+  devLog(`[GLOBAL ERROR] ${err.message || err}`);
+  devLog(`[GLOBAL ERROR] Request Headers: ${JSON.stringify(req.headers, null, 2)}`);
 
   // Handle Multer/Busboy errors
   if (
     err.message === "Unexpected end of form" ||
     err.code === "UNEXPECTED_END_OF_FORM"
   ) {
+    devLog("[MULTIPART ERROR] Unexpected end of form - may be network/timeout issue");
     res.status(400).json({
       success: false,
       message:
@@ -130,6 +137,7 @@ app.use((err: any, req: Request, res: Response, next: NextFunction): void => {
 
   // Handle other Multer errors
   if (err.name === "MulterError") {
+    devLog(`[MULTER ERROR] ${err.message || err} (code: ${err.code})`);
     res.status(400).json({
       success: false,
       message: "File upload error",
