@@ -53,10 +53,10 @@ export const cloudRunMultipartFix = (req: Request, res: Response, next: NextFunc
     const busboy = Busboy({
       headers: req.headers,
       limits: {
-        fileSize: 10 * 1024 * 1024, // 10MB
-        files: 10,
-        fields: 20,
-        parts: 30,
+        fileSize: 50 * 1024 * 1024, // 50MB per file
+        files: 50,
+        fields: 50,
+        parts: 100,
       },
     });
 

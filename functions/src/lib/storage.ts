@@ -32,17 +32,25 @@ export const uploadFile = async (
   bucketName?: string
 ): Promise<string | null> => {
   try {
+    console.log(`[uploadFile] Starting: ${filePath} (size: ${data instanceof Buffer ? data.length : "?"} bytes)`);
     devLog(`uploadFile: Starting upload to: ${filePath} (contentType: ${contentType})`);
+
     const file = getFileRef(filePath, bucketName);
     const options: any = {};
     if (contentType) options.metadata = {contentType};
+
+    const startTime = Date.now();
     await file.save(data, options);
+    const duration = Date.now() - startTime;
+
+    console.log(`[uploadFile] ✅ Saved in ${duration}ms: ${filePath}`);
     devLog(`uploadFile: ✅ File saved successfully: ${filePath}`);
 
     // Return the file path (to be stored in DB)
     // Use getSignedUrl() when you need to display/access the file
     return filePath;
   } catch (error) {
+    console.error(`[uploadFile] ❌ Error: ${filePath}`, error);
     devLog(`uploadFile: ❌ Error uploading to ${filePath}: ${error}`);
     devLog(error);
     return null;
@@ -54,24 +62,42 @@ export const uploadFiles = async (
   folder: string,
   bucketName?: string
 ): Promise<string[]> => {
+  console.log(`[uploadFiles] Starting upload for ${files.length} files to folder: ${folder}`);
   devLog(`uploadFiles: Starting upload for ${files.length} files to folder: ${folder}`);
-  const filePaths: string[] = [];
-  for (const file of files) {
-    const filePath = `${folder}/${Date.now()}_${file.originalname}`;
+
+  // Upload all files in parallel for better performance
+  const uploadPromises = files.map(async (file) => {
+    const timestamp = Date.now();
+    const filePath = `${folder}/${timestamp}_${file.originalname}`;
+    console.log(`[uploadFiles] Uploading file to: ${filePath} (size: ${file.buffer.length} bytes)`);
     devLog(`uploadFiles: Uploading file to: ${filePath} (size: ${file.buffer.length} bytes, mime: ${file.mimetype})`);
-    const uploadedPath = await uploadFile(
-      filePath,
-      file.buffer,
-      file.mimetype,
-      bucketName
-    );
-    if (uploadedPath) {
-      devLog(`uploadFiles: ✅ File uploaded successfully: ${uploadedPath}`);
-      filePaths.push(uploadedPath);
-    } else {
-      devLog(`uploadFiles: ❌ File upload failed for: ${filePath}`);
+
+    try {
+      const uploadedPath = await uploadFile(
+        filePath,
+        file.buffer,
+        file.mimetype,
+        bucketName
+      );
+      if (uploadedPath) {
+        console.log(`[uploadFiles] ✅ File uploaded: ${uploadedPath}`);
+        devLog(`uploadFiles: ✅ File uploaded successfully: ${uploadedPath}`);
+        return uploadedPath;
+      } else {
+        console.error(`[uploadFiles] ❌ File upload returned null for: ${filePath}`);
+        devLog(`uploadFiles: ❌ File upload failed for: ${filePath}`);
+        return null;
+      }
+    } catch (error) {
+      console.error(`[uploadFiles] ❌ Error uploading ${filePath}:`, error);
+      devLog(`uploadFiles: ❌ Error uploading ${filePath}: ${error}`);
+      return null;
     }
-  }
+  });
+
+  const results = await Promise.all(uploadPromises);
+  const filePaths = results.filter((path) => path !== null) as string[];
+  console.log(`[uploadFiles] ✅ Upload complete - ${filePaths.length}/${files.length} files succeeded`);
   devLog(`uploadFiles: ✅ Upload complete - ${filePaths.length}/${files.length} files succeeded`);
   return filePaths;
 };

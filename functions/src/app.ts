@@ -28,6 +28,13 @@ import {cloudRunMultipartFix} from "./middlewares/cloudRunMultipartFix";
 
 const app = express();
 
+// Set timeout for large file uploads (3 minutes for the entire request)
+app.use((req, res, next) => {
+  req.setTimeout(180000); // 3 minutes
+  res.setTimeout(180000); // 3 minutes
+  next();
+});
+
 // CRITICAL: Capture raw body BEFORE any middleware for multipart forms in Cloud Run
 // Cloud Run/Firebase Functions v2 consume the stream, so we need to buffer it first
 app.use((req, res, next) => {
