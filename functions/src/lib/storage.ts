@@ -32,15 +32,18 @@ export const uploadFile = async (
   bucketName?: string
 ): Promise<string | null> => {
   try {
+    devLog(`uploadFile: Starting upload to: ${filePath} (contentType: ${contentType})`);
     const file = getFileRef(filePath, bucketName);
     const options: any = {};
     if (contentType) options.metadata = {contentType};
     await file.save(data, options);
+    devLog(`uploadFile: ✅ File saved successfully: ${filePath}`);
 
     // Return the file path (to be stored in DB)
     // Use getSignedUrl() when you need to display/access the file
     return filePath;
   } catch (error) {
+    devLog(`uploadFile: ❌ Error uploading to ${filePath}: ${error}`);
     devLog(error);
     return null;
   }
@@ -51,17 +54,25 @@ export const uploadFiles = async (
   folder: string,
   bucketName?: string
 ): Promise<string[]> => {
+  devLog(`uploadFiles: Starting upload for ${files.length} files to folder: ${folder}`);
   const filePaths: string[] = [];
   for (const file of files) {
     const filePath = `${folder}/${Date.now()}_${file.originalname}`;
+    devLog(`uploadFiles: Uploading file to: ${filePath} (size: ${file.buffer.length} bytes, mime: ${file.mimetype})`);
     const uploadedPath = await uploadFile(
       filePath,
       file.buffer,
       file.mimetype,
       bucketName
     );
-    if (uploadedPath) filePaths.push(uploadedPath);
+    if (uploadedPath) {
+      devLog(`uploadFiles: ✅ File uploaded successfully: ${uploadedPath}`);
+      filePaths.push(uploadedPath);
+    } else {
+      devLog(`uploadFiles: ❌ File upload failed for: ${filePath}`);
+    }
   }
+  devLog(`uploadFiles: ✅ Upload complete - ${filePaths.length}/${files.length} files succeeded`);
   return filePaths;
 };
 
@@ -115,23 +126,30 @@ export const getSignedUrl = async (
   bucketName?: string
 ): Promise<string | null> => {
   try {
+    devLog(`getSignedUrl: Attempting to generate URL for: ${filePath}`);
     const file = getFileRef(filePath, bucketName);
 
     // Check if file exists first
     const [exists] = await file.exists();
+    devLog(`getSignedUrl: File exists check for '${filePath}': ${exists ? "EXISTS" : "NOT_FOUND"}`);
+
     if (!exists) {
-      devLog(`File does not exist: ${filePath}`);
+      devLog(`getSignedUrl: ❌ File does not exist: ${filePath}`);
       return null;
     }
 
     // Generate signed URL with explicit expiration date
+    const expirationTime = Date.now() + expiresInSeconds * 1000;
+    devLog(`getSignedUrl: Generating signed URL, expires in ${expiresInSeconds}s (${new Date(expirationTime).toISOString()})`);
+
     const [url] = await file.getSignedUrl({
       action: "read",
-      expires: Date.now() + expiresInSeconds * 1000,
+      expires: expirationTime,
     });
+    devLog(`getSignedUrl: ✅ Successfully generated signed URL (${url.substring(0, 50)}...)`);
     return url;
   } catch (error) {
-    devLog(`Error generating signed URL for ${filePath}`);
+    devLog(`getSignedUrl: ❌ Error generating signed URL for ${filePath}: ${error}`);
     return null;
   }
 };

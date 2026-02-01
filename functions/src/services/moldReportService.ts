@@ -41,23 +41,42 @@ import {transformToSignedUrl} from "../utils/storageTransform";
 const transformCoverPhotos = async (
   caseDetails: Array<any>
 ): Promise<Array<any>> => {
-  if (!Array.isArray(caseDetails)) return caseDetails;
+  if (!Array.isArray(caseDetails)) {
+    devLog(`transformCoverPhotos: caseDetails is not an array: ${typeof caseDetails}`);
+    return caseDetails;
+  }
+
+  devLog(`transformCoverPhotos: Processing ${caseDetails.length} case details`);
 
   return Promise.all(
-    caseDetails.map(async (detail) => {
-      if (!detail.cover_photo || !Array.isArray(detail.cover_photo)) {
+    caseDetails.map(async (detail, idx) => {
+      if (!detail.cover_photo) {
+        devLog(`transformCoverPhotos[${idx}]: No cover_photo field`);
         return detail;
       }
 
+      if (!Array.isArray(detail.cover_photo)) {
+        devLog(`transformCoverPhotos[${idx}]: cover_photo is not an array: ${typeof detail.cover_photo}`);
+        return detail;
+      }
+
+      devLog(`transformCoverPhotos[${idx}]: Found ${detail.cover_photo.length} photos to transform`);
+
       const transformedPhotos = await Promise.all(
-        detail.cover_photo.map((photoPath: string) =>
-          transformToSignedUrl(photoPath)
-        )
+        detail.cover_photo.map(async (photoPath: string, photoIdx: number) => {
+          devLog(`transformCoverPhotos[${idx}][${photoIdx}]: Transforming: ${photoPath}`);
+          const signedUrl = await transformToSignedUrl(photoPath);
+          devLog(`transformCoverPhotos[${idx}][${photoIdx}]: Result: ${signedUrl ? "SUCCESS" : "FAILED"} - ${signedUrl}`);
+          return signedUrl;
+        })
       );
+
+      const filteredPhotos = transformedPhotos.filter((url) => url !== null);
+      devLog(`transformCoverPhotos[${idx}]: Filtered ${filteredPhotos.length}/${transformedPhotos.length} photos (removed nulls)`);
 
       return {
         ...detail,
-        cover_photo: transformedPhotos.filter((url) => url !== null),
+        cover_photo: filteredPhotos,
       };
     })
   );
@@ -82,10 +101,18 @@ export const addMoldReportToFirestore = async (
   details: MoldReport
 ): Promise<MoldReport | null> => {
   try {
+    devLog(`addMoldReportToFirestore: Creating report with case_name="${details.case_name}"`);
+    devLog(`addMoldReportToFirestore: case_details type: ${typeof details.case_details}, isArray: ${Array.isArray(details.case_details)}`);
+
     // Ensure case_details is treated as an array and attach metadata to each entry
     const caseDetailsArray = Array.isArray(details.case_details) ?
       details.case_details :
       [];
+
+    devLog(`addMoldReportToFirestore: case_details count: ${caseDetailsArray.length}`);
+    caseDetailsArray.forEach((d: any, idx: number) => {
+      devLog(`addMoldReportToFirestore[${idx}]: cover_photo=${JSON.stringify(d.cover_photo)}, description="${d.description}"`);
+    });
 
     const caseDetailsWithMeta: WithMetadata<MoldReportDetails>[] =
       caseDetailsArray.map((d) => ({
@@ -119,8 +146,10 @@ export const addMoldReportToFirestore = async (
     const doc: DocumentSnapshot | null =
       await addMoldReport(detailsWithMetadata);
     if (!doc) throw new Error("Cannot add mold report.");
+    devLog("addMoldReportToFirestore: ✅ Report created successfully");
     return documentToJson<MoldReport>(doc);
   } catch (error) {
+    devLog(`addMoldReportToFirestore: ❌ Error - ${error}`);
     devLog(error);
     return null;
   }
@@ -231,9 +260,16 @@ export const retrieveMoldReportById = async (
   id: string
 ): Promise<MoldReport | null> => {
   try {
+    devLog(`retrieveMoldReportById: Fetching report ID: ${id}`);
     const doc: DocumentSnapshot | null = await findMoldReportById(id);
-    if (!doc) throw new Error("No mold report found.");
+    if (!doc) {
+      devLog(`retrieveMoldReportById: ❌ Document not found for ID: ${id}`);
+      throw new Error("No mold report found.");
+    }
+
     const raw = documentToJson<MoldReport>(doc);
+    devLog(`retrieveMoldReportById: Raw data case_details: ${JSON.stringify(raw.case_details)}`);
+
     const nr = normalizeDateObserved(raw) as unknown as MoldReport & any;
     try {
       const authUser = await getAuthUserById(nr.user_id);
@@ -250,11 +286,15 @@ export const retrieveMoldReportById = async (
 
     // Transform cover photos to signed URLs
     if (nr.case_details) {
+      devLog(`retrieveMoldReportById: Transforming cover photos for ${nr.case_details.length} case details`);
       nr.case_details = await transformCoverPhotos(nr.case_details);
+      devLog(`retrieveMoldReportById: After transform case_details: ${JSON.stringify(nr.case_details)}`);
     }
 
+    devLog("retrieveMoldReportById: ✅ Report retrieved successfully");
     return nr;
   } catch (error) {
+    devLog(`retrieveMoldReportById: ❌ Error - ${error}`);
     devLog(error);
     return null;
   }
