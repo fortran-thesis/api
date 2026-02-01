@@ -132,26 +132,8 @@ export const createMoldReport = async (req: Request, res: Response) => {
       | undefined;
     devLog(`[createMoldReport] Received ${photos?.length || 0} photos, case_name=${details.case_name}`);
 
-    let urls: string[] | null = null;
-    if (photos && photos.length > 0) {
-      devLog(`[createMoldReport] Starting file upload for ${photos.length} photos`);
-      const startTime = Date.now();
-      const uploaded = await uploadFiles(photos, StorageFolder.MOLD_REPORTS);
-      const duration = Date.now() - startTime;
-      devLog(`[createMoldReport] Upload completed in ${duration}ms, result: ${uploaded?.length || 0} files`);
-
-      if (!uploaded || uploaded.length === 0) {
-        devLog("[createMoldReport] Upload failed - no files returned");
-        return sendError(
-          res,
-          "Invalid photo, please upload a different image.",
-          400
-        );
-      }
-      urls = uploaded;
-    }
-
-    // Preserve existing case_details if provided, otherwise create new entry
+    // Create report with placeholder URLs first (returns immediately)
+    const urls: string[] | null = null;
     let caseDetails = details.case_details || [];
     if (!Array.isArray(caseDetails)) {
       caseDetails = [];
@@ -161,7 +143,7 @@ export const createMoldReport = async (req: Request, res: Response) => {
     if (caseDetails.length === 0) {
       caseDetails = [
         {
-          cover_photo: urls,
+          cover_photo: urls || [],
           description: description || "",
         },
       ];
@@ -187,6 +169,33 @@ export const createMoldReport = async (req: Request, res: Response) => {
       return sendError(res, "Failed to create mold report", 400);
     }
     devLog(`[createMoldReport] ✅ Report created successfully: ${moldReport.case_name}`);
+
+    // Upload photos in background (don't wait for it)
+    if (photos && photos.length > 0 && moldReport) {
+      devLog(`[createMoldReport] Starting async file upload in background for ${photos.length} photos`);
+      const reportId = (moldReport as any)._id || (moldReport as any).id || Object.keys(moldReport)[0];
+      uploadFiles(photos, StorageFolder.MOLD_REPORTS)
+        .then(async (uploaded) => {
+          devLog(`[createMoldReport] ✅ Async upload completed: ${uploaded?.length || 0} files`);
+
+          // Update firestore report with photo URLs
+          if (uploaded && uploaded.length > 0 && reportId) {
+            try {
+              caseDetails[0].cover_photo = uploaded;
+              await updateMoldReportInFirestore(reportId, {
+                case_details: caseDetails,
+              } as any);
+              devLog("[createMoldReport] ✅ Updated report with photo URLs");
+            } catch (err) {
+              devLog(`[createMoldReport] ⚠️ Failed to update with photo URLs: ${err}`);
+            }
+          }
+        })
+        .catch((err) => {
+          devLog(`[createMoldReport] ❌ Async upload failed: ${err}`);
+        });
+    }
+
     return sendSuccess(res, moldReport);
   } catch (error) {
     devLog("[createMoldReport] ❌ Error: " + error);
