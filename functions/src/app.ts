@@ -38,34 +38,8 @@ app.use((req, res, next) => {
   next();
 });
 
-// CRITICAL: Capture raw body BEFORE any middleware for multipart forms in Cloud Run
-// Cloud Run/Firebase Functions v2 consume the stream, so we need to buffer it first
-app.use((req, res, next) => {
-  const contentType = req.headers["content-type"] || "";
-  if (contentType.includes("multipart/form-data")) {
-    const chunks: Buffer[] = [];
-    const startTime = Date.now();
-    devLog("[RAW BODY CAPTURE] Starting to capture multipart request");
-    req.on("data", (chunk: Buffer) => {
-      chunks.push(chunk);
-    });
-    req.on("end", () => {
-      (req as any).rawBody = Buffer.concat(chunks);
-      const duration = Date.now() - startTime;
-      devLog(`[RAW BODY CAPTURE] ✅ Captured ${(req as any).rawBody.length} bytes in ${duration}ms`);
-      next();
-    });
-    req.on("error", (err) => {
-      devLog(`[RAW BODY CAPTURE] ❌ Error: ${err}`);
-      next(err);
-    });
-  } else {
-    next();
-  }
-});
-
-// CRITICAL: Parse multipart/form-data using the captured rawBody
-// This MUST come after raw body capture but before any other middleware
+// CRITICAL: Parse multipart/form-data using the captured rawBody or stream directly
+// This MUST come before any other body parser
 app.use(cloudRunMultipartFix);
 
 // Apply security headers early (but after multipart fix to avoid interfering with parsing)

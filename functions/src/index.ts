@@ -21,8 +21,8 @@ import app from "./app";
 export const api = onRequest(
   {
     region: "asia-southeast1",
-    timeoutSeconds: 120,
-    memory: "512MiB",
+    timeoutSeconds: 540,
+    memory: "1GiB",
     maxInstances: 10,
   },
   app

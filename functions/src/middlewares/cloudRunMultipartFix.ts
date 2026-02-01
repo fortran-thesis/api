@@ -42,8 +42,17 @@ export const cloudRunMultipartFix = (req: Request, res: Response, next: NextFunc
   // Mark as processed to avoid double-processing
   (req as any)._multipartProcessed = true;
 
-  // Create a readable stream from the buffer
-  const stream = Readable.from(rawBody);
+  let stream: Readable;
+
+  if (rawBody && Buffer.isBuffer(rawBody)) {
+    devLog("[CLOUD RUN FIX] ✅ Found rawBody: " + rawBody.length + " bytes, using buffer stream");
+    stream = Readable.from(rawBody);
+  } else {
+    // 2. Fallback to direct request piping
+    // This works if the stream hasn't been consumed yet
+    devLog("[CLOUD RUN FIX] ⚠️ No rawBody found, attempting to pipe request stream directly");
+    stream = req;
+  }
 
   // Parse with busboy
   try {
@@ -66,7 +75,7 @@ export const cloudRunMultipartFix = (req: Request, res: Response, next: NextFunc
 
     busboy.on("field", (fieldname: string, value: string) => {
       fieldCount++;
-      devLog(`[CLOUD RUN FIX] Field: ${fieldname} (${value.length} bytes)`);
+      // devLog(`[CLOUD RUN FIX] Field: ${fieldname} (${value.length} bytes)`);
       req.body[fieldname] = value;
     });
 
@@ -112,7 +121,7 @@ export const cloudRunMultipartFix = (req: Request, res: Response, next: NextFunc
       devLog("[CLOUD RUN FIX] ❌ Busboy error: " + err);
       hasError = true;
       // Clean up the stream
-      stream.destroy();
+      if (stream.destroy) stream.destroy();
       next(err);
     });
 
@@ -124,7 +133,7 @@ export const cloudRunMultipartFix = (req: Request, res: Response, next: NextFunc
       }
 
       devLog(`[CLOUD RUN FIX] ✅ Parse complete: ${fieldCount} fields, ${fileCount} files in ${totalDuration}ms`);
-      devLog("[CLOUD RUN FIX] Body keys: " + Object.keys(req.body).join(", "));
+      // devLog("[CLOUD RUN FIX] Body keys: " + Object.keys(req.body).join(", "));
 
       if (files.length > 0) {
         req.files = files;
