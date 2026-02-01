@@ -10,6 +10,7 @@ import {
   deleteFirestoreUser,
   softDeleteFirestoreUser,
   updateFirestoreUser,
+  findFirestoreUserById,
 } from "../repositories/userRepository";
 import {Role} from "../types/enums";
 import {DeviceType, canAccessDevice} from "../types/device";
@@ -115,27 +116,38 @@ export const registerOAuthUser = async (
   uid: string
 ): Promise<ApiResponse<string>> => {
   try {
-    let userExists = false;
-    try {
-      await getAuth().getUser(uid);
-      userExists = true;
-    } catch (err: any) {
-      if (err.code !== "auth/user-not-found") throw err;
-    }
-    if (userExists) {
-      // User already exists, treat as success
+    // Check if Firestore user exists
+    const firestoreUser = await findFirestoreUserById(uid);
+    if (firestoreUser) {
+      // User already exists in Firestore, treat as success
+      devLog(`✅ OAuth: Firestore user already exists for UID ${uid}`);
       return {
         success: true,
-        data: "User already exists in Firebase Auth.",
+        data: "User already exists in Firestore.",
       };
     }
 
+    // User doesn't exist in Firestore, check Firebase Auth
+    let userExistsInAuth = false;
+    try {
+      await getAuth().getUser(uid);
+      userExistsInAuth = true;
+    } catch (err: any) {
+      if (err.code !== "auth/user-not-found") throw err;
+    }
+
+    if (!userExistsInAuth) {
+      // User doesn't exist anywhere
+      throw new Error(`OAuth user UID ${uid} not found in Firebase Auth`);
+    }
+
+    // User exists in Firebase Auth but not in Firestore - create Firestore record
     const user: WithMetadata<User> = {
       username: "",
       first_name: "",
       last_name: "",
       address: "",
-      role: Role.USER,
+      role: Role.USER, // Default role is USER (="farmer")
       is_banned: false,
       metadata: {
         created_at: Timestamp.now(),
@@ -145,13 +157,14 @@ export const registerOAuthUser = async (
     };
 
     const details = await addUser(user, uid);
-    if (!details) throw new Error("Could not register user!");
+    if (!details) throw new Error("Could not register user in Firestore!");
+    devLog(`✅ OAuth: Created Firestore user with UID ${uid} and role ${Role.USER}`);
     return {
       success: true,
       data: "Successfully created user in Firebase Firestore!",
     };
   } catch (error) {
-    devLog(error);
+    devLog(error, "REGISTER_OAUTH_USER");
     return {
       success: false,
       error: "Failed to register OAuth user in Firebase Firestore!",
