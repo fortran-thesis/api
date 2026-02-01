@@ -141,15 +141,33 @@ export const createMoldReport = async (req: Request, res: Response) => {
       }
       urls = uploaded;
     }
+
+    // Preserve existing case_details if provided, otherwise create new entry
+    let caseDetails = details.case_details || [];
+    if (!Array.isArray(caseDetails)) {
+      caseDetails = [];
+    }
+
+    // If no case_details were provided, create one with the uploaded photos and description
+    if (caseDetails.length === 0) {
+      caseDetails = [
+        {
+          cover_photo: urls,
+          description: description || "",
+        },
+      ];
+    } else if (urls) {
+      // If case_details exist and we have photos, update the first entry with the uploaded photos
+      caseDetails[0] = {
+        ...caseDetails[0],
+        cover_photo: urls,
+      };
+    }
+
     const moldReport: MoldReport | null = await addMoldReportToFirestore({
       ...details,
       assigned_mycologist_id: null,
-      case_details: [
-        {
-          cover_photo: urls,
-          description: description,
-        },
-      ],
+      case_details: caseDetails,
       is_archived: false,
       status: "pending",
     } as MoldReport);
