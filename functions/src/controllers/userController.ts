@@ -487,7 +487,7 @@ export const patchUser = async (req: Request, res: Response) => {
  *     security:
  *       - bearerAuth: []
  *       - cookieAuth: []
- *     description: Update the authenticated user's profile (name, email, address, phone, photo_url). Requires authentication.
+ *     description: Update the authenticated user's profile (username, name, email, address, phone, photo_url). Requires authentication.
  *     requestBody:
  *       required: true
  *       content:
@@ -498,7 +498,7 @@ export const patchUser = async (req: Request, res: Response) => {
  *               details:
  *                 type: string
  *                 description: JSON stringified object containing profile fields
- *                 example: '{"firstName":"John","lastName":"Doe","email":"john@example.com","displayName":"John Doe","address":"123 Main St","phoneNumber":"+1234567890"}'
+ *                 example: '{"username":"johndoe","firstName":"John","lastName":"Doe","email":"john@example.com","displayName":"John Doe","address":"123 Main St","phoneNumber":"+1234567890"}'
  *               photo:
  *                 type: string
  *                 format: binary
@@ -614,6 +614,7 @@ export const patchUserProfile = async (req: Request, res: Response) => {
     }
 
     const updated = await updateUserProfile(id, {
+      username: details.username,
       firstName: details.firstName,
       lastName: details.lastName,
       email: details.email,

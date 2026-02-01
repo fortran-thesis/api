@@ -284,6 +284,7 @@ export const updateUser = async (
 export const updateUserProfile = async (
   id: string,
   profile: Partial<{
+    username?: string;
     firstName?: string;
     lastName?: string;
     email?: string;
@@ -320,6 +321,7 @@ export const updateUserProfile = async (
 
     // Update Firestore user fields
     const firestoreUpdate: any = {};
+    if (profile.username !== undefined) firestoreUpdate.username = profile.username;
     if (profile.firstName !== undefined) firestoreUpdate.first_name = profile.firstName;
     if (profile.lastName !== undefined) firestoreUpdate.last_name = profile.lastName;
     if (profile.address !== undefined) firestoreUpdate.address = profile.address;
