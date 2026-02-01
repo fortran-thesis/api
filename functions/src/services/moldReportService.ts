@@ -505,7 +505,7 @@ export const searchAndFilterMoldReports = async (
     if (searchQuery && searchQuery.trim() && !priority) {
       const query = searchQuery.toLowerCase().trim();
       devLog(`🔍 Searching ${reportList.length} reports for: "${query}"`);
-      
+
       reportList = reportList.filter((report: any) => {
         const caseName = report.case_name?.toLowerCase() || "";
         const host = report.host?.toLowerCase() || "";
@@ -521,14 +521,14 @@ export const searchAndFilterMoldReports = async (
           reporterName.includes(query) ||
           reportStatus.includes(query) ||
           description.includes(query);
-        
+
         if (matches) {
           devLog(`✅ Search match: "${report.case_name}" matched query "${query}"`);
         }
-        
+
         return matches;
       });
-      
+
       devLog(`🔍 Search complete: ${reportList.length} results`);
     }
 
