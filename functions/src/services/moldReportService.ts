@@ -442,8 +442,10 @@ export const searchAndFilterMoldReports = async (
     }
 
     // Fetch from repository with status filter and optional priority-based IDs
+    // When searching, fetch more to ensure we get enough results after filtering
+    const fetchLimit = (searchQuery && searchQuery.trim()) ? Math.min(limit * 5, 100) : limit * 3;
     const result = await findMoldReportsBySearch(
-      priority && reportIds ? Math.min(limit * 3, reportIds.length) : limit * 3,
+      fetchLimit,
       token,
       status,
       reportIds
@@ -502,21 +504,32 @@ export const searchAndFilterMoldReports = async (
     // Apply search filter if query provided (only if priority is not specified)
     if (searchQuery && searchQuery.trim() && !priority) {
       const query = searchQuery.toLowerCase().trim();
+      devLog(`🔍 Searching ${reportList.length} reports for: "${query}"`);
+      
       reportList = reportList.filter((report: any) => {
         const caseName = report.case_name?.toLowerCase() || "";
         const host = report.host?.toLowerCase() || "";
         const location = report.location?.toLowerCase() || "";
         const reporterName = report.reporter?.name?.toLowerCase() || "";
         const reportStatus = report.status?.toLowerCase() || "";
+        const description = report.description?.toLowerCase() || "";
 
-        return (
+        const matches =
           caseName.includes(query) ||
           host.includes(query) ||
           location.includes(query) ||
           reporterName.includes(query) ||
-          reportStatus.includes(query)
-        );
+          reportStatus.includes(query) ||
+          description.includes(query);
+        
+        if (matches) {
+          devLog(`✅ Search match: "${report.case_name}" matched query "${query}"`);
+        }
+        
+        return matches;
       });
+      
+      devLog(`🔍 Search complete: ${reportList.length} results`);
     }
 
     // Trim results to requested limit
@@ -527,7 +540,7 @@ export const searchAndFilterMoldReports = async (
       nextPageToken: reportList.length > limit ? result.nextPageToken : null,
     };
   } catch (error) {
-    devLog(error);
+    devLog(error, "searchAndFilterMoldReports error:");
     return null;
   }
 };
