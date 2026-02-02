@@ -204,7 +204,8 @@ export const findMoldReportsBySearch = async (
   limit: number,
   token?: string,
   status?: string,
-  reportIds?: string[]
+  reportIds?: string[],
+  userId?: string
 ): Promise<{
   snapshot: FirebaseFirestore.QuerySnapshot;
   nextPageToken: string | null;
@@ -212,6 +213,10 @@ export const findMoldReportsBySearch = async (
   try {
     const queryModifier = (q: FirebaseFirestore.Query) => {
       let query = q.where("is_archived", "==", false);
+
+      if (userId) {
+        query = query.where("user_id", "==", userId);
+      }
 
       if (status) {
         query = query.where("status", "==", status);

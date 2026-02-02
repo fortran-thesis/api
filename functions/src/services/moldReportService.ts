@@ -463,7 +463,8 @@ export const searchAndFilterMoldReports = async (
   status: string | undefined,
   priority: string | undefined,
   limit: number,
-  token?: string
+  token?: string,
+  userId?: string
 ): Promise<PaginatedResult<MoldReport[]> | null> => {
   try {
     let reportIds: string[] | undefined;
@@ -488,7 +489,8 @@ export const searchAndFilterMoldReports = async (
       fetchLimit,
       token,
       status,
-      reportIds
+      reportIds,
+      userId
     );
 
     if (!result || !result.snapshot) return null;

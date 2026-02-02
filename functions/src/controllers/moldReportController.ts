@@ -21,7 +21,7 @@ import {
   getMoldReportMonthlyTotals,
 } from "../services/moldReportService";
 import {createLog} from "../utils/logging";
-import {AuditAction} from "../types/enums";
+import {AuditAction, Role} from "../types/enums";
 import {getCombinedTotalCounts, getMoldCasePriorityBreakdown} from "../services/moldCaseService";
 
 export const createMoldReport = async (req: Request, res: Response) => {
@@ -1468,13 +1468,18 @@ export const searchMoldReports = async (req: Request, res: Response) => {
       | string
       | undefined;
 
+    // Filter by user ID if the user is a regular user (Role.USER / 'farmer')
+    // Admins and Curators should be able to search all reports
+    const userId = req.user?.user.role === Role.USER ? req.user?.id : undefined;
+
     const result: PaginatedResult<MoldReport[]> | null =
       await searchAndFilterMoldReports(
         searchQuery,
         status,
         priority,
         limit,
-        pageToken
+        pageToken,
+        userId
       );
 
     if (!result) return sendError(res, "Failed to retrieve mold reports", 500);
