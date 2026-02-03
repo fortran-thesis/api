@@ -250,7 +250,7 @@ export const getMoldReportCountsController = async (
   try {
     // If user is admin, show all counts. Otherwise, filter by userId
     const userId = req.user?.user.role === "admin" ? undefined : req.user?.id;
-    
+
     const counts = await getMoldReportStatusCounts(userId);
     if (!counts) {
       return sendError(res, "Failed to retrieve mold report counts", 500);

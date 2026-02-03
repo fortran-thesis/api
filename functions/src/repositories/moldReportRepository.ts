@@ -163,11 +163,11 @@ export const countReportsByStatuses = async (
   try {
     const db = getFirestore(firebase);
     let query = db.collection(collection).where("status", "in", statuses);
-    
+
     if (userId) {
       query = query.where("user_id", "==", userId);
     }
-    
+
     const snap = await query.get();
     return snap.size;
   } catch (err) {
@@ -180,11 +180,11 @@ export const countTotalReports = async (userId?: string): Promise<number | null>
   try {
     const db = getFirestore(firebase);
     let query = db.collection(collection);
-    
+
     if (userId) {
       query = query.where("user_id", "==", userId) as FirebaseFirestore.CollectionReference;
     }
-    
+
     const snap = await query.get();
     return snap.size;
   } catch (err) {
