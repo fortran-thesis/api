@@ -144,7 +144,7 @@ router.get(
 
 router.get(
   "/counts/statuses",
-  verifyUser(Role.ADMIN),
+  verifyUser(),
   async (req: Request, res: Response) => {
     await getMoldReportCountsController(req, res);
   }

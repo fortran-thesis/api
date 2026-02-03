@@ -213,7 +213,7 @@ export const createMoldReport = async (req: Request, res: Response) => {
  *     security:
  *       - bearerAuth: []
  *       - cookieAuth: []
- *     description: Retrieve counts of mold reports by status (pending, in progress, resolved, rejected). Requires admin role.
+ *     description: Retrieve counts of mold reports by status (pending, in progress, resolved, rejected). Admins see all reports, farmers and mycologists see only their own.
  *     responses:
  *       200:
  *         description: Status counts retrieved successfully
@@ -248,7 +248,10 @@ export const getMoldReportCountsController = async (
   res: Response
 ) => {
   try {
-    const counts = await getMoldReportStatusCounts();
+    // If user is admin, show all counts. Otherwise, filter by userId
+    const userId = req.user?.user.role === "admin" ? undefined : req.user?.id;
+    
+    const counts = await getMoldReportStatusCounts(userId);
     if (!counts) {
       return sendError(res, "Failed to retrieve mold report counts", 500);
     }

@@ -409,7 +409,7 @@ export const removeMoldReport = async (id: string): Promise<void> => {
   }
 };
 
-export const getMoldReportStatusCounts = async (): Promise<{
+export const getMoldReportStatusCounts = async (userId?: string): Promise<{
   total: number;
   pending: number;
   in_progress: number;
@@ -426,12 +426,12 @@ export const getMoldReportStatusCounts = async (): Promise<{
       rejected: ["closed", "rejected"],
     };
 
-    const total = await countTotalReports();
+    const total = await countTotalReports(userId);
 
-    const pending = await countReportsByStatuses(mapping.pending);
-    const inProgress = await countReportsByStatuses(mapping.in_progress);
-    const resolved = await countReportsByStatuses(mapping.resolved);
-    const closed = await countReportsByStatuses(mapping.closed);
+    const pending = await countReportsByStatuses(mapping.pending, userId);
+    const inProgress = await countReportsByStatuses(mapping.in_progress, userId);
+    const resolved = await countReportsByStatuses(mapping.resolved, userId);
+    const closed = await countReportsByStatuses(mapping.closed, userId);
 
     return {
       total: total ?? 0,

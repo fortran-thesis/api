@@ -4,8 +4,8 @@ export const FAQIdSchema = z.object({
   id: z
     .string({required_error: "ID is required"})
     .nonempty({message: "ID is required"})
-    .min(22, {message: "ID must be at least 22 characters"})
-    .max(28, {message: "ID must be at most 28 characters"})
+    .min(20, {message: "ID must be at least 20 characters"})
+    .max(20, {message: "ID must be at most 20 characters"})
     .regex(/^[A-Za-z0-9-_]+$/, {message: "ID format is invalid"}),
 });
 

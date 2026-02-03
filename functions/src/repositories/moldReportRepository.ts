@@ -157,14 +157,18 @@ export const softDeleteMoldReport = async (id: string) =>
   softDeleteDocument(collection, id);
 
 export const countReportsByStatuses = async (
-  statuses: string[]
+  statuses: string[],
+  userId?: string
 ): Promise<number | null> => {
   try {
     const db = getFirestore(firebase);
-    const snap = await db
-      .collection(collection)
-      .where("status", "in", statuses)
-      .get();
+    let query = db.collection(collection).where("status", "in", statuses);
+    
+    if (userId) {
+      query = query.where("user_id", "==", userId);
+    }
+    
+    const snap = await query.get();
     return snap.size;
   } catch (err) {
     devLog(err);
@@ -172,10 +176,16 @@ export const countReportsByStatuses = async (
   }
 };
 
-export const countTotalReports = async (): Promise<number | null> => {
+export const countTotalReports = async (userId?: string): Promise<number | null> => {
   try {
     const db = getFirestore(firebase);
-    const snap = await db.collection(collection).get();
+    let query = db.collection(collection);
+    
+    if (userId) {
+      query = query.where("user_id", "==", userId) as FirebaseFirestore.CollectionReference;
+    }
+    
+    const snap = await query.get();
     return snap.size;
   } catch (err) {
     devLog(err);
