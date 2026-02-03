@@ -5,3 +5,7 @@ export interface Moldipedia {
   cover_photo: string;
   tags: string[];
 }
+
+export interface MoldipediaResponse extends Omit<Moldipedia, "author_id"> {
+  author: string;
+}

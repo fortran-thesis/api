@@ -16,11 +16,13 @@ import {
 } from "../repositories/moldipediaRepository";
 import {
   Moldipedia,
+  MoldipediaResponse,
   WithMetadata,
   WithId,
   PaginatedResult,
 } from "../types/types";
 import {transformToSignedUrl} from "../utils/storageTransform";
+import {retrieveUserById} from "./userService";
 
 export const addMoldipediaToFirestore = async (
   details: Moldipedia
@@ -47,7 +49,7 @@ export const addMoldipediaToFirestore = async (
 export const retrieveAllMoldipedia = async (
   limit: number,
   token?: string
-): Promise<PaginatedResult<Moldipedia[]> | null> => {
+): Promise<PaginatedResult<MoldipediaResponse[]> | null> => {
   try {
     const docs: PaginatedResult<QuerySnapshot> | null = await findAllMoldipedia(
       limit,
@@ -56,12 +58,25 @@ export const retrieveAllMoldipedia = async (
     if (!docs) throw new Error("No moldipedia entries found.");
     const items = queryToJson<Moldipedia>(docs.snapshot);
 
-    // Transform cover_photo paths to signed URLs
+    // Transform cover_photo paths to signed URLs and get author name
     const itemsWithSignedUrls = await Promise.all(
-      items.map(async (item) => ({
-        ...item,
-        cover_photo: (await transformToSignedUrl(item.cover_photo)) || item.cover_photo,
-      }))
+      items.map(async (item) => {
+        const user = await retrieveUserById(item.author_id);
+        const authorName = user ?
+          user.details.displayName ||
+            `${user.user.first_name} ${user.user.last_name}` :
+          "Unknown Author";
+
+        // eslint-disable-next-line camelcase
+        const {author_id, ...rest} = item;
+
+        return {
+          ...rest,
+          cover_photo:
+            (await transformToSignedUrl(item.cover_photo)) || item.cover_photo,
+          author: authorName,
+        };
+      })
     );
 
     return {
@@ -76,7 +91,7 @@ export const retrieveAllMoldipedia = async (
 
 export const retrieveMoldipediaById = async (
   id: string
-): Promise<Moldipedia | null> => {
+): Promise<MoldipediaResponse | null> => {
   try {
     const query: DocumentSnapshot | null = await findMoldipediaById(id);
     if (!query) throw new Error("No moldipedia found.");
@@ -84,9 +99,20 @@ export const retrieveMoldipediaById = async (
 
     // Transform cover_photo path to signed URL
     const signedUrl = await transformToSignedUrl(moldipedia.cover_photo);
+
+    const user = await retrieveUserById(moldipedia.author_id);
+    const authorName = user ?
+      user.details.displayName ||
+        `${user.user.first_name} ${user.user.last_name}` :
+      "Unknown Author";
+
+    // eslint-disable-next-line camelcase
+    const {author_id, ...rest} = moldipedia;
+
     return {
-      ...moldipedia,
+      ...rest,
       cover_photo: signedUrl || moldipedia.cover_photo,
+      author: authorName,
     };
   } catch (error) {
     devLog(error);
@@ -97,7 +123,7 @@ export const retrieveMoldipediaById = async (
 export const updateMoldipediaInFirestore = async (
   id: string,
   details: Partial<Moldipedia>
-): Promise<Moldipedia | null> => {
+): Promise<MoldipediaResponse | null> => {
   try {
     const result: WriteResult | null = await updateMoldipedia(id, details);
     if (!result) throw new Error("Failed to update moldipedia.");

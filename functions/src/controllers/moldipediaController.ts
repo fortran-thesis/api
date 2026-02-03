@@ -1,7 +1,7 @@
 import {Request, Response} from "express";
 import {devLog} from "../utils/dev";
 import {defaultError, sendError, sendSuccess} from "../utils/response";
-import {Moldipedia, PaginatedResult, WithId} from "../types/types";
+import {Moldipedia, MoldipediaResponse, PaginatedResult, WithId} from "../types/types";
 import {createLog} from "../utils/logging";
 import {AuditAction} from "../types/enums";
 import {uploadFile} from "../lib/storage";
@@ -188,7 +188,7 @@ export const getAllMoldipedia = async (req: Request, res: Response) => {
  *                             type: string
  *                           body:
  *                             type: string
- *                           author_id:
+ *                           author:
  *                             type: string
  *                           cover_photo:
  *                             type: string
@@ -229,7 +229,7 @@ export const getAllMoldipedia = async (req: Request, res: Response) => {
     | string
     | undefined;
   try {
-    const result: PaginatedResult<Moldipedia[]> | null =
+    const result: PaginatedResult<MoldipediaResponse[]> | null =
       await retrieveAllMoldipedia(limit, pageToken);
     if (!result) {
       return sendError(res, "Failed to retrieve moldipedia articles", 404);
@@ -277,7 +277,7 @@ export const getMoldipediaById = async (req: Request, res: Response) => {
  *                       type: string
  *                     body:
  *                       type: string
- *                     author_id:
+ *                     author:
  *                       type: string
  *                     cover_photo:
  *                       type: string
@@ -312,7 +312,7 @@ export const getMoldipediaById = async (req: Request, res: Response) => {
    */
   try {
     const id = req.params.id;
-    const article: Moldipedia | null = await retrieveMoldipediaById(id);
+    const article: MoldipediaResponse | null = await retrieveMoldipediaById(id);
     if (!article) {
       return sendError(res, "Failed to retrieve moldipedia article", 404);
     }
