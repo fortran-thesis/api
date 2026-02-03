@@ -264,6 +264,50 @@ export const getMoldReportCountsController = async (
 
 /**
  * @swagger
+ * /api/v1/mold-report/public/resolved-count:
+ *   get:
+ *     summary: Get count of resolved mold reports
+ *     tags: [MoldReport]
+ *     description: Retrieve the count of all resolved mold reports. Public endpoint - no authentication required.
+ *     responses:
+ *       200:
+ *         description: Resolved count retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     resolved_count:
+ *                       type: integer
+ *                       description: Number of resolved mold reports
+ *       500:
+ *         description: Server error
+ */
+export const getResolvedMoldReportsCountController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const counts = await getMoldReportStatusCounts();
+    if (!counts) {
+      return sendError(res, "Failed to retrieve resolved mold report count", 500);
+    }
+    return sendSuccess(res, {
+      resolved_count: counts.resolved,
+    });
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
+/**
+ * @swagger
  * /api/v1/mold-report:
  *   get:
  *     summary: Get all mold reports

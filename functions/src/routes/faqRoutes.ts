@@ -38,7 +38,6 @@ router.post(
 // Get all FAQs (Public)
 router.get(
   "/",
-  verifyUser(),
   validateQuery(PaginationQuerySchema),
   async (req: Request, res: Response) => {
     await getAllFAQ(req, res);
@@ -48,7 +47,6 @@ router.get(
 // Get FAQ by ID (Public)
 router.get(
   "/:id",
-  verifyUser(),
   sanitizeParams,
   validateParams(FAQIdSchema),
   async (req: Request, res: Response) => {

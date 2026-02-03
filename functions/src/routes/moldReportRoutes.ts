@@ -36,6 +36,7 @@ import {
   getMoldReportMonthlyTotalsController,
   getCombinedTotalCountsController,
   getMoldCasePriorityBreakdownController,
+  getResolvedMoldReportsCountController,
 } from "../controllers/moldReportController";
 import {Role} from "../types/enums";
 
@@ -65,6 +66,14 @@ router.post(
   validateBody(MoldReportSchema),
   async (req: Request, res: Response) => {
     await createMoldReport(req, res);
+  }
+);
+
+// Public endpoint - resolved count
+router.get(
+  "/public/resolved-count",
+  async (req: Request, res: Response) => {
+    await getResolvedMoldReportsCountController(req, res);
   }
 );
 

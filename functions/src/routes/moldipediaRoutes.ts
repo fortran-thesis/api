@@ -40,7 +40,6 @@ router.post(
 
 router.get(
   "/",
-  verifyUser(),
   validateQuery(PaginationQuerySchema),
   async (req: Request, res: Response) => {
     await getAllMoldipedia(req, res);
@@ -51,7 +50,6 @@ router.get(
 
 router.get(
   "/:id",
-  verifyUser(),
   sanitizeParams,
   validateParams(MoldipediaIdSchema),
   async (req: Request, res: Response) => {
