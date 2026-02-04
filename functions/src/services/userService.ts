@@ -65,6 +65,7 @@ export const retrieveAllUsers = async (
           photo_url: authUser?.photoURL ?? "",
           disabled: !!authUser?.disabled,
           phone_number: authUser?.phoneNumber,
+          address: firestoreUser.address,
         },
       };
     });
@@ -131,6 +132,7 @@ export const retrieveUsersByRole = async (
           photo_url: authUser?.photoURL ?? "",
           disabled: !!authUser?.disabled,
           phone_number: authUser?.phoneNumber,
+          address: firestoreUser.address,
         },
       };
     });
@@ -354,6 +356,7 @@ export const searchAndFilterUsers = async (
           photo_url: authUser?.photoURL ?? "",
           disabled: !!authUser?.disabled,
           phone_number: authUser?.phoneNumber,
+          address: firestoreUser.address,
         },
       };
     });

@@ -45,6 +45,7 @@ export const getAuthUserById = async (uid: string): Promise<WithId<APIUser> | nu
         photo_url: finalPhotoUrl,
         disabled: user.disabled,
         phone_number: user.phoneNumber,
+        address: firestoreUser.address,
       },
     };
   } catch (error) {
@@ -82,6 +83,7 @@ export const getAuthUserByEmail = async (email: string): Promise<WithId<APIUser>
         photo_url: finalPhotoUrl,
         disabled: user.disabled,
         phone_number: user.phoneNumber,
+        address: firestoreUser.address,
       },
     };
   } catch (error) {

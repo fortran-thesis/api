@@ -61,11 +61,15 @@ export const retrieveAllMoldipedia = async (
     // Transform cover_photo paths to signed URLs and get author name
     const itemsWithSignedUrls = await Promise.all(
       items.map(async (item) => {
-        const user = await retrieveUserById(item.author_id);
-        const authorName = user ?
-          user.details.displayName ||
-            `${user.user.first_name} ${user.user.last_name}` :
-          "Unknown Author";
+        let authorName = "Unknown Author";
+        if (item.author_id) {
+          const user = await retrieveUserById(item.author_id);
+          if (user) {
+            authorName =
+              user.details.displayName ||
+              `${user.user.first_name} ${user.user.last_name}`;
+          }
+        }
 
         // eslint-disable-next-line camelcase
         const {author_id, ...rest} = item;
@@ -100,11 +104,15 @@ export const retrieveMoldipediaById = async (
     // Transform cover_photo path to signed URL
     const signedUrl = await transformToSignedUrl(moldipedia.cover_photo);
 
-    const user = await retrieveUserById(moldipedia.author_id);
-    const authorName = user ?
-      user.details.displayName ||
-        `${user.user.first_name} ${user.user.last_name}` :
-      "Unknown Author";
+    let authorName = "Unknown Author";
+    if (moldipedia.author_id) {
+      const user = await retrieveUserById(moldipedia.author_id);
+      if (user) {
+        authorName =
+          user.details.displayName ||
+          `${user.user.first_name} ${user.user.last_name}`;
+      }
+    }
 
     // eslint-disable-next-line camelcase
     const {author_id, ...rest} = moldipedia;

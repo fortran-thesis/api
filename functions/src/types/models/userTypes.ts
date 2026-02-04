@@ -15,9 +15,11 @@ export interface UserDetails {
   photo_url: string;
   phone_number?: string
   disabled: boolean;
+  address?: string;
 }
 
 export interface APIUser {
+  id: string;
   user: User;
   details: UserDetails;
 }

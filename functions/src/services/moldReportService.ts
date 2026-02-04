@@ -431,7 +431,7 @@ export const getMoldReportStatusCounts = async (userId?: string): Promise<{
     const pending = await countReportsByStatuses(mapping.pending, userId);
     const inProgress = await countReportsByStatuses(mapping.in_progress, userId);
     const resolved = await countReportsByStatuses(mapping.resolved, userId);
-    const closed = await countReportsByStatuses(mapping.closed, userId);
+    const closed = await countReportsByStatuses(mapping.rejected, userId);
 
     return {
       total: total ?? 0,
