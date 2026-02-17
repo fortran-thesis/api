@@ -16,9 +16,13 @@ export const FAQCreateSchema = z.object({
   answer: z
     .string({required_error: "Answer is required."})
     .min(1, {message: "Answer cannot be empty."}),
+  user_id: z
+    .string({required_error: "User ID is required."})
+    .min(1, {message: "User ID cannot be empty."}),
 });
 
 export const FAQUpdateSchema = z.object({
   question: z.string().optional(),
   answer: z.string().optional(),
+  user_id: z.string().optional(),
 });

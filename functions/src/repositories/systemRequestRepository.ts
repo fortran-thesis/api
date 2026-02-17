@@ -25,7 +25,7 @@ export const findAllSystemRequests = async (
   token?: string,
   orderFields: OrderField[] = [
     "metadata.created_at",
-    "userId",
+    "user_id",
     FieldPath.documentId(),
   ]
 ) => getPaginatedDocuments(collection, limit, token, orderFields);
