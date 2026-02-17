@@ -224,13 +224,14 @@ export const getAllMoldipedia = async (req: Request, res: Response) => {
    *                 error:
    *                   type: string
    */
+  const searchQuery: string | undefined = req.query.search as string | undefined;
   const limit: number = parseInt(req.query.limit as string) || 10;
   const pageToken: string | undefined = req.query.pageToken as
     | string
     | undefined;
   try {
     const result: PaginatedResult<MoldipediaResponse[]> | null =
-      await retrieveAllMoldipedia(limit, pageToken);
+      await retrieveAllMoldipedia(limit, pageToken, searchQuery);
     if (!result) {
       return sendError(res, "Failed to retrieve moldipedia articles", 404);
     }

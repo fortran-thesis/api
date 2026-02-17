@@ -25,6 +25,7 @@ import {transformToSignedUrl} from "../utils/storageTransform";
 import {cacheItem, getCachedItem, cacheList, getCachedList, invalidateAllLists} from "../utils/cacheManager";
 import {getRoleCounts, getDisabledCounts} from "./userService";
 import {getMoldReportStatusCounts} from "./moldReportService";
+import {getAuthUserById} from "../lib/auth";
 
 // Helper function to transform MoldCase photo_url and cultivation_logs image_urls
 const transformMoldCaseImages = async (moldCase: MoldCase): Promise<MoldCase> => {
@@ -306,6 +307,20 @@ export const retrieveMoldCaseByReportId = async (
     }
     if (raw.end_date && typeof (raw.end_date as any).toDate === "function") {
       normalized.end_date = (raw.end_date as any).toDate().toISOString();
+    }
+
+    // Enrich with mycologist display name
+    if (normalized.mycologist_id) {
+      try {
+        const authUser = await getAuthUserById(normalized.mycologist_id);
+        if (authUser) {
+          normalized.mycologist_name =
+            authUser.details.displayName ||
+            authUser.user.first_name + " " + authUser.user.last_name;
+        }
+      } catch (e) {
+        devLog(e, "ENRICH_CASE_MYCOLOGIST");
+      }
     }
 
     // Transform photo URL and cultivation log image URLs

@@ -10,6 +10,7 @@ import {
   FAQCreateSchema,
   FAQIdSchema,
   FAQUpdateSchema,
+  SearchFAQQuerySchema,
 } from "../dto/faqDTO";
 import {PaginationQuerySchema} from "../dto/paginationDTO";
 import {
@@ -38,7 +39,7 @@ router.post(
 // Get all FAQs (Public)
 router.get(
   "/",
-  validateQuery(PaginationQuerySchema),
+  validateQuery(SearchFAQQuerySchema),
   async (req: Request, res: Response) => {
     await getAllFAQ(req, res);
   }

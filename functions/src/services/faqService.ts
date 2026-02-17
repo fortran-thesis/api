@@ -45,14 +45,28 @@ export const addFAQToFirestore = async (
 
 export const retrieveAllFAQ = async (
   limit: number,
-  token?: string
+  token?: string,
+  searchQuery?: string
 ): Promise<PaginatedResult<FAQ[]> | null> => {
   try {
     const docs: PaginatedResult<QuerySnapshot> | null =
       await findAllFAQ(limit, token);
     if (!docs) throw new Error("No FAQ found.");
+
+    let faqs = queryToJson<FAQ>(docs.snapshot);
+
+    // Filter by search query if provided
+    if (searchQuery && searchQuery.trim()) {
+      const queryLower = searchQuery.toLowerCase();
+      faqs = faqs.filter((faq) => {
+        const question = (faq as any).question?.toLowerCase() || "";
+        const answer = (faq as any).answer?.toLowerCase() || "";
+        return question.includes(queryLower) || answer.includes(queryLower);
+      });
+    }
+
     return {
-      snapshot: queryToJson<FAQ>(docs.snapshot),
+      snapshot: faqs,
       nextPageToken: docs.nextPageToken,
     };
   } catch (error) {

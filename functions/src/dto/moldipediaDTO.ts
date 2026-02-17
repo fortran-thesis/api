@@ -27,3 +27,9 @@ export const MoldipediaUpdateSchema = z.object({
   body: z.string().optional(),
   // author_id and cover_photo are not updatable via patch
 });
+
+export const SearchMoldipediaQuerySchema = z.object({
+  search: z.string().optional(),
+  limit: z.string().regex(/^\d+$/).optional(),
+  pageToken: z.string().optional(),
+});

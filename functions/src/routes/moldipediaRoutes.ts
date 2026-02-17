@@ -10,6 +10,7 @@ import {
   MoldipediaCreateSchema,
   MoldipediaIdSchema,
   MoldipediaUpdateSchema,
+  SearchMoldipediaQuerySchema,
 } from "../dto/moldipediaDTO";
 import {PaginationQuerySchema} from "../dto/paginationDTO";
 import {
@@ -40,7 +41,7 @@ router.post(
 
 router.get(
   "/",
-  validateQuery(PaginationQuerySchema),
+  validateQuery(SearchMoldipediaQuerySchema),
   async (req: Request, res: Response) => {
     await getAllMoldipedia(req, res);
   }

@@ -26,3 +26,9 @@ export const FAQUpdateSchema = z.object({
   answer: z.string().optional(),
   user_id: z.string().optional(),
 });
+
+export const SearchFAQQuerySchema = z.object({
+  search: z.string().optional(),
+  limit: z.string().regex(/^\d+$/).optional(),
+  pageToken: z.string().optional(),
+});

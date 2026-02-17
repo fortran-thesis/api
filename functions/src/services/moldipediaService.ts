@@ -48,7 +48,8 @@ export const addMoldipediaToFirestore = async (
 
 export const retrieveAllMoldipedia = async (
   limit: number,
-  token?: string
+  token?: string,
+  searchQuery?: string
 ): Promise<PaginatedResult<MoldipediaResponse[]> | null> => {
   try {
     const docs: PaginatedResult<QuerySnapshot> | null = await findAllMoldipedia(
@@ -56,7 +57,17 @@ export const retrieveAllMoldipedia = async (
       token
     );
     if (!docs) throw new Error("No moldipedia entries found.");
-    const items = queryToJson<Moldipedia>(docs.snapshot);
+    let items = queryToJson<Moldipedia>(docs.snapshot);
+
+    // Filter by search query if provided
+    if (searchQuery && searchQuery.trim()) {
+      const queryLower = searchQuery.toLowerCase();
+      items = items.filter((item) => {
+        const title = (item as any).title?.toLowerCase() || "";
+        const body = (item as any).body?.toLowerCase() || "";
+        return title.includes(queryLower) || body.includes(queryLower);
+      });
+    }
 
     // Transform cover_photo paths to signed URLs and get author name
     const itemsWithSignedUrls = await Promise.all(

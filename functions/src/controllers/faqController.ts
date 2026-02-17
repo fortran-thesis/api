@@ -86,15 +86,20 @@ export const getAllFAQ = async (req: Request, res: Response) => {
    * @swagger
    * /api/v1/faq:
    *   get:
-   *     summary: Get all FAQ entries
+   *     summary: Get all FAQ entries with optional search
    *     tags: [FAQ]
    *     security:
    *       - bearerAuth: []
    *       - cookieAuth: []
-   *     description: Retrieve all FAQ entries with pagination.
+   *     description: Retrieve FAQ entries with optional search by question/answer and pagination.
    *     parameters:
    *       - in: query
-   *         name: pageSize
+   *         name: search
+   *         schema:
+   *           type: string
+   *         description: Search query for question or answer
+   *       - in: query
+   *         name: limit
    *         schema:
    *           type: integer
    *           default: 10
@@ -122,11 +127,13 @@ export const getAllFAQ = async (req: Request, res: Response) => {
    *         description: Server error
    */
   try {
-    const pageSize = parseInt((req.query.pageSize as string) || "10");
+    const searchQuery: string | undefined = req.query.search as string | undefined;
+    const limit = parseInt((req.query.limit as string) || "10");
     const pageToken = (req.query.pageToken as string) || undefined;
     const result: PaginatedResult<FAQ[]> | null = await retrieveAllFAQ(
-      pageSize,
-      pageToken
+      limit,
+      pageToken,
+      searchQuery
     );
     if (!result) return sendError(res, "Failed to retrieve FAQ", 500);
     return sendSuccess(res, {

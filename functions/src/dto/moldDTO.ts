@@ -65,3 +65,10 @@ export const CultivationDetailsSchema = z.object({
   start_date: z.string().datetime().optional(),
   end_date: z.string().datetime().optional(),
 });
+
+export const SearchMoldCasesQuerySchema = z.object({
+  search: z.string().optional(),
+  priority: z.enum(["low", "medium", "high"]).optional(),
+  limit: z.string().regex(/^\d+$/).optional(),
+  pageToken: z.string().optional(),
+});

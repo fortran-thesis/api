@@ -5,7 +5,7 @@ import {
   validateQuery,
   validateBody} from "../middlewares/validation";
 import {PaginationQuerySchema} from "../dto/paginationDTO";
-import {MoldIdSchema, CultivationLogSchema, CultivationDetailsSchema} from "../dto/moldDTO";
+import {MoldIdSchema, CultivationLogSchema, CultivationDetailsSchema, SearchMoldCasesQuerySchema} from "../dto/moldDTO";
 import {ReportIdSchema} from "../dto/reportDTO";
 import {Role} from "../types/enums";
 import {upload} from "../middlewares/upload";
@@ -72,7 +72,7 @@ router.get(
 router.get(
   "/search",
   verifyUser(),
-  validateQuery(PaginationQuerySchema),
+  validateQuery(SearchMoldCasesQuerySchema),
   async (req: Request, res: Response) => {
     await searchAssignedMoldCases(req, res);
   }
