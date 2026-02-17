@@ -6,7 +6,7 @@ import {
 } from "firebase-admin/firestore";
 import {documentToJson, queryToJson} from "../lib/firestore";
 import {devLog} from "../utils/dev";
-import {cacheItem, getCachedItem} from "../utils/cacheManager";
+import {cacheItem, getCachedItem, cacheList, getCachedList, invalidateAllLists} from "../utils/cacheManager";
 import {
   addMoldReport,
   deleteMoldReport,
@@ -147,6 +147,14 @@ export const addMoldReportToFirestore = async (
       await addMoldReport(detailsWithMetadata);
     if (!doc) throw new Error("Cannot add mold report.");
     devLog("addMoldReportToFirestore: ✅ Report created successfully");
+
+    // Invalidate all report caches since new report was added
+    await invalidateAllLists("mold-reports-search");
+    await invalidateAllLists("mold-reports-all");
+    await invalidateAllLists("mold-reports-user");
+    await invalidateAllLists("mold-reports-unassigned");
+    await invalidateAllLists("mold-reports-assigned");
+
     return documentToJson<MoldReport>(doc);
   } catch (error) {
     devLog(`addMoldReportToFirestore: ❌ Error - ${error}`);
@@ -161,6 +169,20 @@ export const retrieveAllMoldReports = async (
   token?: string
 ): Promise<PaginatedResult<MoldReport[]> | null> => {
   try {
+    // Build cache key (INCLUDE token for pagination)
+    const cacheQuery = {
+      isArchived,
+      limit,
+      token: token || null,
+    };
+
+    // Try to get from cache
+    const cached = await getCachedList<PaginatedResult<MoldReport[]>>("mold-reports-all", cacheQuery, {useCache: true});
+    if (cached) {
+      devLog(`[CACHE] Hit all reports for isArchived=${isArchived}, limit=${limit}`);
+      return cached;
+    }
+
     const docs: PaginatedResult<QuerySnapshot> | null =
       await findAllMoldReports(limit, token);
     if (!docs) throw new Error("No mold reports found.");
@@ -219,10 +241,15 @@ export const retrieveAllMoldReports = async (
       return isArchived ? isDeleted : !isDeleted;
     });
 
-    return {
+    const response = {
       snapshot: filtered,
       nextPageToken: docs.nextPageToken,
     };
+
+    // Cache the results
+    await cacheList("mold-reports-all", response, cacheQuery, {ttl: 300});
+
+    return response;
   } catch (error) {
     devLog(error);
     return null;
@@ -236,6 +263,21 @@ export const retrieveAllMoldReportsByUser = async (
   token?: string
 ): Promise<PaginatedResult<Omit<MoldReport, "user_id">[]> | null> => {
   try {
+    // Build cache key (INCLUDE token for pagination)
+    const cacheQuery = {
+      uid,
+      isArchived,
+      limit,
+      token: token || null,
+    };
+
+    // Try to get from cache
+    const cached = await getCachedList<PaginatedResult<Omit<MoldReport, "user_id">[]>>("mold-reports-user", cacheQuery, {useCache: true});
+    if (cached) {
+      devLog(`[CACHE] Hit user reports for uid=${uid}`);
+      return cached;
+    }
+
     const docs: PaginatedResult<QuerySnapshot> | null =
       await findAllMoldReportsByUser(uid, limit, isArchived, token);
     if (!docs) throw new Error("No mold reports found.");
@@ -246,10 +288,16 @@ export const retrieveAllMoldReportsByUser = async (
       MoldReport,
       "user_id"
     >[];
-    return {
+
+    const response = {
       snapshot: sanitized,
       nextPageToken: docs.nextPageToken,
     };
+
+    // Cache the results
+    await cacheList("mold-reports-user", response, cacheQuery, {ttl: 300});
+
+    return response;
   } catch (error) {
     devLog(error);
     return null;
@@ -305,14 +353,33 @@ export const retrieveUnassignedMoldReports = async (
   token?: string
 ): Promise<PaginatedResult<MoldReport[]> | null> => {
   try {
+    // Build cache key (INCLUDE token for pagination)
+    const cacheQuery = {
+      limit,
+      token: token || null,
+    };
+
+    // Try to get from cache
+    const cached = await getCachedList<PaginatedResult<MoldReport[]>>("mold-reports-unassigned", cacheQuery, {useCache: true});
+    if (cached) {
+      devLog("[CACHE] Hit unassigned reports");
+      return cached;
+    }
+
     const docs: PaginatedResult<QuerySnapshot> | null =
       await findUnassignedMoldReports(limit, token);
     if (!docs) throw new Error("No mold reports found.");
     const raw = queryToJson<MoldReport>(docs.snapshot);
-    return {
+
+    const response = {
       snapshot: raw,
       nextPageToken: docs.nextPageToken,
     };
+
+    // Cache the results
+    await cacheList("mold-reports-unassigned", response, cacheQuery, {ttl: 300});
+
+    return response;
   } catch (error) {
     devLog(error);
     return null;
@@ -325,14 +392,34 @@ export const retrieveAssignedMoldReports = async (
   token?: string
 ): Promise<PaginatedResult<MoldReport[]> | null> => {
   try {
+    // Build cache key (INCLUDE token for pagination)
+    const cacheQuery = {
+      mycologistId,
+      limit,
+      token: token || null,
+    };
+
+    // Try to get from cache
+    const cached = await getCachedList<PaginatedResult<MoldReport[]>>("mold-reports-assigned", cacheQuery, {useCache: true});
+    if (cached) {
+      devLog(`[CACHE] Hit assigned reports for mycologist=${mycologistId}`);
+      return cached;
+    }
+
     const docs: PaginatedResult<QuerySnapshot> | null =
       await findReportsByAssignedMycologist(mycologistId, limit, token);
     if (!docs) throw new Error("No mold reports found.");
     const raw = queryToJson<MoldReport>(docs.snapshot);
-    return {
+
+    const response = {
       snapshot: raw,
       nextPageToken: docs.nextPageToken,
     };
+
+    // Cache the results
+    await cacheList("mold-reports-assigned", response, cacheQuery, {ttl: 300});
+
+    return response;
   } catch (error) {
     devLog(error);
     return null;
@@ -355,6 +442,14 @@ export const addCaseDetailToReport = async (
 
     const result = await appendCaseDetailRepo(reportId, detailWithMeta);
     if (!result) throw new Error("Failed to add case detail to report.");
+
+    // Invalidate all report caches since report was modified
+    await invalidateAllLists("mold-reports-search");
+    await invalidateAllLists("mold-reports-all");
+    await invalidateAllLists("mold-reports-user");
+    await invalidateAllLists("mold-reports-unassigned");
+    await invalidateAllLists("mold-reports-assigned");
+
     return await retrieveMoldReportById(reportId);
   } catch (error) {
     devLog(error);
@@ -383,6 +478,14 @@ export const updateMoldReportInFirestore = async (
       updatedDetails
     );
     if (!result) throw new Error("Failed to update mold report.");
+
+    // Invalidate all report caches since report was updated
+    await invalidateAllLists("mold-reports-search");
+    await invalidateAllLists("mold-reports-all");
+    await invalidateAllLists("mold-reports-user");
+    await invalidateAllLists("mold-reports-unassigned");
+    await invalidateAllLists("mold-reports-assigned");
+
     const updated = await retrieveMoldReportById(id);
     return updated;
   } catch (error) {
@@ -395,6 +498,13 @@ export const softRemoveMoldReport = async (id: string): Promise<void> => {
   try {
     const result: WriteResult | null = await softDeleteMoldReport(id);
     if (!result) throw new Error("Failed to soft delete mold report");
+
+    // Invalidate all report caches since report was deleted
+    await invalidateAllLists("mold-reports-search");
+    await invalidateAllLists("mold-reports-all");
+    await invalidateAllLists("mold-reports-user");
+    await invalidateAllLists("mold-reports-unassigned");
+    await invalidateAllLists("mold-reports-assigned");
   } catch (error) {
     devLog(error);
   }
@@ -404,6 +514,13 @@ export const removeMoldReport = async (id: string): Promise<void> => {
   try {
     const result: WriteResult | null = await deleteMoldReport(id);
     if (!result) throw new Error("Failed to delete mold report");
+
+    // Invalidate all report caches since report was deleted
+    await invalidateAllLists("mold-reports-search");
+    await invalidateAllLists("mold-reports-all");
+    await invalidateAllLists("mold-reports-user");
+    await invalidateAllLists("mold-reports-unassigned");
+    await invalidateAllLists("mold-reports-assigned");
   } catch (error) {
     devLog(error);
   }
@@ -467,6 +584,23 @@ export const searchAndFilterMoldReports = async (
   userId?: string
 ): Promise<PaginatedResult<MoldReport[]> | null> => {
   try {
+    // Build cache key from search parameters (INCLUDE token for proper pagination)
+    const cacheQuery = {
+      search: searchQuery || null,
+      status: status || null,
+      priority: priority || null,
+      limit,
+      token: token || null,
+      userId: userId || null,
+    };
+
+    // Try to get from cache
+    const cached = await getCachedList<PaginatedResult<MoldReport[]>>("mold-reports-search", cacheQuery, {useCache: true});
+    if (cached) {
+      devLog(`[CACHE] Hit search results for query: ${JSON.stringify(cacheQuery)}`);
+      return cached;
+    }
+
     let reportIds: string[] | undefined;
 
     // If priority is specified, get report IDs from mold cases first
@@ -483,10 +617,11 @@ export const searchAndFilterMoldReports = async (
     }
 
     // Fetch from repository with status filter and optional priority-based IDs
-    // When searching, fetch more to ensure we get enough results after filtering
-    const fetchLimit = (searchQuery && searchQuery.trim()) ? Math.min(limit * 5, 100) : limit * 3;
+    // Fetch only slightly more to account for filtering, but not excessively
+    // Reduce multiplier to lower database load and prevent rate limiting
+    const fetchLimit = (searchQuery && searchQuery.trim()) ? Math.min(limit * 1.5, 50) : limit * 1.2;
     const result = await findMoldReportsBySearch(
-      fetchLimit,
+      Math.ceil(fetchLimit),
       token,
       status,
       reportIds,
@@ -498,9 +633,40 @@ export const searchAndFilterMoldReports = async (
     // Convert Firestore results
     const raw = queryToJson<MoldReport>(result.snapshot);
 
+    // Apply search filter FIRST on raw data before enrichment (optimization to reduce DB calls)
+    let filteredRaw = raw;
+    if (searchQuery && searchQuery.trim() && !priority) {
+      const query = searchQuery.toLowerCase().trim();
+      devLog(`🔍 Pre-filtering ${raw.length} reports for: "${query}"`);
+
+      filteredRaw = raw.filter((report: any) => {
+        const caseName = report.case_name?.toLowerCase() || "";
+        const host = report.host?.toLowerCase() || "";
+        const location = report.location?.toLowerCase() || "";
+        const reporterName = report.reporter?.name?.toLowerCase() || "";
+        const reportStatus = report.status?.toLowerCase() || "";
+        const description = report.description?.toLowerCase() || "";
+
+        return (
+          caseName.includes(query) ||
+          host.includes(query) ||
+          location.includes(query) ||
+          reporterName.includes(query) ||
+          reportStatus.includes(query) ||
+          description.includes(query)
+        );
+      });
+
+      devLog(`🔍 Pre-filtered to ${filteredRaw.length} results`);
+    }
+
+    // Now enrich only the filtered results (or all if no search filter)
+    // Then trim to limit to further reduce enrichment calls
+    const toEnrich = filteredRaw.slice(0, limit);
+
     // Normalize dates and enrich in parallel
-    let reportList = await Promise.all(
-      raw.map(async (r) => {
+    const reportList = await Promise.all(
+      toEnrich.map(async (r) => {
         const nr = normalizeDateObserved(r) as unknown as MoldReport & any;
 
         // Enrich with reporter info
@@ -543,44 +709,21 @@ export const searchAndFilterMoldReports = async (
       })
     );
 
-    // Apply search filter if query provided (only if priority is not specified)
-    if (searchQuery && searchQuery.trim() && !priority) {
-      const query = searchQuery.toLowerCase().trim();
-      devLog(`🔍 Searching ${reportList.length} reports for: "${query}"`);
+    // Determine if there are more results beyond what we're returning
+    // If we filtered and have more filtered results, use the last ID as token
+    // Otherwise use the upstream pagination token if available
+    const hasMoreResults = filteredRaw.length > limit && reportList.length > 0;
+    const nextToken = hasMoreResults && reportList.length > 0 ? (reportList[reportList.length - 1] as any)?.id : null;
 
-      reportList = reportList.filter((report: any) => {
-        const caseName = report.case_name?.toLowerCase() || "";
-        const host = report.host?.toLowerCase() || "";
-        const location = report.location?.toLowerCase() || "";
-        const reporterName = report.reporter?.name?.toLowerCase() || "";
-        const reportStatus = report.status?.toLowerCase() || "";
-        const description = report.description?.toLowerCase() || "";
-
-        const matches =
-          caseName.includes(query) ||
-          host.includes(query) ||
-          location.includes(query) ||
-          reporterName.includes(query) ||
-          reportStatus.includes(query) ||
-          description.includes(query);
-
-        if (matches) {
-          devLog(`✅ Search match: "${report.case_name}" matched query "${query}"`);
-        }
-
-        return matches;
-      });
-
-      devLog(`🔍 Search complete: ${reportList.length} results`);
-    }
-
-    // Trim results to requested limit
-    const trimmedResults = reportList.slice(0, limit);
-
-    return {
-      snapshot: trimmedResults,
-      nextPageToken: reportList.length > limit ? result.nextPageToken : null,
+    const response: PaginatedResult<MoldReport[]> = {
+      snapshot: reportList,
+      nextPageToken: nextToken || result.nextPageToken,
     };
+
+    // Cache the search results for 5 minutes
+    await cacheList("mold-reports-search", response, cacheQuery, {ttl: 300});
+
+    return response;
   } catch (error) {
     devLog(error, "searchAndFilterMoldReports error:");
     return null;
