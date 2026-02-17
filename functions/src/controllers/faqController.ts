@@ -59,7 +59,9 @@ export const createFAQ = async (req: Request, res: Response) => {
    *         description: Server error
    */
   try {
+    // eslint-disable-next-line camelcase
     const {question, answer, user_id}: {question: string; answer: string; user_id: string} = req.body;
+    // eslint-disable-next-line camelcase
     const faq = await addFAQToFirestore({question, answer, user_id});
     if (!faq) return sendError(res, "Failed to create FAQ", 400);
     if (req.user) {
