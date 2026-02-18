@@ -66,9 +66,9 @@ export const UserIdSchema = z.object({
   id: z
     .string({required_error: "UID is required "})
     .nonempty({message: "UID is required"})
-    .min(28, {message: "ID token must be exactly 28 characters"})
-    .max(28, {message: "ID token must be exactly 28 characters"})
-    .regex(/^[A-Za-z0-9-_]+$/, {message: "ID token format is invalid"}),
+    .min(28, {message: "User ID must be exactly 28 characters"})
+    .max(28, {message: "User ID must be exactly 28 characters"})
+    .regex(/^[A-Za-z0-9-_]+$/, {message: "User ID format is invalid"}),
 });
 
 export const EmailSchema = z.object({
