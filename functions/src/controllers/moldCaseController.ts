@@ -12,6 +12,7 @@ import {
   softRemoveMoldCase,
   addCultivationLogToCase,
   updateCultivationDetailsInCase,
+  getMoldCasesCountWithMetadata,
 } from "../services/moldCaseService";
 import {analyzeCultivationImage} from "../services/cultivationAnalysisService";
 import {uploadFile} from "../lib/storage";
@@ -1366,3 +1367,28 @@ export const searchAssignedMoldCases = async (req: Request, res: Response) => {
     return defaultError(res);
   }
 };
+
+/**
+ * Get mold cases count with metadata (latest createdAt timestamp)
+ * Admin only endpoint
+ *
+ * @route GET /api/v1/mold-cases/counts/metadata
+ * @param req - Express request object
+ * @param res - Express response object
+ * @returns 200: Count and metadata, 500: Server error
+ * @access Admin only
+ */
+export const getMoldCasesCountMetadataController = async (req: Request, res: Response) => {
+  try {
+    const metadata = await getMoldCasesCountWithMetadata();
+    if (!metadata) {
+      return sendError(res, "Failed to retrieve mold cases metadata", 500);
+    }
+
+    return sendSuccess(res, metadata);
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+

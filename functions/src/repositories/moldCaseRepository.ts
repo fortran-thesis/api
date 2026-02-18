@@ -249,3 +249,46 @@ export const findAssignedMoldCasesWithSearch = async (
     return null;
   }
 };
+
+/**
+ * Count all mold cases and get metadata (latest createdAt)
+ * Admin only endpoint
+ */
+export const countAllMoldCasesWithMetadata = async (): Promise<{
+  count: number;
+  createdAt: string;
+} | null> => {
+  try {
+    const db = getFirestore(firebase);
+    const snapshot = await db.collection(collection)
+      .orderBy("metadata.created_at", "desc")
+      .limit(1)
+      .get();
+
+    // Get total count separately
+    const allDocs = await db.collection(collection).count().get();
+    const totalCount = allDocs.data().count;
+
+    // Get the latest createdAt timestamp
+    let latestCreatedAt = new Date().toISOString();
+    if (!snapshot.empty) {
+      const latestDoc = snapshot.docs[0];
+      const createdAtField = latestDoc.data()?.metadata?.created_at;
+      if (createdAtField) {
+        // Convert Firestore Timestamp to ISO string if needed
+        latestCreatedAt = createdAtField instanceof Date ?
+          createdAtField.toISOString() :
+          createdAtField.toDate?.().toISOString?.() || new Date().toISOString();
+      }
+    }
+
+    return {
+      count: totalCount,
+      createdAt: latestCreatedAt,
+    };
+  } catch (err) {
+    devLog(err);
+    return null;
+  }
+};
+

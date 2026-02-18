@@ -22,6 +22,7 @@ import {
   updateCultivationDetails,
   analyzeCultivationLogImage,
   searchAssignedMoldCases,
+  getMoldCasesCountMetadataController,
 } from "../controllers/moldCaseController";
 const router = Router();
 
@@ -39,6 +40,14 @@ router.get(
   validateQuery(PaginationQuerySchema),
   async (req: Request, res: Response) => {
     await getAllMoldCases(req, res);
+  }
+);
+
+router.get(
+  "/counts/metadata",
+  verifyUser(Role.ADMIN),
+  async (req: Request, res: Response) => {
+    await getMoldCasesCountMetadataController(req, res);
   }
 );
 

@@ -19,6 +19,7 @@ import {
   appendCultivationLog,
   updateCultivationDetails,
   countCasesByPriority,
+  countAllMoldCasesWithMetadata,
 } from "../repositories/moldCaseRepository";
 import {MoldCase, PaginatedResult, WithMetadata} from "../types/types";
 import {transformToSignedUrl} from "../utils/storageTransform";
@@ -543,3 +544,33 @@ export const getMoldCasePriorityBreakdown = async (): Promise<{
     return null;
   }
 };
+
+/**
+ * Get total count of mold cases and metadata (latest createdAt)
+ * Admin only
+ */
+export const getMoldCasesCountWithMetadata = async (): Promise<{
+  count: number;
+  createdAt: string;
+} | null> => {
+  try {
+    const cacheKey = "mold-cases-count-metadata";
+    const cached = await getCachedItem<{count: number; createdAt: string}>(
+      "dashboard",
+      cacheKey
+    );
+    if (cached) return cached;
+
+    const metadata = await countAllMoldCasesWithMetadata();
+    if (!metadata) return null;
+
+    // Cache the result for 5 minutes
+    await cacheItem("dashboard", cacheKey, metadata, {ttl: 300});
+
+    return metadata;
+  } catch (error) {
+    devLog(error);
+    return null;
+  }
+};
+
