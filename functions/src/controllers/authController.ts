@@ -105,7 +105,10 @@ export const createUser = async (req: Request, res: Response) => {
       address,
       phoneNumber
     );
-    if (!process.success) throw Error(process.error);
+    if (!process.success) {
+      devLog(process, "REGISTER_USER");
+      return sendError(res, process.error, 400);
+    }
     return sendSuccess(res, process.data);
   } catch (error) {
     devLog(error, "REGISTER_USER");

@@ -17,20 +17,12 @@ export const devLog = (error: unknown, context?: string): void => {
   const timestamp = new Date().toISOString();
   const contextTag = context ?? "Unlabeled";
 
-  const safeLog = (payload: any, isError = true) => {
+  const safeLog = (message: string) => {
     try {
-      if (isError) {
-        logger.error(payload);
-      } else {
-        logger.info(payload);
-      }
+      logger.error(message);
     } catch (e) {
       // Fallback to console if logger fails
-      if (isError) {
-        console.error("[devLog fallback - ERROR]", payload);
-      } else {
-        console.log("[devLog fallback - INFO]", payload);
-      }
+      console.error("[devLog fallback - ERROR]", message);
     }
   };
 
@@ -42,43 +34,30 @@ export const devLog = (error: unknown, context?: string): void => {
     "error" in error &&
     (error as ApiErrorShape).success === false
   ) {
-    safeLog({
-      context: contextTag,
-      type: "API_ERROR",
-      error: (error as ApiErrorShape).error,
-      timestamp,
-    }, true);
+    safeLog(
+      `[${contextTag}] API_ERROR: ${(error as ApiErrorShape).error} (${timestamp})`
+    );
     return;
   }
 
   // Handle native Error instances
   if (error instanceof Error) {
-    safeLog({
-      context: contextTag,
-      type: "EXCEPTION",
-      error: error.message,
-      stack: error.stack,
-      timestamp,
-    }, true);
+    safeLog(
+      `[${contextTag}] EXCEPTION: ${error.message}\n${error.stack} (${timestamp})`
+    );
     return;
   }
 
   // Handle string messages (info logs)
   if (typeof error === "string") {
-    safeLog({
-      context: contextTag,
-      type: "INFO",
-      message: error,
-      timestamp,
-    }, false);
+    safeLog(
+      `[${contextTag}] INFO: ${error} (${timestamp})`
+    );
     return;
   }
 
   // Fallback for unknown types
-  safeLog({
-    context: contextTag,
-    type: "UNKNOWN",
-    error: String(error),
-    timestamp,
-  }, false);
+  safeLog(
+    `[${contextTag}] UNKNOWN: ${String(error)} (${timestamp})`
+  );
 };

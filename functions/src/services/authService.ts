@@ -546,13 +546,24 @@ export const logoutUserSession = async (
 
     if (idToken) {
       try {
+        // Try as ID token first
         const decoded = await getAuth().verifyIdToken(idToken);
         if (decoded?.uid) {
           await getAuth().revokeRefreshTokens(decoded.uid);
           return true;
         }
       } catch (err) {
-        devLog(err, "logoutUserSession:verifyIdToken");
+        // If ID token verification fails, try as session cookie
+        // (mobile app might be sending session token in Authorization header)
+        try {
+          const decoded = await getAuth().verifySessionCookie(idToken, true);
+          if (decoded?.uid) {
+            await getAuth().revokeRefreshTokens(decoded.uid);
+            return true;
+          }
+        } catch (sessionErr) {
+          devLog(err, "logoutUserSession:verifyIdToken");
+        }
       }
     }
 
