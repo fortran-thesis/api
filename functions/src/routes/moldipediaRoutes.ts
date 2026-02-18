@@ -12,7 +12,6 @@ import {
   MoldipediaUpdateSchema,
   SearchMoldipediaQuerySchema,
 } from "../dto/moldipediaDTO";
-import {PaginationQuerySchema} from "../dto/paginationDTO";
 import {
   createMoldipedia,
   getAllMoldipedia,

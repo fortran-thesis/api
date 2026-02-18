@@ -12,7 +12,6 @@ import {
   FAQUpdateSchema,
   SearchFAQQuerySchema,
 } from "../dto/faqDTO";
-import {PaginationQuerySchema} from "../dto/paginationDTO";
 import {
   createFAQ,
   getAllFAQ,
