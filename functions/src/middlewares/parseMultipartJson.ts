@@ -22,17 +22,17 @@ export const parseMultipartJson = (fields: string[]) => (
     for (const f of fields) {
       const val = (req.body as any)[f];
       console.log(`[parseMultipartJson] Field "${f}" type:`, typeof val);
-      if (val && typeof val === "string") {
+
+      if (typeof val === "string") {
+        // Handle JSON string (from multipart form-data)
         try {
           const parsed = JSON.parse(val);
-          console.log(`[parseMultipartJson] Successfully parsed field "${f}"`);
-          console.log(`[parseMultipartJson] Parsed "${f}" content location value:`, parsed.location);
+          console.log(`[parseMultipartJson] Successfully parsed field "${f}" from string`);
           // Promote the parsed object properties to root body for validation
           if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) {
             Object.assign(req.body, parsed);
             delete (req.body as any)[f];
             console.log(`[parseMultipartJson] Promoted "${f}" to root body`);
-            console.log("[parseMultipartJson] After promotion, req.body.location:", (req.body as any).location);
           } else {
             (req.body as any)[f] = parsed;
           }
@@ -40,6 +40,12 @@ export const parseMultipartJson = (fields: string[]) => (
           console.log(`[parseMultipartJson] Failed to parse field "${f}":`, e);
           // leave the original string if it's not valid JSON
         }
+      } else if (val && typeof val === "object" && !Array.isArray(val)) {
+        // Handle JSON object (from application/json with details wrapper)
+        console.log(`[parseMultipartJson] Field "${f}" is already an object, promoting to root body`);
+        Object.assign(req.body, val);
+        delete (req.body as any)[f];
+        console.log(`[parseMultipartJson] Promoted "${f}" (object) to root body`);
       }
     }
     console.log("[parseMultipartJson] Final body keys:", Object.keys(req.body || {}));

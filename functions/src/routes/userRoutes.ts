@@ -1,4 +1,4 @@
-import {Request, Response, Router} from "express";
+import {Request, Response, Router, NextFunction} from "express";
 import {verifyUser} from "../middlewares/verification";
 import {parseMultipartJson} from "../middlewares/parseMultipartJson";
 import {Role} from "../types/enums";
@@ -53,10 +53,19 @@ router.get(
 router.get("/profile", verifyUser(), async (req: Request, res: Response) => {
   getUserProfile(req, res);
 });
+
+// Handle PATCH with JSON body (no photo)
 router.patch(
   "/profile",
   verifyUser(),
-  upload.single("photo"),
+  (req: Request, res: Response, next: NextFunction) => {
+    const contentType = req.headers["content-type"] || "";
+    // Only apply multipart middleware if Content-Type is multipart/form-data
+    if (contentType.includes("multipart")) {
+      return upload.single("photo")(req, res, next);
+    }
+    next();
+  },
   parseMultipartJson(["details"]),
   sanitizeBody,
   validateBody(UserProfileUpdateSchema),
