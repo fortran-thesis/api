@@ -73,10 +73,21 @@ export const createMoldReport = async (req: Request, res: Response) => {
    *                     type: string
    *                   is_archived:
    *                     type: boolean
-   *                 description: MoldReport DTO (location omitted)
+   *                 description: MoldReport DTO
    *               cover_photo:
    *                 type: string
    *                 format: binary
+   *             required:
+   *               - details
+   *           details:
+   *             description: |
+   *               JSON object containing:
+   *               - case_name (required): string
+   *               - host (required): string
+   *               - location (required): string - City/Province location
+   *               - date_observed (required): ISO 8601 date-time string
+   *               - description (required): string - Problem description
+   *               - user_id (optional): string
    *     responses:
    *       200:
    *         description: Successfully created mold report
@@ -119,7 +130,7 @@ export const createMoldReport = async (req: Request, res: Response) => {
    *                             items:
    *                               type: string
    *       400:
-   *         description: Validation error
+   *         description: Validation error - Missing or invalid required fields (case_name, host, location, date_observed, description)
    *       500:
    *         description: Server error
    */
@@ -131,6 +142,23 @@ export const createMoldReport = async (req: Request, res: Response) => {
       | Express.Multer.File[]
       | undefined;
     devLog(`[createMoldReport] Received ${photos?.length || 0} photos, case_name=${details.case_name}`);
+
+    // Validate required fields
+    if (!details.case_name || !details.case_name.trim()) {
+      return sendError(res, "case_name is required", 400);
+    }
+    if (!details.host || !details.host.trim()) {
+      return sendError(res, "host (crop name) is required", 400);
+    }
+    if (!details.location || !details.location.trim()) {
+      return sendError(res, "location is required", 400);
+    }
+    if (!details.date_observed) {
+      return sendError(res, "date_observed is required", 400);
+    }
+    if (!description || !description.trim()) {
+      return sendError(res, "description is required", 400);
+    }
 
     // Create report with placeholder URLs first (returns immediately)
     const urls: string[] | null = null;
