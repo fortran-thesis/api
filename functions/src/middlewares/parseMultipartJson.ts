@@ -32,7 +32,7 @@ export const parseMultipartJson = (fields: string[]) => (
             Object.assign(req.body, parsed);
             delete (req.body as any)[f];
             console.log(`[parseMultipartJson] Promoted "${f}" to root body`);
-            console.log(`[parseMultipartJson] After promotion, req.body.location:`, (req.body as any).location);
+            console.log("[parseMultipartJson] After promotion, req.body.location:", (req.body as any).location);
           } else {
             (req.body as any)[f] = parsed;
           }

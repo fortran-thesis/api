@@ -139,13 +139,13 @@ export const createMoldReport = async (req: Request, res: Response) => {
     // After parseMultipartJson, details fields are promoted to root body
     console.log("[createMoldReport] Raw req.body keys:", Object.keys(req.body || {}));
     console.log("[createMoldReport] Full req.body:", JSON.stringify(req.body, null, 2));
-    
+
     const {description, ...details} = req.body;
     const photos: Express.Multer.File[] | undefined = req.files as
       | Express.Multer.File[]
       | undefined;
-    
-    devLog(`[createMoldReport] After destructure - details.location:`, details.location);
+
+    devLog("[createMoldReport] After destructure - details.location:", details.location);
     devLog(`[createMoldReport] Received ${photos?.length || 0} photos, case_name=${details.case_name}`);
 
     // Validate required fields
