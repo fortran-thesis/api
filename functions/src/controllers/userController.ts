@@ -596,19 +596,16 @@ export const patchUserProfile = async (req: Request, res: Response) => {
     console.log("[patchUserProfile] Request details:", {
       contentType: req.headers["content-type"],
       bodyKeys: Object.keys(req.body || {}),
-      filesCount: req.files ? (Array.isArray(req.files) ? req.files.length : 1) : 0,
+      hasFile: !!req.file,
       body: req.body,
-      file: req.file,
     });
 
     const details = req.body as any;
-    const photos: Express.Multer.File[] | undefined = req.files as
-      | Express.Multer.File[]
-      | undefined;
     let uploadedPhotoPath: string | undefined;
 
-    if (photos && photos.length > 0) {
-      const uploaded = await uploadFiles(photos, StorageFolder.USERS);
+    // Handle single photo upload (upload.single("photo") sets req.file, not req.files)
+    if (req.file) {
+      const uploaded = await uploadFiles([req.file], StorageFolder.USERS);
       if (!uploaded || uploaded.length === 0) return sendError(res, "Invalid photo, please upload a different image.", 400);
       uploadedPhotoPath = uploaded[0];
     }
