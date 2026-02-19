@@ -26,11 +26,13 @@ export const parseMultipartJson = (fields: string[]) => (
         try {
           const parsed = JSON.parse(val);
           console.log(`[parseMultipartJson] Successfully parsed field "${f}"`);
+          console.log(`[parseMultipartJson] Parsed "${f}" content location value:`, parsed.location);
           // Promote the parsed object properties to root body for validation
           if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) {
             Object.assign(req.body, parsed);
             delete (req.body as any)[f];
             console.log(`[parseMultipartJson] Promoted "${f}" to root body`);
+            console.log(`[parseMultipartJson] After promotion, req.body.location:`, (req.body as any).location);
           } else {
             (req.body as any)[f] = parsed;
           }
