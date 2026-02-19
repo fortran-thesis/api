@@ -295,6 +295,9 @@ export const updateUserProfile = async (
   }>
 ): Promise<boolean> => {
   try {
+    console.log("[updateUserProfile] Starting with id:", id);
+    console.log("[updateUserProfile] Received profile:", JSON.stringify(profile, null, 2));
+
     // Update Firebase Auth fields
     const authUpdate: UpdateRequest = {};
     if (profile.email !== undefined) authUpdate.email = profile.email;
@@ -328,16 +331,27 @@ export const updateUserProfile = async (
     if (profile.phoneNumber !== undefined) firestoreUpdate.phone_number = normalizePH(profile.phoneNumber) || profile.phoneNumber;
     // Do not write `photo_url` to Firestore user document (leave original types unchanged)
 
+    console.log("[updateUserProfile] authUpdate:", JSON.stringify(authUpdate, null, 2));
+    console.log("[updateUserProfile] firestoreUpdate:", JSON.stringify(firestoreUpdate, null, 2));
+
     // Run both updates if provided
     const authResult = true;
     if (Object.keys(authUpdate).length > 0) {
+      console.log("[updateUserProfile] Updating Firebase Auth...");
       const details = await getAuth().updateUser(id, authUpdate);
       if (!details) throw new Error("Error updating user in Firebase Auth.");
+      console.log("[updateUserProfile] Firebase Auth updated successfully");
+    } else {
+      console.log("[updateUserProfile] No Auth fields to update");
     }
 
     if (Object.keys(firestoreUpdate).length > 0) {
+      console.log("[updateUserProfile] Updating Firestore...");
       const updated = await updateFirestoreUser(id, firestoreUpdate);
       if (!updated) throw new Error("Error updating user in Firestore.");
+      console.log("[updateUserProfile] Firestore updated successfully");
+    } else {
+      console.log("[updateUserProfile] No Firestore fields to update");
     }
 
     // Invalidate cache for user and lists

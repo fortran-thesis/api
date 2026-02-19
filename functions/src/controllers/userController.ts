@@ -610,7 +610,7 @@ export const patchUserProfile = async (req: Request, res: Response) => {
       uploadedPhotoPath = uploaded[0];
     }
 
-    const updated = await updateUserProfile(id, {
+    const profileUpdate = {
       username: details.username,
       firstName: details.firstName,
       lastName: details.lastName,
@@ -619,7 +619,11 @@ export const patchUserProfile = async (req: Request, res: Response) => {
       address: details.address,
       phoneNumber: details.phoneNumber,
       photo_url: uploadedPhotoPath || details.photo_url,
-    });
+    };
+
+    console.log("[patchUserProfile] Calling updateUserProfile with:", JSON.stringify(profileUpdate, null, 2));
+
+    const updated = await updateUserProfile(id, profileUpdate);
     if (!updated) return sendError(res, "Failed to update user profile", 400);
     // Return the updated user profile
     const updatedUser = await retrieveUserById(id);

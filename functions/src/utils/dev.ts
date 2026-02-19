@@ -17,15 +17,6 @@ export const devLog = (error: unknown, context?: string): void => {
   const timestamp = new Date().toISOString();
   const contextTag = context ?? "Unlabeled";
 
-  const safeLog = (message: string) => {
-    try {
-      logger.error(message);
-    } catch (e) {
-      // Fallback to console if logger fails
-      console.error("[devLog fallback - ERROR]", message);
-    }
-  };
-
   // Handle structured API error responses
   if (
     typeof error === "object" &&
@@ -34,30 +25,59 @@ export const devLog = (error: unknown, context?: string): void => {
     "error" in error &&
     (error as ApiErrorShape).success === false
   ) {
-    safeLog(
-      `[${contextTag}] API_ERROR: ${(error as ApiErrorShape).error} (${timestamp})`
-    );
+    try {
+      logger.error(
+        `[${contextTag}] API_ERROR: ${(error as ApiErrorShape).error} (${timestamp})`
+      );
+    } catch (e) {
+      console.error(
+        `[devLog fallback - API_ERROR] [${contextTag}]`,
+        (error as ApiErrorShape).error
+      );
+    }
     return;
   }
 
   // Handle native Error instances
   if (error instanceof Error) {
-    safeLog(
-      `[${contextTag}] EXCEPTION: ${error.message}\n${error.stack} (${timestamp})`
-    );
+    try {
+      logger.error(
+        `[${contextTag}] EXCEPTION: ${error.message}\n${error.stack} (${timestamp})`
+      );
+    } catch (e) {
+      console.error(
+        `[devLog fallback - EXCEPTION] [${contextTag}]`,
+        error.message,
+        error.stack
+      );
+    }
     return;
   }
 
   // Handle string messages (info logs)
   if (typeof error === "string") {
-    safeLog(
-      `[${contextTag}] INFO: ${error} (${timestamp})`
-    );
+    try {
+      logger.info(
+        `[${contextTag}] ${error} (${timestamp})`
+      );
+    } catch (e) {
+      console.log(
+        `[devLog fallback - INFO] [${contextTag}]`,
+        error
+      );
+    }
     return;
   }
 
   // Fallback for unknown types
-  safeLog(
-    `[${contextTag}] UNKNOWN: ${String(error)} (${timestamp})`
-  );
+  try {
+    logger.info(
+      `[${contextTag}] ${String(error)} (${timestamp})`
+    );
+  } catch (e) {
+    console.log(
+      `[devLog fallback - INFO] [${contextTag}]`,
+      String(error)
+    );
+  }
 };
