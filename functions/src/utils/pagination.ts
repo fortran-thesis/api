@@ -21,24 +21,48 @@ function makePageToken(
   orderFields: OrderField[],
 ): string {
   const vals = orderFields.map((f) => {
-    // If ordering by documentId, return the id
-    const fieldPath = f instanceof FieldPath ? FieldPath.documentId() : f;
+    // Check if field is the document ID
     const isDocId =
-      fieldPath === FieldPath.documentId() ||
-      (typeof f === "object" &&
-        f.toString &&
-        f.toString().includes("documentId"));
+      f === FieldPath.documentId() ||
+      (f instanceof FieldPath && f.toString().includes("__name__")) ||
+      f === "__name__";
 
-    if (isDocId || f === "__name__") {
+    if (isDocId) {
       return lastDoc.id;
     }
 
-    const v = lastDoc.get(f as string);
+    // Handle string field names (including nested fields with dot notation)
+    const fieldStr = f as string;
+    let v = lastDoc.get(fieldStr);
+
+    // If nested field access failed, try manual traversal
+    if (v === undefined && fieldStr.includes(".")) {
+      const parts = fieldStr.split(".");
+      let current = lastDoc.data();
+      for (const part of parts) {
+        if (current && typeof current === "object") {
+          current = (current as any)[part];
+        } else {
+          current = undefined;
+          break;
+        }
+      }
+      v = current;
+    }
+
+    // Validate that we got a value
+    if (v === undefined || v === null) {
+      devLog(`[pagination] WARNING: Field '${fieldStr}' is undefined/null in document ${lastDoc.id}. This may cause pagination to fail.`);
+      // Return a consistent fallback to avoid null values breaking pagination
+      return null;
+    }
+
     // Convert Timestamps to millis for portability
     if (v instanceof Timestamp) return v.toMillis();
     return v;
   });
 
+  devLog(`[pagination] Creating token from fields: ${orderFields.join(", ")} -> values: ${JSON.stringify(vals)}`);
   const payload = {vals};
   return Buffer.from(JSON.stringify(payload)).toString("base64");
 }
@@ -54,7 +78,10 @@ function parsePageToken(token?: string) {
     if (!vals) return null;
 
     // Reconstruct Timestamps from milliseconds
-    return vals.map((v: any) => {
+    const reconstructed = vals.map((v: any) => {
+      // Skip null values (from deleted/missing fields)
+      if (v === null) return null;
+
       // If it's a number that looks like a timestamp (milliseconds since epoch)
       if (typeof v === "number" && v > 1000000000000 && v < 9999999999999) {
         // Convert milliseconds back to Timestamp
@@ -64,7 +91,11 @@ function parsePageToken(token?: string) {
       }
       return v;
     });
-  } catch {
+
+    devLog(`[pagination] Parsed token, reconstructed values: ${JSON.stringify(reconstructed)}`);
+    return reconstructed;
+  } catch (err) {
+    devLog(`[pagination] ERROR parsing token: ${err}`);
     return null;
   }
 }
@@ -77,6 +108,9 @@ function parsePageToken(token?: string) {
  * - orderFields: array describing the fields used in orderBy in the same sequence (include FieldPath.documentId() last).
  *
  * Returns: { snapshot, nextPageToken } or null on error.
+ *
+ * IMPORTANT: The returned nextPageToken will be null ONLY when snap.empty or when we got fewer items than limit.
+ * The frontend should detect the last page by checking if returned items < limit.
  */
 export async function paginateQuery(
   query: FirebaseFirestore.Query,
@@ -88,26 +122,56 @@ export async function paginateQuery(
   nextPageToken: string | null;
 } | null> {
   try {
-    let q = query.limit(limit);
+    // Fetch limit + 1 so we know if there are more pages
+    let q = query.limit(limit + 1);
     const vals = parsePageToken(token);
 
-    if (vals && vals.length) {
-      // startAfter expects the same number of ordering values as orderBy clauses
+    if (vals && vals.length > 0) {
+      // Validate that we have the correct number of values for startAfter
+      if (vals.length !== orderFields.length) {
+        devLog(`[pagination] WARNING: Token has ${vals.length} values but orderFields has ${orderFields.length}. Mismatch may cause pagination to fail.`);
+      }
+
+      // Ensure all values are non-null before calling startAfter
+      const hasNull = vals.some((v: any) => v === null);
+      if (hasNull) {
+        devLog(`[pagination] WARNING: Token contains null values. This will likely cause pagination to fail. Values: ${JSON.stringify(vals)}`);
+      }
+
+      devLog(`[pagination] Applying startAfter with ${vals.length} values for token`);
       q = (q as any).startAfter(...vals);
+    } else if (token) {
+      devLog("[pagination] Token provided but could not parse it or it contained no values. Starting from beginning.");
     }
+
     const snap = await q.get();
 
     if (snap.empty) {
+      devLog("[pagination] Query returned empty snapshot. No more pages.");
       return {snapshot: snap, nextPageToken: null};
     }
-    const last = snap.docs[snap.docs.length - 1];
 
-    // If the query returned fewer than limit items, we still return a token if there is a last doc;
-    // caller can inspect nextPageToken===null vs not to disable "load more".
-    const nextPageToken = makePageToken(last, orderFields);
-    return {snapshot: snap, nextPageToken};
+    // Check if we got more than the requested limit (which means there are more pages)
+    const hasMorePages = snap.docs.length > limit;
+
+    // Return only up to limit items
+    const snapshotDocs = snap.docs.slice(0, limit);
+    const last = snapshotDocs[snapshotDocs.length - 1];
+
+    devLog(`[pagination] Got ${snapshotDocs.length} documents (queried for ${limit + 1}). HasMorePages: ${hasMorePages}. Last doc ID: ${last.id}`);
+
+    // Return nextPageToken ONLY if there are more pages
+    const nextPageToken = hasMorePages ? makePageToken(last, orderFields) : null;
+
+    // Create a snapshot-like object with only the requested limit of documents
+    const limitedSnap = {
+      ...snap,
+      docs: snapshotDocs,
+      size: snapshotDocs.length,
+    } as any;
+
+    return {snapshot: limitedSnap, nextPageToken};
   } catch (err) {
-    // log/handle as you prefer
     devLog("paginateQuery error: " + err);
     return null;
   }

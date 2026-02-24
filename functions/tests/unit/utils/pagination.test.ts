@@ -27,9 +27,10 @@ describe("pagination utils (unit)", () => {
         [FieldPath.documentId()]
       );
 
-      expect(mockQuery.limit).toHaveBeenCalledWith(10);
+      expect(mockQuery.limit).toHaveBeenCalledWith(11);
       expect(result).toBeDefined();
-      expect(result?.snapshot).toEqual(mockSnapshot);
+      expect(result?.snapshot.docs).toEqual(mockDocs);
+      expect(result?.snapshot.empty).toBe(mockSnapshot.empty);
       expect(result?.nextPageToken).toBeDefined();
     });
 
@@ -75,7 +76,8 @@ describe("pagination utils (unit)", () => {
       );
 
       expect(result).toBeDefined();
-      expect(result?.snapshot).toEqual(mockSnapshot);
+      expect(result?.snapshot.docs).toEqual(mockDocs);
+      expect(result?.snapshot.empty).toBe(mockSnapshot.empty);
     });
 
     it("should handle Timestamp values in pagination", async () => {
@@ -138,7 +140,8 @@ describe("pagination utils (unit)", () => {
       const result = await paginateQuery(mockQuery, 10, invalidToken);
 
       expect(result).toBeDefined();
-      expect(result?.snapshot).toEqual(mockSnapshot);
+      expect(result?.snapshot.docs).toEqual(mockDocs);
+      expect(result?.snapshot.empty).toBe(mockSnapshot.empty);
     });
 
     it("should handle multiple order fields", async () => {

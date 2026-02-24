@@ -7,7 +7,7 @@ export interface Mold {
 
 export interface MoldDetails {
   info: MoldInfo;
-  prevention: object;
+  prevention: MoldPrevention;
 }
 
 export interface MoldInfo {
@@ -27,14 +27,16 @@ export interface MoldInfo {
 }
 
 export interface MoldPrevention {
-  fungicide: Array<string>;
-  additional_info: Array<{
-    title: string;
-    description: string;
-  }>;
+  physicalControl: string;
+  mechanicalControl: string;
+  culturalControl: string;
+  biologicalControl: string;
+  chemicalControl: string;
 }
 
 export interface MoldCase {
+  user_id?: string;
+  user_name?: string;
   mycologist_id: string;
   name: string;
   mold_report_id: string;

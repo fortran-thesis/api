@@ -56,6 +56,21 @@ export const addMoldCaseToFirestore = async (
   details: MoldCase
 ): Promise<MoldCase | null> => {
   try {
+    // Resolve user_name from user_id if not provided
+    let userName = (details as any).user_name;
+    if (!userName && details.user_id) {
+      try {
+        const authUser = await getAuthUserById(details.user_id);
+        if (authUser) {
+          userName =
+            authUser.details.displayName ||
+            `${authUser.user.first_name} ${authUser.user.last_name}`.trim();
+        }
+      } catch (e) {
+        devLog(e, "ENRICH_CASE_USER");
+      }
+    }
+
     // convert start_date/end_date (strings from DTO) to Firestore Timestamp
     const rawStart = (details as any).start_date;
     const rawEnd = (details as any).end_date;
@@ -73,6 +88,7 @@ export const addMoldCaseToFirestore = async (
 
     const detailsWithMetadata: WithMetadata<MoldCase> = {
       ...details,
+      ...(userName ? {user_name: userName} : {}),
       start_date: startTimestamp as any,
       end_date: endTimestamp as any,
       metadata: {

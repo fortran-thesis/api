@@ -23,13 +23,20 @@ export const findMoldReportById = async (id: string) =>
   getDocumentById(collection, id);
 export const findAllMoldReports = async (
   limit: number,
-  token?: string
+  token?: string,
+  isArchived = false
 ): Promise<{
   snapshot: FirebaseFirestore.QuerySnapshot;
   nextPageToken: string | null;
 } | null> => {
   try {
-    const queryModifier = (q: FirebaseFirestore.Query) => q;
+    // Filter at the DB level: archived docs have metadata.deleted_at set (non-null)
+    // Non-archived docs have metadata.deleted_at == null
+    const queryModifier = isArchived ?
+      (q: FirebaseFirestore.Query) =>
+        q.where("metadata.deleted_at", "!=", null) :
+      (q: FirebaseFirestore.Query) =>
+        q.where("metadata.deleted_at", "==", null);
 
     const paged = await getPaginatedDocuments(
       collection,

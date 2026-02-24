@@ -184,17 +184,14 @@ export const retrieveAllMoldReports = async (
     }
 
     const docs: PaginatedResult<QuerySnapshot> | null =
-      await findAllMoldReports(limit, token);
+      await findAllMoldReports(limit, token, isArchived);
     if (!docs) throw new Error("No mold reports found.");
-    console.log(
-      "[DEBUG] retrieveAllMoldReports - raw snapshot size:",
-      docs.snapshot.size
-    );
+    devLog(`[DEBUG] retrieveAllMoldReports - raw snapshot size: ${docs.snapshot.size}`);
     const raw = queryToJson<MoldReport>(docs.snapshot);
-    console.log("[DEBUG] retrieveAllMoldReports - parsed count:", raw.length);
-    console.log(
+    devLog(`[DEBUG] retrieveAllMoldReports - parsed count: ${raw.length}`);
+    devLog(
       "[DEBUG] retrieveAllMoldReports - report IDs:",
-      raw.map((r) => r.id)
+      raw.map((r) => (r as any).id).join(", ")
     );
     // Normalize date_observed and enrich each report with reporter info in parallel
     const enriched = await Promise.all(
@@ -234,15 +231,8 @@ export const retrieveAllMoldReports = async (
       })
     );
 
-    // Apply archive filter (documents with metadata.deleted_at are considered archived)
-    const filtered = enriched.filter((r) => {
-      const deletedAt = (r as any)?.metadata?.deleted_at;
-      const isDeleted = !!deletedAt;
-      return isArchived ? isDeleted : !isDeleted;
-    });
-
     const response = {
-      snapshot: filtered,
+      snapshot: enriched,
       nextPageToken: docs.nextPageToken,
     };
 
@@ -322,10 +312,15 @@ export const retrieveMoldReportById = async (
     try {
       const authUser = await getAuthUserById(nr.user_id);
       if (authUser) {
+        // Include location as alias for address so mobile clients can read either field
+        const detailsWithLocation = {
+          ...authUser.details,
+          location: authUser.details.address || authUser.user.address || null,
+        };
         nr.reporter = {
           id: authUser.id,
           user: authUser.user,
-          details: authUser.details,
+          details: detailsWithLocation,
         } as WithId<APIUser>;
       }
     } catch (e) {

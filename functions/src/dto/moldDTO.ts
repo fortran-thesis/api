@@ -32,13 +32,11 @@ export const MoldSchema = z.object({
       ).optional(),
     }),
     prevention: z.object({
-      fungicide: z.array(z.string()).optional(),
-      additional_info: z.array(
-        z.object({
-          title: z.string(),
-          description: z.string(),
-        })
-      ).optional(),
+      physicalControl: z.string().optional(),
+      mechanicalControl: z.string().optional(),
+      culturalControl: z.string().optional(),
+      biologicalControl: z.string().optional(),
+      chemicalControl: z.string().optional(),
     }),
   }),
 });

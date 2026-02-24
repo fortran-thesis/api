@@ -8,7 +8,6 @@ import {
 import {Role, AuditAction} from "../types/enums";
 import {auditLog} from "../middlewares/auditLogger";
 import {
-  MoldipediaCreateSchema,
   MoldipediaIdSchema,
   MoldipediaUpdateSchema,
   SearchMoldipediaQuerySchema,
@@ -21,16 +20,16 @@ import {
   deleteMoldipedia,
   softDeleteMoldipedia,
 } from "../controllers/moldipediaController";
-import {sanitizeBody, sanitizeParams} from "../middlewares/sanitation";
+import {sanitizeParams} from "../middlewares/sanitation";
 import {cacheGet, cacheInvalidate} from "../middlewares/cacheMiddleware";
+import {upload} from "../middlewares/upload";
 
 const router = Router();
 
 router.post(
   "/",
   verifyUser(Role.CURATOR),
-  sanitizeBody,
-  validateBody(MoldipediaCreateSchema),
+  upload.single("cover_photo"),
   auditLog(AuditAction.ADD_WIKIMOLD, "Created moldipedia article"),
   cacheInvalidate("moldipedia", "create"),
   async (req: Request, res: Response) => {

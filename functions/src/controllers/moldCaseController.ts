@@ -121,8 +121,11 @@ export const createMoldCase = async (req: Request, res: Response) => {
   try {
     // Accept body directly (no multipart) or from body.details if present
     const details: Omit<MoldCase, "is_archived"> = req.body.details || req.body;
+    // Auto-populate user_id from the authenticated user if not provided
+    const userId = details.user_id || req.user?.id;
     const moldCase: MoldCase | null = await addMoldCaseToFirestore({
       ...details,
+      ...(userId ? {user_id: userId} : {}),
       is_archived: false,
     });
     if (!moldCase) return sendError(res, "Failed to create mold case", 400);

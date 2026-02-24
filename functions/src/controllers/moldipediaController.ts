@@ -103,8 +103,15 @@ export const createMoldipedia = async (req: Request, res: Response) => {
    *                   type: string
    */
   try {
-    const details: Omit<Moldipedia, "cover_photo"> = req.body.details;
+    const rawDetails = req.body.details;
+    const details: Omit<Moldipedia, "cover_photo"> =
+      typeof rawDetails === "string" ? JSON.parse(rawDetails) : rawDetails;
+    // Auto-populate author_id from the authenticated user if not provided
+    const authorId = details.author_id || req.user?.id || "";
     const photo: Express.Multer.File = req.file as Express.Multer.File;
+    if (!photo) {
+      return sendError(res, "Cover photo is required.", 400);
+    }
     const filePath = generateStoragePath(
       StorageFolder.MOLDIPEDIA,
       photo.originalname
@@ -119,6 +126,7 @@ export const createMoldipedia = async (req: Request, res: Response) => {
     }
     const article: WithId<Moldipedia> | null = await addMoldipediaToFirestore({
       ...details,
+      author_id: authorId,
       cover_photo: url,
     });
     if (!article) {
@@ -382,7 +390,8 @@ export const patchMoldipedia = async (req: Request, res: Response) => {
    */
   try {
     const id: string = req.params.id;
-    const details: Partial<Moldipedia> = req.body.details;
+    // Support both { details: {...} } and flat body formats
+    const details: Partial<Moldipedia> = req.body.details ?? req.body;
     const updated = await updateMoldipediaInFirestore(id, details);
     if (!updated) {
       return sendError(res, "Failed to update moldipedia article", 404);
