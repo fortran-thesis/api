@@ -5,9 +5,11 @@ import {
   validateParams,
   validateQuery,
 } from "../middlewares/validation";
-import {Role} from "../types/enums";
+import {Role, AuditAction} from "../types/enums";
+import {auditLog} from "../middlewares/auditLogger";
 import {PaginationQuerySchema} from "../dto/paginationDTO";
 import {ReportCreateSchema, ReportIdSchema} from "../dto/reportDTO";
+import {cacheGet, cacheInvalidate} from "../middlewares/cacheMiddleware";
 import {
   createReport,
   getAllReports,
@@ -24,6 +26,8 @@ router.post(
   "/",
   verifyUser(),
   validateBody(ReportCreateSchema),
+  auditLog(AuditAction.CREATE_REPORT, "Reported user"),
+  cacheInvalidate("reports", "create"),
   async (req: Request, res: Response): Promise<void> => {
     await createReport(req, res);
   }
@@ -34,6 +38,7 @@ router.get(
   "/",
   verifyUser(Role.ADMIN),
   validateQuery(PaginationQuerySchema),
+  cacheGet("reports"),
   async (req: Request, res: Response): Promise<void> => {
     await getAllReports(req, res);
   }
@@ -55,6 +60,8 @@ router.patch(
   verifyUser(Role.ADMIN),
   validateParams(ReportIdSchema),
   validateBody(ReportCreateSchema.partial()),
+  auditLog(AuditAction.UPDATE_REPORT, (req) => `Updated report ${req.params.id}`),
+  cacheInvalidate("reports", "update"),
   async (req: Request, res: Response): Promise<void> => {
     await patchReport(req, res);
   }
@@ -65,6 +72,8 @@ router.delete(
   "/hard/:id",
   verifyUser(Role.ADMIN),
   validateParams(ReportIdSchema),
+  auditLog(AuditAction.DELETE_REPORT, (req) => `Deleted report ${req.params.id}`),
+  cacheInvalidate("reports", "delete"),
   async (req: Request, res: Response): Promise<void> => {
     await deleteReport(req, res);
   }
@@ -75,6 +84,8 @@ router.delete(
   "/soft/:id",
   verifyUser(Role.ADMIN),
   validateParams(ReportIdSchema),
+  auditLog(AuditAction.SOFT_DELETE_REPORT, (req) => `Soft deleted report ${req.params.id}`),
+  cacheInvalidate("reports", "delete"),
   async (req: Request, res: Response): Promise<void> => {
     await softDeleteReport(req, res);
   }

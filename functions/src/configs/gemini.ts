@@ -6,7 +6,7 @@ if (!process.env.GEMINI_CULTIVATION_LOG_API_KEY) {
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_CULTIVATION_LOG_API_KEY);
 
-// Using Gemini 2.5 Flash model for fast image analysis
+// Using Gemini 2.0 Flash stable model for image analysis
 export const cultivationModel = genAI.getGenerativeModel({
-  model: "gemini-2.0-flash-exp",
+  model: "gemini-2.0-flash",
 });

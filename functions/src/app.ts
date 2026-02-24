@@ -18,7 +18,6 @@ import moldRoutes from "./routes/moldRoutes";
 import moldipediaRoutes from "./routes/moldipediaRoutes";
 import moldCaseRoutes from "./routes/moldCaseRoutes";
 import moldReportRoutes from "./routes/moldReportRoutes";
-import curatorRoutes from "./routes/curatorRoutes";
 import adminRoutes from "./routes/adminRoutes";
 import reportRoutes from "./routes/reportRoutes";
 import systemRequestRoutes from "./routes/systemRequestRoutes";
@@ -26,6 +25,8 @@ import testRoute from "./routes/testRoute";
 import faqRoutes from "./routes/faqRoutes";
 import flagReportRoutes from "./routes/flagReportRoutes";
 import {cloudRunMultipartFix} from "./middlewares/cloudRunMultipartFix";
+import {globalErrorHandler} from "./middlewares/errorHandler";
+import {httpLogger} from "./middlewares/httpLogger";
 
 const app = express();
 
@@ -40,6 +41,25 @@ app.use((req, res, next) => {
 
 // CRITICAL: Parse multipart/form-data using the captured rawBody or stream directly
 // This MUST come before any other body parser
+
+// HTTP request/response logging (structured JSON in prod, pretty in dev)
+app.use(httpLogger);
+
+// Capture raw body for multipart requests before any middleware consumes the stream.
+// Firebase Functions provides rawBody automatically in production; this covers local dev.
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const ct = req.headers["content-type"] ?? "";
+  if (!ct.includes("multipart/form-data")) return next();
+  if ((req as any).rawBody) return next(); // Already provided by Firebase Functions SDK
+  const chunks: Buffer[] = [];
+  req.on("data", (c: Buffer) => chunks.push(c));
+  req.on("end", () => {
+    (req as any).rawBody = Buffer.concat(chunks);
+    next();
+  });
+  req.on("error", next);
+});
+
 app.use(cloudRunMultipartFix);
 
 // Apply security headers early (but after multipart fix to avoid interfering with parsing)
@@ -76,7 +96,6 @@ router.use("/v1/monitor", monitorRoutes);
 router.use("/v1/moldipedia", moldipediaRoutes);
 router.use("/v1/mold-case", moldCaseRoutes);
 router.use("/v1/mold-report", moldReportRoutes);
-router.use("/v1/curator", curatorRoutes);
 router.use("/v1/admin", adminRoutes);
 router.use("/v1/report", reportRoutes);
 router.use("/v1/system-request", systemRequestRoutes);
@@ -87,46 +106,6 @@ router.use("/v1/test", testRoute);
 
 app.use("/api", router);
 
-// Global error handler for multipart/multer errors
-app.use((err: any, req: Request, res: Response, next: NextFunction): void => {
-  devLog(`[GLOBAL ERROR] ${err.message || err}`);
-  devLog(`[GLOBAL ERROR] Request Headers: ${JSON.stringify(req.headers, null, 2)}`);
-
-  // Handle Multer/Busboy errors
-  if (
-    err.message === "Unexpected end of form" ||
-    err.code === "UNEXPECTED_END_OF_FORM"
-  ) {
-    devLog("[MULTIPART ERROR] Unexpected end of form - may be network/timeout issue");
-    res.status(400).json({
-      success: false,
-      message:
-        "Multipart form upload error: unexpected end of form. This may be due to network issues, incomplete upload, or timeout.",
-      error: err.message,
-      contentLength: req.headers["content-length"],
-      contentType: req.headers["content-type"],
-    });
-    return;
-  }
-
-  // Handle other Multer errors
-  if (err.name === "MulterError") {
-    devLog(`[MULTER ERROR] ${err.message || err} (code: ${err.code})`);
-    res.status(400).json({
-      success: false,
-      message: "File upload error",
-      error: err.message,
-      code: err.code,
-    });
-    return;
-  }
-
-  // Generic error handler
-  res.status(err.status || 500).json({
-    success: false,
-    message: err.message || "Internal server error",
-    error: process.env.NODE_ENV === "development" ? err : undefined,
-  });
-});
+app.use(globalErrorHandler);
 
 export default app;

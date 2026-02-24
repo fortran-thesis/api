@@ -11,8 +11,6 @@ import {
   updateMoldInFirestore,
 } from "../services/moldService";
 import {Mold, MoldDetails, PaginatedResult, WithId} from "../types/types";
-import {createLog} from "../utils/logging";
-import {AuditAction} from "../types/enums";
 
 /**
  * @swagger
@@ -201,10 +199,7 @@ export const createMold = async (req: Request, res: Response) => {
     const details: MoldDetails = req.body.details;
     const mold: WithId<Mold> | null = await addMoldToFirestore({name: moldName, mold_details: details});
     if (!mold) return sendError(res, "Failed to retrieve mold", 404);
-    // Audit log
-    if (req.user) {
-      createLog(req.user.id, req.user.user.role, AuditAction.ADD_MOLD, `Created mold: ${moldName}`, mold.id || "");
-    }
+    req.auditTargetId = mold.id || "";
     return sendSuccess(res, mold);
   } catch (error) {
     devLog(error);
@@ -592,10 +587,6 @@ export const patchMold = async (req: Request, res: Response) => {
     const details: Mold = req.body.details;
     const mold = await updateMoldInFirestore(id, details);
     if (!mold) return sendError(res, "Failed to update mold", 404);
-    // Audit log
-    if (req.user) {
-      createLog(req.user.id, req.user.user.role, AuditAction.EDIT_MOLD, `Updated mold: ${id}`, id);
-    }
     return sendSuccess(res, "Successfully updated mold.");
   } catch (error) {
     devLog(error);
@@ -651,10 +642,6 @@ export const deleteMold = async (req: Request, res: Response) => {
   try {
     const id: string = req.params.id;
     await removeMold(id);
-    // Audit log
-    if (req.user) {
-      createLog(req.user.id, req.user.user.role, AuditAction.EDIT_MOLD, `Soft deleted mold: ${id}`, id);
-    }
     return sendSuccess(res, "Successfully deleted mold");
   } catch (error) {
     devLog(error);

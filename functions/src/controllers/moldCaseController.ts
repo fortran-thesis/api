@@ -13,11 +13,11 @@ import {
   addCultivationLogToCase,
   updateCultivationDetailsInCase,
   getMoldCasesCountWithMetadata,
+  searchAssignedMoldCasesByMycologist,
 } from "../services/moldCaseService";
 import {analyzeCultivationImage} from "../services/cultivationAnalysisService";
 import {uploadFile} from "../lib/storage";
 import {StorageFolder, generateStoragePath} from "../configs/storage";
-import {findAssignedMoldCasesWithSearch} from "../repositories/moldCaseRepository.js";
 
 export const createMoldCase = async (req: Request, res: Response) => {
   /**
@@ -1340,7 +1340,7 @@ export const searchAssignedMoldCases = async (req: Request, res: Response) => {
     const pageToken: string | undefined = req.query.pageToken as string | undefined;
 
 
-    const result = await findAssignedMoldCasesWithSearch(
+    const result = await searchAssignedMoldCasesByMycologist(
       mycologistId,
       searchQuery,
       priority,
@@ -1352,16 +1352,7 @@ export const searchAssignedMoldCases = async (req: Request, res: Response) => {
       return sendError(res, "Failed to search mold cases", 500);
     }
 
-    // Convert Firestore QuerySnapshot to JSON
-    const snapshot = result.snapshot.docs.map((doc: FirebaseFirestore.QueryDocumentSnapshot<FirebaseFirestore.DocumentData>) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
-
-    return sendSuccess(res, {
-      snapshot,
-      nextPageToken: result.nextPageToken,
-    });
+    return sendSuccess(res, result);
   } catch (error) {
     devLog(error);
     return defaultError(res);

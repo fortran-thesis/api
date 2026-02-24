@@ -9,6 +9,7 @@ import {MoldIdSchema, CultivationLogSchema, CultivationDetailsSchema, SearchMold
 import {ReportIdSchema} from "../dto/reportDTO";
 import {Role} from "../types/enums";
 import {upload} from "../middlewares/upload";
+import {cacheGet, cacheInvalidate} from "../middlewares/cacheMiddleware";
 import {
   createMoldCase,
   getAllMoldCases,
@@ -29,6 +30,8 @@ const router = Router();
 router.post(
   "/",
   verifyUser(),
+  cacheInvalidate("mold-cases-all", "create"),
+  cacheInvalidate("mold-cases-assigned", "create"),
   async (req: Request, res: Response) => {
     await createMoldCase(req, res);
   }
@@ -38,6 +41,7 @@ router.get(
   "/",
   verifyUser(),
   validateQuery(PaginationQuerySchema),
+  cacheGet("mold-cases-all"),
   async (req: Request, res: Response) => {
     await getAllMoldCases(req, res);
   }
@@ -55,6 +59,7 @@ router.get(
   "/assigned",
   verifyUser(Role.CURATOR),
   validateQuery(PaginationQuerySchema),
+  cacheGet("mold-cases-assigned"),
   async (req: Request, res: Response) => {
     await getAssignedMoldCases(req, res);
   }
@@ -91,6 +96,8 @@ router.patch(
   "/:id",
   verifyUser(),
   validateParams(MoldIdSchema),
+  cacheInvalidate("mold-cases-all", "update"),
+  cacheInvalidate("mold-cases-assigned", "update"),
   async (req: Request, res: Response) => {
     await patchMoldCase(req, res);
   }
@@ -143,6 +150,8 @@ router.delete(
   "/hard/:id",
   verifyUser(),
   validateParams(MoldIdSchema),
+  cacheInvalidate("mold-cases-all", "delete"),
+  cacheInvalidate("mold-cases-assigned", "delete"),
   async (req: Request, res: Response) => {
     await deleteMoldCase(req, res);
   }
@@ -152,6 +161,8 @@ router.delete(
   "/soft/:id",
   verifyUser(),
   validateParams(MoldIdSchema),
+  cacheInvalidate("mold-cases-all", "delete"),
+  cacheInvalidate("mold-cases-assigned", "delete"),
   async (req: Request, res: Response) => {
     await softDeleteMoldCase(req, res);
   }

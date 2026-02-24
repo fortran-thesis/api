@@ -38,32 +38,20 @@ import {
   getMoldCasePriorityBreakdownController,
   getResolvedMoldReportsCountController,
 } from "../controllers/moldReportController";
-import {Role} from "../types/enums";
+import {Role, AuditAction} from "../types/enums";
+import {auditLog} from "../middlewares/auditLogger";
+import {cacheGet, cacheInvalidate} from "../middlewares/cacheMiddleware";
 
 const router = Router();
 
-// Debug middleware to log request info before multer
-const debugMultipart = (req: Request, res: Response, next: any) => {
-  console.log("[DEBUG] Request received:", {
-    method: req.method,
-    url: req.url,
-    headers: {
-      "content-type": req.headers["content-type"],
-      "content-length": req.headers["content-length"],
-      "transfer-encoding": req.headers["transfer-encoding"],
-    },
-  });
-  next();
-};
-
 router.post(
   "/",
-  debugMultipart,
   verifyUser(),
-  // lenientMulter removed - cloudRunMultipartFix in app.ts handles multipart parsing
   parseMultipartJson(["details"]),
   sanitizeBody,
   validateBody(MoldReportSchema),
+  auditLog(AuditAction.CREATE_MOLD_REPORT, "Submitted mold report"),
+  cacheInvalidate("mold-reports", "create"),
   async (req: Request, res: Response) => {
     await createMoldReport(req, res);
   }
@@ -81,6 +69,7 @@ router.get(
   "/",
   verifyUser(),
   validateQuery(PaginationQuerySchema),
+  cacheGet("mold-reports"),
   async (req: Request, res: Response) => {
     await getAllMoldReports(req, res);
   }
@@ -128,6 +117,7 @@ router.patch(
   verifyUser(Role.ADMIN),
   validateParams(ReportIdSchema),
   validateBody(AssignMoldReportSchema),
+  auditLog(AuditAction.ASSIGN_MOLD_REPORT, (req) => `Assigned report ${req.params.id}`),
   async (req: Request, res: Response) => {
     await assignReport(req, res);
   }
@@ -137,6 +127,7 @@ router.patch(
   "/:id/reject",
   verifyUser(Role.ADMIN),
   validateParams(ReportIdSchema),
+  auditLog(AuditAction.REJECT_MOLD_REPORT, (req) => `Rejected report ${req.params.id}`),
   async (req: Request, res: Response) => {
     await rejectReport(req, res);
   }
@@ -216,6 +207,8 @@ router.patch(
   verifyUser(),
   validateParams(ReportIdSchema),
   validateBody(MoldReportUpdateSchema),
+  auditLog(AuditAction.UPDATE_MOLD_REPORT, (req) => `Updated report ${req.params.id}`),
+  cacheInvalidate("mold-reports", "update"),
   async (req: Request, res: Response) => {
     await patchMoldReport(req, res);
   }
@@ -225,6 +218,8 @@ router.delete(
   "/hard/:id",
   verifyUser(),
   validateParams(ReportIdSchema),
+  auditLog(AuditAction.DELETE_MOLD_REPORT, (req) => `Deleted report ${req.params.id}`),
+  cacheInvalidate("mold-reports", "delete"),
   async (req: Request, res: Response) => {
     await deleteMoldReport(req, res);
   }
@@ -234,6 +229,8 @@ router.delete(
   "/soft/:id",
   verifyUser(),
   validateParams(ReportIdSchema),
+  auditLog(AuditAction.SOFT_DELETE_MOLD_REPORT, (req) => `Soft deleted report ${req.params.id}`),
+  cacheInvalidate("mold-reports", "delete"),
   async (req: Request, res: Response) => {
     await softDeleteMoldReport(req, res);
   }

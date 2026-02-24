@@ -29,11 +29,6 @@ import {getDocumentIdByField} from "../lib/firestore";
 import {ensureRedisConnection} from "../configs/redis";
 import {generateCode} from "../utils/code";
 import {v4 as uuidv4} from "uuid";
-import {
-  handlePostCache,
-  handlePatchCache,
-  handleDeleteCache,
-} from "../utils/cacheManager";
 import {envOptions} from "../configs/environment";
 
 export const registerUser = async (
@@ -101,9 +96,6 @@ export const registerUser = async (
 
     const details = await addUser(user, userId);
     if (!details) throw new Error("Could not register user!");
-
-    // Invalidate user list caches (new user added)
-    await handlePostCache("users");
 
     return {success: true, data: "Successfully created user!"};
   } catch (error) {
@@ -271,9 +263,6 @@ export const updateUser = async (
       throw new Error("Error updating user metadata in Firestore.");
     }
 
-    // Invalidate user cache (email/displayName don't affect list ordering)
-    await handlePatchCache("users", id, false);
-
     return true;
   } catch (error) {
     devLog(error);
@@ -295,8 +284,8 @@ export const updateUserProfile = async (
   }>
 ): Promise<boolean> => {
   try {
-    console.log("[updateUserProfile] Starting with id:", id);
-    console.log("[updateUserProfile] Received profile:", JSON.stringify(profile, null, 2));
+    devLog(`[updateUserProfile] Starting with id: ${id}`);
+    devLog(`[updateUserProfile] Received profile: ${JSON.stringify(profile)}`);
 
     // Update Firebase Auth fields
     const authUpdate: UpdateRequest = {};
@@ -331,31 +320,28 @@ export const updateUserProfile = async (
     if (profile.phoneNumber !== undefined) firestoreUpdate.phone_number = normalizePH(profile.phoneNumber) || profile.phoneNumber;
     // Do not write `photo_url` to Firestore user document (leave original types unchanged)
 
-    console.log("[updateUserProfile] authUpdate:", JSON.stringify(authUpdate, null, 2));
-    console.log("[updateUserProfile] firestoreUpdate:", JSON.stringify(firestoreUpdate, null, 2));
+    devLog(`[updateUserProfile] authUpdate: ${JSON.stringify(authUpdate)}`);
+    devLog(`[updateUserProfile] firestoreUpdate: ${JSON.stringify(firestoreUpdate)}`);
 
     // Run both updates if provided
     const authResult = true;
     if (Object.keys(authUpdate).length > 0) {
-      console.log("[updateUserProfile] Updating Firebase Auth...");
+      devLog("[updateUserProfile] Updating Firebase Auth...");
       const details = await getAuth().updateUser(id, authUpdate);
       if (!details) throw new Error("Error updating user in Firebase Auth.");
-      console.log("[updateUserProfile] Firebase Auth updated successfully");
+      devLog("[updateUserProfile] Firebase Auth updated successfully");
     } else {
-      console.log("[updateUserProfile] No Auth fields to update");
+      devLog("[updateUserProfile] No Auth fields to update");
     }
 
     if (Object.keys(firestoreUpdate).length > 0) {
-      console.log("[updateUserProfile] Updating Firestore...");
+      devLog("[updateUserProfile] Updating Firestore...");
       const updated = await updateFirestoreUser(id, firestoreUpdate);
       if (!updated) throw new Error("Error updating user in Firestore.");
-      console.log("[updateUserProfile] Firestore updated successfully");
+      devLog("[updateUserProfile] Firestore updated successfully");
     } else {
-      console.log("[updateUserProfile] No Firestore fields to update");
+      devLog("[updateUserProfile] No Firestore fields to update");
     }
-
-    // Invalidate cache for user and lists
-    await handlePatchCache("users", id, true);
 
     return authResult;
   } catch (error) {
@@ -369,9 +355,6 @@ export const softRemoveUser = async (id: string): Promise<void> => {
     await getAuth().updateUser(id, {disabled: true});
     const process = await softDeleteFirestoreUser(id);
     if (!process) throw new Error("Error deleting user.");
-
-    // Invalidate user cache (soft delete affects list and counts)
-    await handleDeleteCache("users", id);
   } catch (error) {
     devLog(error);
   }
@@ -382,9 +365,6 @@ export const removeUser = async (id: string): Promise<void> => {
     await getAuth().deleteUser(id);
     const process = await deleteFirestoreUser(id);
     if (!process) throw new Error("Error deleting user.");
-
-    // Invalidate user cache (hard delete affects list and counts)
-    await handleDeleteCache("users", id);
   } catch (error) {
     devLog(error);
   }

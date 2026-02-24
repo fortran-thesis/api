@@ -137,8 +137,7 @@ export const createMoldReport = async (req: Request, res: Response) => {
   try {
     devLog("[createMoldReport] Starting report creation");
     // After parseMultipartJson, details fields are promoted to root body
-    console.log("[createMoldReport] Raw req.body keys:", Object.keys(req.body || {}));
-    console.log("[createMoldReport] Full req.body:", JSON.stringify(req.body, null, 2));
+    devLog("[createMoldReport] Raw req.body keys:", Object.keys(req.body || {}).join(", "));
 
     const {description, ...details} = req.body;
     const photos: Express.Multer.File[] | undefined = req.files as
@@ -226,6 +225,7 @@ export const createMoldReport = async (req: Request, res: Response) => {
         });
     }
 
+    req.auditTargetId = (moldReport as any).id || "";
     return sendSuccess(res, moldReport);
   } catch (error) {
     devLog("[createMoldReport] ❌ Error: " + error);
@@ -819,7 +819,7 @@ export const postCaseDetail = async (req: Request, res: Response) => {
         createLog(
           actorId,
           role,
-          AuditAction.RESOLVE_REPORT,
+          AuditAction.UPDATE_MOLD_REPORT,
           `User follow-up on report ${id}`,
           id
         );
@@ -929,19 +929,6 @@ export const assignReport = async (req: Request, res: Response) => {
       status: (details.status as any) || "in progress",
     });
     if (!updated) return sendError(res, "Failed to assign mycologist", 400);
-    if (req.user) {
-      const {
-        id: actorId,
-        user: {role},
-      } = req.user;
-      createLog(
-        actorId,
-        role,
-        AuditAction.APPROVE_CURATOR,
-        `Assigned mycologist ${details.assigned_mycologist_id} to report ${id}`,
-        id
-      );
-    }
     return sendSuccess(res, updated);
   } catch (error) {
     devLog(error);
@@ -1020,19 +1007,6 @@ export const rejectReport = async (req: Request, res: Response) => {
       assigned_mycologist_id: null,
     });
     if (!updated) return sendError(res, "Failed to reject/close report", 400);
-    if (req.user) {
-      const {
-        id: actorId,
-        user: {role},
-      } = req.user;
-      createLog(
-        actorId,
-        role,
-        AuditAction.REJECT_CURATOR,
-        `Rejected/closed report ${id}`,
-        id
-      );
-    }
     return sendSuccess(res, updated);
   } catch (error) {
     devLog(error);

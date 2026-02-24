@@ -124,7 +124,11 @@ describe("authController (unit)", () => {
         userData.address,
         userData.phoneNumber
       );
-      expect(mockResponseUtils.defaultError).toHaveBeenCalledWith(mockRes);
+      expect(mockResponseUtils.sendError).toHaveBeenCalledWith(
+        mockRes,
+        "Email already used!",
+        400
+      );
     });
 
     it("should handle service errors", async () => {

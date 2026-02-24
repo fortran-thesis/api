@@ -106,15 +106,7 @@ export const createFlagReport = async (req: Request, res: Response) => {
       status: "unresolved",
     });
     if (!report) return sendError(res, "Failed to create flag report");
-    if (req.user) {
-      createLog(
-        reporterId,
-        req.user.user.role,
-        AuditAction.CORRECT_FLAG_REPORT,
-        `Flagged content ${details.content_id}`,
-        details.content_id
-      );
-    }
+    req.auditTargetId = (report as any).id || "";
     return sendSuccess(res, report);
   } catch (error) {
     devLog(error);

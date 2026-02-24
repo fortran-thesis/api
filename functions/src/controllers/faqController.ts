@@ -10,8 +10,6 @@ import {
   removeFAQ,
   softRemoveFAQ,
 } from "../services/faqService";
-import {createLog} from "../utils/logging";
-import {AuditAction} from "../types/enums";
 
 /**
  * Create a new FAQ
@@ -64,10 +62,7 @@ export const createFAQ = async (req: Request, res: Response) => {
     // eslint-disable-next-line camelcase
     const faq = await addFAQToFirestore({question, answer, user_id});
     if (!faq) return sendError(res, "Failed to create FAQ", 400);
-    if (req.user) {
-      const {id: actorId, user: {role}} = req.user;
-      createLog(actorId, role, AuditAction.CREATE, "Created FAQ", faq.id);
-    }
+    req.auditTargetId = faq.id;
     return sendSuccess(res, faq);
   } catch (error) {
     devLog(error);
@@ -238,10 +233,6 @@ export const patchFAQ = async (req: Request, res: Response) => {
     const details: Partial<FAQ> = req.body;
     const updated = await updateFAQInFirestore(id, details);
     if (!updated) return sendError(res, "Failed to update FAQ", 400);
-    if (req.user) {
-      const {id: actorId, user: {role}} = req.user;
-      createLog(actorId, role, AuditAction.UPDATE, "Updated FAQ", id);
-    }
     return sendSuccess(res, updated);
   } catch (error) {
     devLog(error);
@@ -283,10 +274,6 @@ export const deleteFAQ = async (req: Request, res: Response) => {
     const id = req.params.id;
     const result = await removeFAQ(id);
     if (!result) return sendError(res, "Failed to delete FAQ", 400);
-    if (req.user) {
-      const {id: actorId, user: {role}} = req.user;
-      createLog(actorId, role, AuditAction.DELETE, "Deleted FAQ", id);
-    }
     return sendSuccess(res, {message: "FAQ deleted successfully"});
   } catch (error) {
     devLog(error);
@@ -328,10 +315,6 @@ export const softDeleteFAQ = async (req: Request, res: Response) => {
     const id = req.params.id;
     const result = await softRemoveFAQ(id);
     if (!result) return sendError(res, "Failed to soft delete FAQ", 400);
-    if (req.user) {
-      const {id: actorId, user: {role}} = req.user;
-      createLog(actorId, role, AuditAction.SOFT_DELETE, "Soft deleted FAQ", id);
-    }
     return sendSuccess(res, {message: "FAQ soft deleted successfully"});
   } catch (error) {
     devLog(error);

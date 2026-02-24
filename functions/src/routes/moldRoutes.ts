@@ -17,8 +17,10 @@ import {
   MoldUpdateSchema,
   NameParamSchema,
 } from "../dto/moldDTO";
-import {Role} from "../types/enums";
+import {Role, AuditAction} from "../types/enums";
+import {auditLog} from "../middlewares/auditLogger";
 import {upload} from "../middlewares/upload";
+import {cacheGet, cacheInvalidate} from "../middlewares/cacheMiddleware";
 
 const router = Router();
 
@@ -28,6 +30,8 @@ router.post(
   validateBody(MoldSchema),
   verifyUser(),
   upload.array("photos", 5),
+  auditLog(AuditAction.ADD_MOLD, "Created mold"),
+  cacheInvalidate("molds", "create"),
   async (req: Request, res: Response) => {
     createMold(req, res);
   }
@@ -36,6 +40,7 @@ router.post(
 router.get(
   "/",
   verifyUser(Role.CURATOR),
+  cacheGet("molds"),
   async (req: Request, res: Response) => {
     getAllMolds(req, res);
   }
@@ -68,6 +73,8 @@ router.patch(
   sanitizeBody,
   validateBody(MoldUpdateSchema),
   verifyUser(),
+  auditLog(AuditAction.EDIT_MOLD, (req) => `Updated mold ${req.params.id}`),
+  cacheInvalidate("molds", "update"),
   async (req: Request, res: Response) => {
     patchMold(req, res);
   }
@@ -78,6 +85,8 @@ router.delete(
   sanitizeParams,
   validateParams(MoldIdSchema),
   verifyUser(Role.ADMIN),
+  auditLog(AuditAction.DELETE_MOLD, (req) => `Deleted mold ${req.params.id}`),
+  cacheInvalidate("molds", "delete"),
   async (req: Request, res: Response) => {
     deleteMold(req, res);
   }
@@ -88,6 +97,8 @@ router.delete(
   sanitizeParams,
   validateParams(MoldIdSchema),
   verifyUser(),
+  auditLog(AuditAction.SOFT_DELETE_MOLD, (req) => `Soft deleted mold ${req.params.id}`),
+  cacheInvalidate("molds", "delete"),
   async (req: Request, res: Response) => {
     softDeleteMold(req, res);
   }

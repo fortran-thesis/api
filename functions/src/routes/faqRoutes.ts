@@ -5,7 +5,8 @@ import {
   validateParams,
   validateQuery,
 } from "../middlewares/validation";
-import {Role} from "../types/enums";
+import {Role, AuditAction} from "../types/enums";
+import {auditLog} from "../middlewares/auditLogger";
 import {
   FAQCreateSchema,
   FAQIdSchema,
@@ -21,6 +22,7 @@ import {
   softDeleteFAQ,
 } from "../controllers/faqController";
 import {sanitizeBody, sanitizeParams} from "../middlewares/sanitation";
+import {cacheGet, cacheInvalidate} from "../middlewares/cacheMiddleware";
 
 const router = Router();
 
@@ -30,6 +32,8 @@ router.post(
   verifyUser(Role.CURATOR),
   sanitizeBody,
   validateBody(FAQCreateSchema),
+  auditLog(AuditAction.CREATE_FAQ, "Created FAQ"),
+  cacheInvalidate("faqs", "create"),
   async (req: Request, res: Response) => {
     await createFAQ(req, res);
   }
@@ -39,6 +43,7 @@ router.post(
 router.get(
   "/",
   validateQuery(SearchFAQQuerySchema),
+  cacheGet("faqs"),
   async (req: Request, res: Response) => {
     await getAllFAQ(req, res);
   }
@@ -62,6 +67,8 @@ router.patch(
   validateParams(FAQIdSchema),
   sanitizeBody,
   validateBody(FAQUpdateSchema),
+  auditLog(AuditAction.UPDATE_FAQ, (req) => `Updated FAQ ${req.params.id}`),
+  cacheInvalidate("faqs", "update"),
   async (req: Request, res: Response) => {
     await patchFAQ(req, res);
   }
@@ -73,6 +80,8 @@ router.delete(
   verifyUser(Role.ADMIN),
   sanitizeParams,
   validateParams(FAQIdSchema),
+  auditLog(AuditAction.DELETE_FAQ, (req) => `Deleted FAQ ${req.params.id}`),
+  cacheInvalidate("faqs", "delete"),
   async (req: Request, res: Response) => {
     await deleteFAQ(req, res);
   }
@@ -84,6 +93,8 @@ router.delete(
   verifyUser(Role.ADMIN),
   sanitizeParams,
   validateParams(FAQIdSchema),
+  auditLog(AuditAction.SOFT_DELETE_FAQ, (req) => `Soft deleted FAQ ${req.params.id}`),
+  cacheInvalidate("faqs", "delete"),
   async (req: Request, res: Response) => {
     await softDeleteFAQ(req, res);
   }

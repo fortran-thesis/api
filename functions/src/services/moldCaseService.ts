@@ -1,5 +1,6 @@
 import {
   DocumentSnapshot,
+  QueryDocumentSnapshot,
   QuerySnapshot,
   Timestamp,
   WriteResult,
@@ -11,6 +12,7 @@ import {
   deleteMoldCase,
   findAllMoldCases,
   findAssignedMoldCases,
+  findAssignedMoldCasesWithSearch,
   findMoldCaseById,
   findMoldCaseByName,
   findMoldCaseByReportId,
@@ -23,7 +25,7 @@ import {
 } from "../repositories/moldCaseRepository";
 import {MoldCase, PaginatedResult, WithMetadata} from "../types/types";
 import {transformToSignedUrl} from "../utils/storageTransform";
-import {cacheItem, getCachedItem, cacheList, getCachedList, invalidateAllLists} from "../utils/cacheManager";
+import {cacheItem, getCachedItem, cacheList, getCachedList} from "../utils/cacheManager";
 import {getRoleCounts, getDisabledCounts} from "./userService";
 import {getMoldReportStatusCounts} from "./moldReportService";
 import {getAuthUserById} from "../lib/auth";
@@ -83,10 +85,6 @@ export const addMoldCaseToFirestore = async (
       await addMoldCase(detailsWithMetadata);
     if (!moldCase) throw new Error("Cannot add mold case.");
 
-    // Invalidate mold case caches since new case was added
-    await invalidateAllLists("mold-cases-all");
-    await invalidateAllLists("mold-cases-assigned");
-
     return documentToJson<MoldCase>(moldCase);
   } catch (error) {
     devLog(error);
@@ -108,6 +106,10 @@ export const retrieveAllMoldCasesByUser = async (
       isArchived,
       token: token || null,
     };
+
+    // Try to get from cache
+    const cached = await getCachedList<PaginatedResult<MoldCase[]>>("mold-cases-all", cacheQuery, {useCache: true});
+    if (cached) return cached;
 
     const cases: PaginatedResult<QuerySnapshot> | null = await findAllMoldCases(
       uid,
@@ -229,6 +231,49 @@ export const retrieveAssignedMoldCases = async (
     await cacheList("mold-cases-assigned", response, cacheQuery, {ttl: 300});
 
     return response;
+  } catch (error) {
+    devLog(error);
+    return null;
+  }
+};
+
+export const searchAssignedMoldCasesByMycologist = async (
+  mycologistId: string,
+  searchQuery?: string,
+  priority?: string,
+  limit = 10,
+  token?: string
+): Promise<PaginatedResult<MoldCase[]> | null> => {
+  try {
+    const result = await findAssignedMoldCasesWithSearch(mycologistId, searchQuery, priority, limit, token);
+    if (!result) throw new Error("No results found.");
+
+    const raw: MoldCase[] = result.snapshot.docs.map((doc: QueryDocumentSnapshot) => ({
+      id: doc.id,
+      ...doc.data(),
+    } as unknown as MoldCase));
+
+    const normalized = raw.map((c) => {
+      const copy: any = {...c};
+      try {
+        if (copy.start_date && typeof copy.start_date === "object" && (copy.start_date as any).toDate instanceof Function) {
+          copy.start_date = (copy.start_date as any).toDate().toISOString();
+        }
+      } catch (e) {/* ignore */}
+      try {
+        if (copy.end_date && typeof copy.end_date === "object" && (copy.end_date as any).toDate instanceof Function) {
+          copy.end_date = (copy.end_date as any).toDate().toISOString();
+        }
+      } catch (e) {/* ignore */}
+      return copy as MoldCase;
+    });
+
+    const transformed = await Promise.all(normalized.map((c) => transformMoldCaseImages(c)));
+
+    return {
+      snapshot: transformed,
+      nextPageToken: result.nextPageToken,
+    };
   } catch (error) {
     devLog(error);
     return null;
@@ -383,10 +428,6 @@ export const updateMoldCaseInFirestore = async (
     );
     if (!result) throw new Error("Failed to update mold case.");
 
-    // Invalidate mold case caches since case was updated
-    await invalidateAllLists("mold-cases-all");
-    await invalidateAllLists("mold-cases-assigned");
-
     const updatedCase = await retrieveMoldCaseById(id);
     return updatedCase;
   } catch (error) {
@@ -399,10 +440,6 @@ export const softRemoveMoldCase = async (id: string): Promise<void> => {
   try {
     const result: WriteResult | null = await softDeleteMoldCase(id);
     if (!result) throw new Error("Failed to soft delete mold case");
-
-    // Invalidate mold case caches since case was deleted
-    await invalidateAllLists("mold-cases-all");
-    await invalidateAllLists("mold-cases-assigned");
   } catch (error) {
     devLog(error);
   }
@@ -412,10 +449,6 @@ export const removeMoldCase = async (id: string): Promise<void> => {
   try {
     const result: WriteResult | null = await deleteMoldCase(id);
     if (!result) throw new Error("Failed to delete mold case");
-
-    // Invalidate mold case caches since case was deleted
-    await invalidateAllLists("mold-cases-all");
-    await invalidateAllLists("mold-cases-assigned");
   } catch (error) {
     devLog(error);
   }
@@ -428,10 +461,6 @@ export const addCultivationLogToCase = async (
   try {
     const result = await appendCultivationLog(caseId, log);
     if (!result) throw new Error("Failed to add cultivation log");
-
-    // Invalidate mold case caches since case was modified
-    await invalidateAllLists("mold-cases-all");
-    await invalidateAllLists("mold-cases-assigned");
 
     const updated = await retrieveMoldCaseById(caseId);
     return updated;
@@ -448,10 +477,6 @@ export const updateCultivationDetailsInCase = async (
   try {
     const result = await updateCultivationDetails(caseId, details);
     if (!result) throw new Error("Failed to update cultivation details");
-
-    // Invalidate mold case caches since case was modified
-    await invalidateAllLists("mold-cases-all");
-    await invalidateAllLists("mold-cases-assigned");
 
     const updated = await retrieveMoldCaseById(caseId);
     return updated;

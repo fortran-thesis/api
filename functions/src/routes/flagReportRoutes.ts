@@ -8,7 +8,8 @@ import {
   softDeleteFlagReport,
 } from "../controllers/flagReportController";
 import {verifyUser} from "../middlewares/verification";
-import {Role} from "../types/enums";
+import {Role, AuditAction} from "../types/enums";
+import {auditLog} from "../middlewares/auditLogger";
 import {
   validateBody,
   validateParams,
@@ -16,6 +17,7 @@ import {
 } from "../middlewares/validation";
 import {PaginationQuerySchema} from "../dto/paginationDTO";
 import {CreateFlagReportSchema, FlagReportIdSchema} from "../dto/flagReportDTO";
+import {cacheGet, cacheInvalidate} from "../middlewares/cacheMiddleware";
 
 const router = Router();
 
@@ -25,6 +27,8 @@ router.post(
   "/",
   verifyUser(),
   validateBody(CreateFlagReportSchema),
+  auditLog(AuditAction.CREATE_FLAG_REPORT, "Flagged content"),
+  cacheInvalidate("flag-reports", "create"),
   async (req, res) => {
     await createFlagReport(req, res);
   }
@@ -35,6 +39,7 @@ router.get(
   "/",
   verifyUser(Role.CURATOR),
   validateQuery(PaginationQuerySchema),
+  cacheGet("flag-reports"),
   async (req, res) => {
     await getAllFlagReports(req, res);
   }
@@ -55,6 +60,7 @@ router.patch(
   "/:id",
   verifyUser(Role.CURATOR),
   validateParams(FlagReportIdSchema),
+  cacheInvalidate("flag-reports", "update"),
   async (req, res) => {
     await patchFlagReport(req, res);
   }
@@ -65,6 +71,8 @@ router.delete(
   "/hard/:id",
   verifyUser(Role.ADMIN),
   validateParams(FlagReportIdSchema),
+  auditLog(AuditAction.DELETE_FLAG_REPORT, (req) => `Deleted flag report ${req.params.id}`),
+  cacheInvalidate("flag-reports", "delete"),
   async (req, res) => {
     await deleteFlagReport(req, res);
   }
@@ -75,6 +83,8 @@ router.delete(
   "/soft/:id",
   verifyUser(Role.ADMIN),
   validateParams(FlagReportIdSchema),
+  auditLog(AuditAction.SOFT_DELETE_FLAG_REPORT, (req) => `Soft deleted flag report ${req.params.id}`),
+  cacheInvalidate("flag-reports", "delete"),
   async (req, res) => {
     await softDeleteFlagReport(req, res);
   }

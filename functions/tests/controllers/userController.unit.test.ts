@@ -234,7 +234,7 @@ describe("userController (unit)", () => {
       const updateData = {username: "newusername"};
 
       mockReq.params = {id: userId};
-      mockReq.body = {details: updateData};
+      mockReq.body = { details: updateData };
       mockAuthService.updateUser.mockResolvedValue(true);
 
       await userController.patchUser(mockReq as Request, mockRes as Response);
@@ -254,7 +254,7 @@ describe("userController (unit)", () => {
       const updateData = {username: "newusername"};
 
       mockReq.params = {id: userId};
-      mockReq.body = {details: updateData};
+      mockReq.body = { details: updateData };
       mockAuthService.updateUser.mockResolvedValue(false);
 
       await userController.patchUser(mockReq as Request, mockRes as Response);
@@ -283,7 +283,8 @@ describe("userController (unit)", () => {
       
       (mockReq as any).user = { id: userId } as any;
       mockReq.body = details;
-      (mockReq as any).files = files;
+      // upload.single sets req.file (singular), not req.files
+      (mockReq as any).file = files[0];
       (mockReq as any).headers = { "content-type": "multipart/form-data" };
 
       (mockStorage.uploadFiles as any).mockResolvedValue(["users/123_pic.jpg"]);
@@ -294,7 +295,7 @@ describe("userController (unit)", () => {
       await userController.patchUserProfile(mockReq as Request, mockRes as Response);
 
       expect(mockStorage.uploadFiles).toHaveBeenCalledWith(
-        files,
+        [files[0]],
         expect.any(String)
       );
       expect(mockAuthService.updateUserProfile).toHaveBeenCalledWith(userId, expect.objectContaining({ photo_url: "users/123_pic.jpg" }));

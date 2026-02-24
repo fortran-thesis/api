@@ -78,7 +78,6 @@ describe("moldController (unit)", () => {
       mockMoldService.addMoldToFirestore.mockResolvedValue(
         mockCreatedMold as any
       );
-      mockLoggingUtils.createLog.mockResolvedValue(undefined);
 
       await moldController.createMold(mockReq as Request, mockRes as Response);
 
@@ -90,13 +89,7 @@ describe("moldController (unit)", () => {
         name: "Test Mold",
         mold_details: moldDetails,
       });
-      expect(mockLoggingUtils.createLog).toHaveBeenCalledWith(
-        "test-user-id",
-        "USER",
-        AuditAction.ADD_MOLD,
-        "Created mold: Test Mold",
-        "test-mold-id"
-      );
+      // Audit logging handled by middleware, not checked here
       expect(mockResponseUtils.sendSuccess).toHaveBeenCalledWith(
         mockRes,
         mockCreatedMold
@@ -382,13 +375,7 @@ describe("moldController (unit)", () => {
       await moldController.deleteMold(mockReq as Request, mockRes as Response);
 
       expect(mockMoldService.removeMold).toHaveBeenCalledWith(moldId);
-      expect(mockLoggingUtils.createLog).toHaveBeenCalledWith(
-        "test-user-id",
-        "USER",
-        AuditAction.EDIT_MOLD,
-        `Soft deleted mold: ${moldId}`,
-        moldId
-      );
+      // Audit logging handled by middleware, not checked here
       expect(mockResponseUtils.sendSuccess).toHaveBeenCalledWith(
         mockRes,
         "Successfully deleted mold"

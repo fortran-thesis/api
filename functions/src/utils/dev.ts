@@ -1,23 +1,21 @@
 import {envOptions} from "../configs/environment";
-import * as logger from "firebase-functions/logger";
+import {logger} from "../configs/logger";
 
 type ApiErrorShape = { success: false; error: string };
 
 /**
- * Development logging utility
- * Handles errors, info messages, and structured logs
- * Only logs in dev mode (isDev = true)
+ * Development logging utility.
+ * Uses the central pino logger — only emits when isDev === true.
  *
- * @param error - Error object, string message, or structured data
+ * @param error   - Error object, string message, or structured data
  * @param context - Optional context label (default: "Unlabeled")
  */
 export const devLog = (error: unknown, context?: string): void => {
   if (!envOptions.isDev) return;
 
-  const timestamp = new Date().toISOString();
   const contextTag = context ?? "Unlabeled";
 
-  // Handle structured API error responses
+  // Structured API error shape: { success: false; error: string }
   if (
     typeof error === "object" &&
     error !== null &&
@@ -25,59 +23,22 @@ export const devLog = (error: unknown, context?: string): void => {
     "error" in error &&
     (error as ApiErrorShape).success === false
   ) {
-    try {
-      logger.error(
-        `[${contextTag}] API_ERROR: ${(error as ApiErrorShape).error} (${timestamp})`
-      );
-    } catch (e) {
-      console.error(
-        `[devLog fallback - API_ERROR] [${contextTag}]`,
-        (error as ApiErrorShape).error
-      );
-    }
+    logger.error({ctx: contextTag}, `API_ERROR: ${(error as ApiErrorShape).error}`);
     return;
   }
 
-  // Handle native Error instances
+  // Native Error instances
   if (error instanceof Error) {
-    try {
-      logger.error(
-        `[${contextTag}] EXCEPTION: ${error.message}\n${error.stack} (${timestamp})`
-      );
-    } catch (e) {
-      console.error(
-        `[devLog fallback - EXCEPTION] [${contextTag}]`,
-        error.message,
-        error.stack
-      );
-    }
+    logger.error({err: error, ctx: contextTag}, `EXCEPTION: ${error.message}`);
     return;
   }
 
-  // Handle string messages (info logs)
+  // Plain string messages
   if (typeof error === "string") {
-    try {
-      logger.info(
-        `[${contextTag}] ${error} (${timestamp})`
-      );
-    } catch (e) {
-      console.log(
-        `[devLog fallback - INFO] [${contextTag}]`,
-        error
-      );
-    }
+    logger.info({ctx: contextTag}, error);
     return;
   }
 
-  // Fallback for unknown types
-  try {
-    logger.info(
-      `[${contextTag}] ${String(error)} (${timestamp})`
-    );
-  } catch (e) {
-    console.log(
-      `[devLog fallback - INFO] [${contextTag}]`,
-      String(error)
-    );
-  }
+  // Anything else — stringify it
+  logger.info({data: error, ctx: contextTag}, String(error));
 };

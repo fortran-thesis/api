@@ -1,7 +1,8 @@
 import {Request, Response, Router, NextFunction} from "express";
 import {verifyUser} from "../middlewares/verification";
 import {parseMultipartJson} from "../middlewares/parseMultipartJson";
-import {Role} from "../types/enums";
+import {Role, AuditAction} from "../types/enums";
+import {auditLog} from "../middlewares/auditLogger";
 import {
   deleteUser,
   getAllUsers,
@@ -26,6 +27,7 @@ import {
 import {PaginationQuerySchema} from "../dto/paginationDTO";
 import {sanitizeBody, sanitizeParams} from "../middlewares/sanitation";
 import {upload} from "../middlewares/upload";
+import {cacheGet, cacheInvalidate} from "../middlewares/cacheMiddleware";
 
 const router = Router();
 
@@ -33,6 +35,7 @@ router.get(
   "/",
   verifyUser(Role.ADMIN),
   validateQuery(PaginationQuerySchema),
+  cacheGet("users"),
   async (req: Request, res: Response) => {
     getAllUsers(req, res);
   }
@@ -69,6 +72,7 @@ router.patch(
   parseMultipartJson(["details"]),
   sanitizeBody,
   validateBody(UserProfileUpdateSchema),
+  auditLog(AuditAction.PROFILE_UPDATE, "Updated own profile"),
   async (req: Request, res: Response) => {
     patchUserProfile(req, res);
   }
@@ -85,6 +89,7 @@ router.get(
   "/mycologists",
   verifyUser(Role.ADMIN),
   validateQuery(PaginationQuerySchema),
+  cacheGet("mycologists"),
   async (req: Request, res: Response) => {
     getAllMycologists(req, res);
   }
@@ -134,6 +139,8 @@ router.patch(
   sanitizeBody,
   validateBody(UserDetailsUpdateSchema),
   verifyUser(Role.ADMIN),
+  auditLog(AuditAction.UPDATE_USER, (req) => `Admin updated user ${req.params.id}`),
+  cacheInvalidate("users", "update"),
   async (req: Request, res: Response) => {
     patchUser(req, res);
   }
@@ -144,6 +151,7 @@ router.delete(
   sanitizeParams,
   validateParams(UserIdSchema),
   verifyUser(Role.ADMIN),
+  cacheInvalidate("users", "delete"),
   async (req: Request, res: Response) => {
     deleteUser(req, res);
   }
@@ -154,6 +162,7 @@ router.delete(
   sanitizeParams,
   validateParams(UserIdSchema),
   verifyUser(),
+  cacheInvalidate("users", "delete"),
   async (req: Request, res: Response) => {
     softDeleteUser(req, res);
   }

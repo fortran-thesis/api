@@ -21,9 +21,6 @@ import {
   cacheList,
   getCachedItem,
   cacheItem,
-  handlePostCache,
-  handlePatchCache,
-  handleDeleteCache,
 } from "../utils/cacheManager";
 
 const RESOURCE = "molds";
@@ -44,8 +41,6 @@ export const addMoldToFirestore = async (
     const mold: DocumentSnapshot | null = await addMold(detailsWithMetadata);
     if (!mold) throw new Error("Cannot add mold.");
     const result = documentToJson<WithId<Mold>>(mold);
-    // Invalidate all list caches using new cache manager
-    await handlePostCache(RESOURCE);
     return result;
   } catch (error) {
     devLog(error);
@@ -135,9 +130,6 @@ export const updateMoldInFirestore = async (
     const result: WriteResult | null = await updateMold(id, details);
     if (!result) throw new Error("Failed to update mold.");
 
-    // Invalidate cache using new cache manager (invalidates item + all lists)
-    await handlePatchCache(RESOURCE, id);
-
     const updatedMold = await retrieveMoldById(id);
     return updatedMold;
   } catch (error) {
@@ -150,9 +142,6 @@ export const softRemoveMold = async (id: string): Promise<void> => {
   try {
     const result: WriteResult | null = await softDeleteMold(id);
     if (!result) throw new Error("Failed to delete mold");
-
-    // Invalidate cache using new cache manager (invalidates item + all lists)
-    await handleDeleteCache(RESOURCE, id);
   } catch (error) {
     devLog(error);
   }
@@ -162,9 +151,6 @@ export const removeMold = async (id: string): Promise<void> => {
   try {
     const result: WriteResult | null = await deleteMold(id);
     if (!result) throw new Error("Failed to delete mold");
-
-    // Invalidate cache using new cache manager (invalidates item + all lists)
-    await handleDeleteCache(RESOURCE, id);
   } catch (error) {
     devLog(error);
   }

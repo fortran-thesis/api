@@ -184,13 +184,12 @@ describe("authService (unit)", () => {
     it("should soft delete user", async () => {
       mockUpdateUser.mockResolvedValue(true);
       mockSoftDeleteFirestoreUser.mockResolvedValue(true);
-      mockHandleDeleteCache.mockResolvedValue(undefined);
 
       await authService.softRemoveUser("user123");
 
       expect(mockUpdateUser).toHaveBeenCalledWith("user123", {disabled: true});
       expect(mockSoftDeleteFirestoreUser).toHaveBeenCalledWith("user123");
-      expect(mockHandleDeleteCache).toHaveBeenCalledWith("users", "user123");
+      // Cache invalidation is handled by route middleware, not the service
     });
   });
 
@@ -211,13 +210,12 @@ describe("authService (unit)", () => {
     it("should hard delete user", async () => {
       mockDeleteUser.mockResolvedValue(true);
       mockDeleteFirestoreUser.mockResolvedValue(true);
-      mockHandleDeleteCache.mockResolvedValue(undefined);
 
       await authService.removeUser("user123");
 
       expect(mockDeleteUser).toHaveBeenCalledWith("user123");
       expect(mockDeleteFirestoreUser).toHaveBeenCalledWith("user123");
-      expect(mockHandleDeleteCache).toHaveBeenCalledWith("users", "user123");
+      // Cache invalidation is handled by route middleware, not the service
     });
   });
 });
