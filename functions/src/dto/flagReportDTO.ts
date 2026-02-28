@@ -7,6 +7,14 @@ export const CreateFlagReportSchema = z.object({
   details: z.string().optional(),
 });
 
+export const UpdateFlagReportSchema = z.object({
+  status: z.enum(["unresolved", "resolved"]).optional(),
+  details: z.string().optional(),
+}).refine(
+  (data) => Object.keys(data).length > 0,
+  {message: "At least one field must be provided for update"}
+);
+
 export const FlagReportIdSchema = z.object({
   id: z.string().min(1, "Flag report ID is required"),
 });

@@ -16,7 +16,7 @@ import {FlagReportBase, PaginatedResult} from "../types/types";
 export const createFlagReport = async (req: Request, res: Response) => {
   /**
    * @swagger
-   * /api/v1/flag-reports:
+   * /api/v1/flag-report:
    *   post:
    *     summary: Create a flag report (content)
    *     tags: [FlagReports]
@@ -117,7 +117,7 @@ export const createFlagReport = async (req: Request, res: Response) => {
 export const getAllFlagReports = async (req: Request, res: Response) => {
   /**
    * @swagger
-   * /api/v1/flag-reports:
+   * /api/v1/flag-report:
    *   get:
    *     summary: List flag reports
    *     tags: [FlagReports]
@@ -203,7 +203,7 @@ export const getAllFlagReports = async (req: Request, res: Response) => {
 export const getFlagReportById = async (req: Request, res: Response) => {
   /**
    * @swagger
-   * /api/v1/flag-reports/{id}:
+   * /api/v1/flag-report/{id}:
    *   get:
    *     summary: Get flag report by ID
    *     tags: [FlagReports]
@@ -285,7 +285,7 @@ export const getFlagReportById = async (req: Request, res: Response) => {
 export const patchFlagReport = async (req: Request, res: Response) => {
   /**
    * @swagger
-   * /api/v1/flag-reports/{id}:
+   * /api/v1/flag-report/{id}:
    *   patch:
    *     summary: Update flag report
    *     tags: [FlagReports]
@@ -377,7 +377,7 @@ export const patchFlagReport = async (req: Request, res: Response) => {
 export const deleteFlagReport = async (req: Request, res: Response) => {
   /**
    * @swagger
-   * /api/v1/flag-reports/{id}:
+   * /api/v1/flag-report/hard/{id}:
    *   delete:
    *     summary: Hard delete flag report
    *     tags: [FlagReports]
@@ -445,7 +445,7 @@ export const deleteFlagReport = async (req: Request, res: Response) => {
 export const softDeleteFlagReport = async (req: Request, res: Response) => {
   /**
    * @swagger
-   * /api/v1/flag-reports/soft/{id}:
+   * /api/v1/flag-report/soft/{id}:
    *   delete:
    *     summary: Soft delete flag report
    *     tags: [FlagReports]
