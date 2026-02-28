@@ -592,13 +592,13 @@ export const patchUserProfile = async (req: Request, res: Response) => {
     const id = req.user?.id;
     if (!id) return sendError(res, "Unauthenticated", 401);
 
-    // Debug log
-    console.log("[patchUserProfile] Request details:", {
+    // Debug log (dev-only)
+    devLog({
       contentType: req.headers["content-type"],
       bodyKeys: Object.keys(req.body || {}),
       hasFile: !!req.file,
       body: req.body,
-    });
+    }, "patchUserProfile request details");
 
     const details = req.body as any;
     let uploadedPhotoPath: string | undefined;
@@ -621,7 +621,7 @@ export const patchUserProfile = async (req: Request, res: Response) => {
       photo_url: uploadedPhotoPath || details.photo_url,
     };
 
-    console.log("[patchUserProfile] Calling updateUserProfile with:", JSON.stringify(profileUpdate, null, 2));
+    devLog(profileUpdate, "patchUserProfile updateUserProfile payload");
 
     const updated = await updateUserProfile(id, profileUpdate);
     if (!updated) return sendError(res, "Failed to update user profile", 400);

@@ -1,5 +1,6 @@
 import type {FileFilterCallback} from "multer";
 import {Request, Response, NextFunction} from "express";
+import {logger} from "../configs/logger";
 
 const allowedTypes = ["image/jpeg", "image/png"];
 
@@ -18,7 +19,7 @@ export const fileFilter = (
 const passthroughMulter = {
   single: (fieldName: string) => {
     return (req: Request, res: Response, next: NextFunction) => {
-      console.log(`[PASSTHROUGH MULTER] Checking single file: ${fieldName}`);
+      logger.debug(`[PASSTHROUGH MULTER] Checking single file: ${fieldName}`);
 
       // Files are already parsed by cloudRunMultipartFix
       // Just validate if the file exists and meets requirements
@@ -29,12 +30,12 @@ const passthroughMulter = {
         if (file) {
           // Validate file type
           if (!allowedTypes.includes(file.mimetype)) {
-            console.log(`[PASSTHROUGH MULTER] Invalid file type: ${file.mimetype}`);
+            logger.warn(`[PASSTHROUGH MULTER] Invalid file type: ${file.mimetype}`);
             return next(new Error(`Invalid file type. Only ${allowedTypes.join(", ")} are allowed.`));
           }
           // Store as req.file for compatibility with existing code
           req.file = file;
-          console.log(`[PASSTHROUGH MULTER] File validated: ${file.originalname}`);
+          logger.debug(`[PASSTHROUGH MULTER] File validated: ${file.originalname}`);
         }
       }
 
@@ -44,7 +45,7 @@ const passthroughMulter = {
 
   array: (fieldName: string, maxCount: number) => {
     return (req: Request, res: Response, next: NextFunction) => {
-      console.log(`[PASSTHROUGH MULTER] Checking array field: ${fieldName}, max: ${maxCount}`);
+      logger.debug(`[PASSTHROUGH MULTER] Checking array field: ${fieldName}, max: ${maxCount}`);
 
       const files = req.files as Express.Multer.File[] | undefined;
 
@@ -52,19 +53,19 @@ const passthroughMulter = {
         const matchingFiles = files.filter((f) => f.fieldname === fieldName);
 
         if (matchingFiles.length > maxCount) {
-          console.log(`[PASSTHROUGH MULTER] Too many files: ${matchingFiles.length} > ${maxCount}`);
+          logger.warn(`[PASSTHROUGH MULTER] Too many files: ${matchingFiles.length} > ${maxCount}`);
           return next(new Error(`Too many files. Maximum ${maxCount} allowed.`));
         }
 
         // Validate all files
         for (const file of matchingFiles) {
           if (!allowedTypes.includes(file.mimetype)) {
-            console.log(`[PASSTHROUGH MULTER] Invalid file type: ${file.mimetype}`);
+            logger.warn(`[PASSTHROUGH MULTER] Invalid file type: ${file.mimetype}`);
             return next(new Error(`Invalid file type. Only ${allowedTypes.join(", ")} are allowed.`));
           }
         }
 
-        console.log(`[PASSTHROUGH MULTER] ${matchingFiles.length} files validated`);
+        logger.debug(`[PASSTHROUGH MULTER] ${matchingFiles.length} files validated`);
       }
 
       next();
@@ -73,7 +74,7 @@ const passthroughMulter = {
 
   fields: (fields: {name: string; maxCount: number}[]) => {
     return (req: Request, res: Response, next: NextFunction) => {
-      console.log("[PASSTHROUGH MULTER] Checking fields:", fields);
+      logger.debug({fields}, "[PASSTHROUGH MULTER] Checking fields");
 
       const files = req.files as Express.Multer.File[] | undefined;
 
@@ -82,20 +83,20 @@ const passthroughMulter = {
           const matchingFiles = files.filter((f) => f.fieldname === fieldDef.name);
 
           if (matchingFiles.length > fieldDef.maxCount) {
-            console.log(`[PASSTHROUGH MULTER] Too many files for ${fieldDef.name}: ${matchingFiles.length} > ${fieldDef.maxCount}`);
+            logger.warn(`[PASSTHROUGH MULTER] Too many files for ${fieldDef.name}: ${matchingFiles.length} > ${fieldDef.maxCount}`);
             return next(new Error(`Too many files for field ${fieldDef.name}. Maximum ${fieldDef.maxCount} allowed.`));
           }
 
           // Validate all files
           for (const file of matchingFiles) {
             if (!allowedTypes.includes(file.mimetype)) {
-              console.log(`[PASSTHROUGH MULTER] Invalid file type: ${file.mimetype}`);
+              logger.warn(`[PASSTHROUGH MULTER] Invalid file type: ${file.mimetype}`);
               return next(new Error(`Invalid file type. Only ${allowedTypes.join(", ")} are allowed.`));
             }
           }
         }
 
-        console.log("[PASSTHROUGH MULTER] All fields validated");
+        logger.debug("[PASSTHROUGH MULTER] All fields validated");
       }
 
       next();
