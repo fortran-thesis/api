@@ -22,6 +22,7 @@ import {
   updateCultivationDetails,
   countCasesByPriority,
   countAllMoldCasesWithMetadata,
+  removeCultivationLogAtIndex,
 } from "../repositories/moldCaseRepository";
 import {MoldCase, PaginatedResult, WithMetadata} from "../types/types";
 import {transformToSignedUrl} from "../utils/storageTransform";
@@ -467,6 +468,33 @@ export const removeMoldCase = async (id: string): Promise<void> => {
     if (!result) throw new Error("Failed to delete mold case");
   } catch (error) {
     devLog(error);
+  }
+};
+
+export const getCultivationLogsFromCase = async (
+  caseId: string
+): Promise<MoldCase["cultivation_logs"] | null> => {
+  try {
+    const moldCase = await retrieveMoldCaseById(caseId);
+    if (!moldCase) throw new Error("No case found.");
+    return moldCase.cultivation_logs ?? [];
+  } catch (error) {
+    devLog(error);
+    return null;
+  }
+};
+
+export const removeCultivationLogFromCase = async (
+  caseId: string,
+  logIndex: number
+): Promise<MoldCase | null> => {
+  try {
+    const result = await removeCultivationLogAtIndex(caseId, logIndex);
+    if (!result) throw new Error("Failed to remove cultivation log");
+    return await retrieveMoldCaseById(caseId);
+  } catch (error) {
+    devLog(error);
+    return null;
   }
 };
 

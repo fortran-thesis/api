@@ -123,6 +123,28 @@ export const appendCultivationLog = async (
   }
 };
 
+/**
+ * Remove a cultivation log at a specific index by fetching the array,
+ * splicing the entry, and writing the whole array back.
+ */
+export const removeCultivationLogAtIndex = async (
+  caseId: string,
+  logIndex: number
+): Promise<FirebaseFirestore.WriteResult | null> => {
+  try {
+    const doc = await getDocumentById(collection, caseId);
+    if (!doc || !doc.exists) return null;
+    const data = doc.data() as any;
+    const logs: any[] = Array.isArray(data?.cultivation_logs) ? [...data.cultivation_logs] : [];
+    if (logIndex < 0 || logIndex >= logs.length) return null;
+    logs.splice(logIndex, 1);
+    return await updateDocument(collection, caseId, {cultivation_logs: logs} as any);
+  } catch (err) {
+    devLog(err);
+    return null;
+  }
+};
+
 export const updateCultivationDetails = async (
   caseId: string,
   details: Partial<any>

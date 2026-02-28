@@ -14,6 +14,9 @@ import {
   updateCultivationDetailsInCase,
   getMoldCasesCountWithMetadata,
   searchAssignedMoldCasesByMycologist,
+  retrieveMoldCaseById,
+  getCultivationLogsFromCase,
+  removeCultivationLogFromCase,
 } from "../services/moldCaseService";
 import {analyzeCultivationImage} from "../services/cultivationAnalysisService";
 import {uploadFile} from "../lib/storage";
@@ -1386,3 +1389,423 @@ export const getMoldCasesCountMetadataController = async (req: Request, res: Res
   }
 };
 
+// ─── Case History / Archived ────────────────────────────────────────────────
+
+export const getMoldCaseById = async (req: Request, res: Response) => {
+  /**
+   * @swagger
+   * /api/v1/mold-case/{id}:
+   *   get:
+   *     summary: Get a mold case by ID
+   *     tags: [MoldCases]
+   *     security:
+   *       - bearerAuth: []
+   *       - cookieAuth: []
+   *     description:
+   *       - Requires authentication (Bearer token or session cookie)
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Mold case ID
+   *     responses:
+   *       200:
+   *         description: Mold case retrieved successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     id:
+   *                       type: string
+   *                     mycologist_id:
+   *                       type: string
+   *                     name:
+   *                       type: string
+   *                     mold_report_id:
+   *                       type: string
+   *                     photo_url:
+   *                       type: string
+   *                       nullable: true
+   *                     priority:
+   *                       type: string
+   *                       enum: [low, medium, high]
+   *                     start_date:
+   *                       type: string
+   *                       format: date-time
+   *                     end_date:
+   *                       type: string
+   *                       format: date-time
+   *                     is_archived:
+   *                       type: boolean
+   *                     cultivation_logs:
+   *                       type: array
+   *                       items:
+   *                         type: object
+   *                     cultivation_details:
+   *                       type: object
+   *                       nullable: true
+   *       404:
+   *         description: Mold case not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
+   *       500:
+   *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
+   */
+  try {
+    const id: string = req.params.id;
+    const moldCase = await retrieveMoldCaseById(id);
+    if (!moldCase) return sendError(res, "Mold case not found", 404);
+    return sendSuccess(res, moldCase);
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
+export const archiveMoldCase = async (req: Request, res: Response) => {
+  /**
+   * @swagger
+   * /api/v1/mold-case/{id}/archive:
+   *   patch:
+   *     summary: Archive a mold case (move to case history)
+   *     tags: [MoldCases]
+   *     security:
+   *       - bearerAuth: []
+   *       - cookieAuth: []
+   *     description:
+   *       - Sets is_archived to true, moving the case to case history. Requires authentication.
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Mold case ID
+   *     responses:
+   *       200:
+   *         description: Mold case archived successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     id:
+   *                       type: string
+   *                     is_archived:
+   *                       type: boolean
+   *                       example: true
+   *       404:
+   *         description: Mold case not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
+   *       500:
+   *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
+   */
+  try {
+    const id: string = req.params.id;
+    const updated = await updateMoldCaseInFirestore(id, {is_archived: true} as Partial<MoldCase>);
+    if (!updated) return sendError(res, "Failed to archive mold case", 404);
+    return sendSuccess(res, updated);
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
+export const unarchiveMoldCase = async (req: Request, res: Response) => {
+  /**
+   * @swagger
+   * /api/v1/mold-case/{id}/unarchive:
+   *   patch:
+   *     summary: Restore a mold case from case history (unarchive)
+   *     tags: [MoldCases]
+   *     security:
+   *       - bearerAuth: []
+   *       - cookieAuth: []
+   *     description:
+   *       - Sets is_archived to false, restoring the case to active. Requires authentication.
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Mold case ID
+   *     responses:
+   *       200:
+   *         description: Mold case restored successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     id:
+   *                       type: string
+   *                     is_archived:
+   *                       type: boolean
+   *                       example: false
+   *       404:
+   *         description: Mold case not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
+   *       500:
+   *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
+   */
+  try {
+    const id: string = req.params.id;
+    const updated = await updateMoldCaseInFirestore(id, {is_archived: false} as Partial<MoldCase>);
+    if (!updated) return sendError(res, "Failed to unarchive mold case", 404);
+    return sendSuccess(res, updated);
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
+export const getCultivationLogs = async (req: Request, res: Response) => {
+  /**
+   * @swagger
+   * /api/v1/mold-case/{id}/logs:
+   *   get:
+   *     summary: Get all cultivation logs for a mold case
+   *     tags: [MoldCases]
+   *     security:
+   *       - bearerAuth: []
+   *       - cookieAuth: []
+   *     description:
+   *       - Returns the cultivation_logs array of the specified mold case. Requires authentication.
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Mold case ID
+   *     responses:
+   *       200:
+   *         description: Cultivation logs retrieved successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       type:
+   *                         type: string
+   *                         enum: [vivo, vitro]
+   *                       image_url:
+   *                         type: string
+   *                         nullable: true
+   *                       characteristics:
+   *                         type: object
+   *                       additional_info:
+   *                         type: string
+   *       404:
+   *         description: Mold case not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
+   *       500:
+   *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
+   */
+  try {
+    const id: string = req.params.id;
+    const logs = await getCultivationLogsFromCase(id);
+    if (logs === null) return sendError(res, "Mold case not found", 404);
+    return sendSuccess(res, logs);
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
+export const removeCultivationLog = async (req: Request, res: Response) => {
+  /**
+   * @swagger
+   * /api/v1/mold-case/{id}/logs/{logIndex}:
+   *   delete:
+   *     summary: Remove a cultivation log entry by index
+   *     tags: [MoldCases]
+   *     security:
+   *       - bearerAuth: []
+   *       - cookieAuth: []
+   *     description:
+   *       - Removes the cultivation log at the given zero-based index. Requires authentication.
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Mold case ID
+   *       - in: path
+   *         name: logIndex
+   *         required: true
+   *         schema:
+   *           type: integer
+   *           minimum: 0
+   *         description: Zero-based index of the cultivation log to remove
+   *     responses:
+   *       200:
+   *         description: Cultivation log removed successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   type: object
+   *                   description: Updated mold case
+   *       400:
+   *         description: Invalid log index
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
+   *       404:
+   *         description: Mold case not found or log index out of range
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
+   *       500:
+   *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
+   */
+  try {
+    const id: string = req.params.id;
+    const logIndex = parseInt(req.params.logIndex, 10);
+    if (isNaN(logIndex) || logIndex < 0) {
+      return sendError(res, "Invalid log index. Must be a non-negative integer.", 400);
+    }
+    const updated = await removeCultivationLogFromCase(id, logIndex);
+    if (!updated) return sendError(res, "Mold case not found or log index out of range", 404);
+    return sendSuccess(res, updated);
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};

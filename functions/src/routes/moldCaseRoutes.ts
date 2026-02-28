@@ -24,6 +24,11 @@ import {
   analyzeCultivationLogImage,
   searchAssignedMoldCases,
   getMoldCasesCountMetadataController,
+  getMoldCaseById,
+  archiveMoldCase,
+  unarchiveMoldCase,
+  getCultivationLogs,
+  removeCultivationLog,
 } from "../controllers/moldCaseController";
 const router = Router();
 
@@ -89,6 +94,58 @@ router.get(
   validateQuery(SearchMoldCasesQuerySchema),
   async (req: Request, res: Response) => {
     await searchAssignedMoldCases(req, res);
+  }
+);
+
+// ─── Single case (must come after all fixed-segment GET routes) ────────────────
+router.get(
+  "/:id",
+  verifyUser(),
+  validateParams(MoldIdSchema),
+  async (req: Request, res: Response) => {
+    await getMoldCaseById(req, res);
+  }
+);
+
+// ─── Case History / Archive actions ──────────────────────────────────────────
+router.patch(
+  "/:id/archive",
+  verifyUser(),
+  validateParams(MoldIdSchema),
+  cacheInvalidate("mold-cases-all", "update"),
+  cacheInvalidate("mold-cases-assigned", "update"),
+  async (req: Request, res: Response) => {
+    await archiveMoldCase(req, res);
+  }
+);
+
+router.patch(
+  "/:id/unarchive",
+  verifyUser(),
+  validateParams(MoldIdSchema),
+  cacheInvalidate("mold-cases-all", "update"),
+  cacheInvalidate("mold-cases-assigned", "update"),
+  async (req: Request, res: Response) => {
+    await unarchiveMoldCase(req, res);
+  }
+);
+
+// ─── Cultivation Logs (Case History detail) ───────────────────────────────────
+router.get(
+  "/:id/logs",
+  verifyUser(),
+  validateParams(MoldIdSchema),
+  async (req: Request, res: Response) => {
+    await getCultivationLogs(req, res);
+  }
+);
+
+router.delete(
+  "/:id/logs/:logIndex",
+  verifyUser(),
+  validateParams(MoldIdSchema),
+  async (req: Request, res: Response) => {
+    await removeCultivationLog(req, res);
   }
 );
 
