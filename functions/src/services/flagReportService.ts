@@ -45,13 +45,17 @@ export const retrieveAllFlagReports = async (
   try {
     const querySnap: PaginatedResult<QuerySnapshot> | null =
       await findAllFlagReports(limit, token);
-    if (!querySnap) throw new Error("No flag reports found.");
+    if (!querySnap) {
+      devLog("[flagReportService] Query error - possible missing Firestore composite index");
+      return null;
+    }
+    // Return empty result set if no documents found (this is valid, not an error)
     return {
       snapshot: queryToJson<FlagReportBase>(querySnap.snapshot),
       nextPageToken: querySnap.nextPageToken,
     };
   } catch (error) {
-    devLog(error);
+    devLog("[flagReportService] Error retrieving flag reports");
     return null;
   }
 };
