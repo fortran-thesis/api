@@ -107,12 +107,23 @@ export const UserDetailsUpdateSchema = UserDetailsSchema.partial();
 export const UserProfileUpdateSchema = z.object({
   firstName: z.string().optional(),
   lastName: z.string().optional(),
+  first_name: z.string().optional(),
+  last_name: z.string().optional(),
   email: z.string().email().optional(),
   displayName: z.string().optional(),
   address: z.string().optional(),
   phoneNumber: z.string().optional(),
+  phone_number: z.string().optional(),
   photo_url: z.string().optional(),
-}).partial();
+}).transform((data) => ({
+  firstName: data.firstName ?? data.first_name,
+  lastName: data.lastName ?? data.last_name,
+  email: data.email,
+  displayName: data.displayName,
+  address: data.address,
+  phoneNumber: data.phoneNumber ?? data.phone_number,
+  photo_url: data.photo_url,
+}));
 
 export const SearchUsersQuerySchema = z.object({
   search: z.string().optional(),
