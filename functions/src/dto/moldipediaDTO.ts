@@ -1,12 +1,8 @@
 import {z} from "zod";
+import {FirestoreIdSchema} from "./shared";
 
 export const MoldipediaIdSchema = z.object({
-  id: z
-    .string({required_error: "ID is required"})
-    .nonempty({message: "ID is required"})
-    .min(20, {message: "ID must be at least 20 characters"})
-    .max(20, {message: "ID must be at most 20 characters"})
-    .regex(/^[A-Za-z0-9-_]+$/, {message: "ID format is invalid"}),
+  id: FirestoreIdSchema(20, "Moldipedia ID"),
 });
 
 export const MoldipediaCreateSchema = z.object({
@@ -33,3 +29,9 @@ export const SearchMoldipediaQuerySchema = z.object({
   limit: z.string().regex(/^\d+$/).optional(),
   pageToken: z.string().optional(),
 });
+
+// ── Inferred types ───────────────────────────────────────────────────────────
+export type MoldipediaIdParams = z.infer<typeof MoldipediaIdSchema>;
+export type MoldipediaCreateRequest = z.infer<typeof MoldipediaCreateSchema>;
+export type MoldipediaUpdateRequest = z.infer<typeof MoldipediaUpdateSchema>;
+export type SearchMoldipediaQuery = z.infer<typeof SearchMoldipediaQuerySchema>;

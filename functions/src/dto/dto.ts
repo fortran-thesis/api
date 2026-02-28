@@ -1,4 +1,5 @@
 import {z} from "zod";
+import {FirebaseAuthIdSchema} from "./shared";
 
 export const PasswordSchema = z
   .string({required_error: "Password is required"})
@@ -46,12 +47,7 @@ export const TokenSchema = z.object({
 });
 
 export const UserIdSchema = z.object({
-  id: z
-    .string({required_error: "UID is required "})
-    .nonempty({message: "UID is required"})
-    .min(28, {message: "User ID must be exactly 28 characters"})
-    .max(28, {message: "User ID must be exactly 28 characters"})
-    .regex(/^[A-Za-z0-9-_]+$/, {message: "User ID format is invalid"}),
+  id: FirebaseAuthIdSchema("User ID"),
 });
 
 export const EmailSchema = z.object({
@@ -108,3 +104,15 @@ export const SearchUsersQuerySchema = z.object({
   limit: z.string().regex(/^\d+$/).optional(),
   pageToken: z.string().optional(),
 });
+
+// ── Inferred types ───────────────────────────────────────────────────────────
+export type RegisterRequest = z.infer<typeof RegisterSchema>;
+export type LoginRequest = z.infer<typeof LoginSchema>;
+export type TokenRequest = z.infer<typeof TokenSchema>;
+export type UserIdParams = z.infer<typeof UserIdSchema>;
+export type ChangePasswordRequest = z.infer<typeof ChangePasswordSchema>;
+export type ChangeEmailRequest = z.infer<typeof ChangeEmailSchema>;
+export type UserDetailsRequest = z.infer<typeof UserDetailsSchema>;
+export type UserDetailsUpdateRequest = z.infer<typeof UserDetailsUpdateSchema>;
+export type UserProfileUpdateRequest = z.infer<typeof UserProfileUpdateSchema>;
+export type SearchUsersQuery = z.infer<typeof SearchUsersQuerySchema>;

@@ -1,4 +1,5 @@
 import {z} from "zod";
+import {FirestoreIdSchema} from "./shared";
 
 export const CreateFlagReportSchema = z.object({
   content_id: z.string().min(1, "Content ID is required"),
@@ -16,5 +17,10 @@ export const UpdateFlagReportSchema = z.object({
 );
 
 export const FlagReportIdSchema = z.object({
-  id: z.string().min(1, "Flag report ID is required"),
+  id: FirestoreIdSchema(20, "Flag report ID"),
 });
+
+// ── Inferred types ───────────────────────────────────────────────────────────
+export type CreateFlagReportRequest = z.infer<typeof CreateFlagReportSchema>;
+export type UpdateFlagReportRequest = z.infer<typeof UpdateFlagReportSchema>;
+export type FlagReportIdParams = z.infer<typeof FlagReportIdSchema>;

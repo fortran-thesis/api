@@ -16,3 +16,6 @@ export const PaginationQuerySchema = z.object({
       message: "Limit must be a number.",
     }),
 });
+
+// ── Inferred types ───────────────────────────────────────────────────────────
+export type PaginationQuery = z.infer<typeof PaginationQuerySchema>;

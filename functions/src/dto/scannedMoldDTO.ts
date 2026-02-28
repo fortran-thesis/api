@@ -1,4 +1,5 @@
 import {z} from "zod";
+import {FlexibleIdSchema} from "./shared";
 
 export const ScannedMoldCreateSchema = z.object({
   user_id: z.string({required_error: "User ID is required."}).min(1),
@@ -19,10 +20,10 @@ export const ScannedMoldUpdateSchema = z.object({
 });
 
 export const ScannedMoldIdSchema = z.object({
-  id: z
-    .string({required_error: "ID is required"})
-    .nonempty({message: "ID is required"})
-    .min(20, {message: "ID must be at least 20 characters"})
-    .max(28, {message: "ID must be at most 28 characters"})
-    .regex(/^[A-Za-z0-9-_]+$/, {message: "ID format is invalid"}),
+  id: FlexibleIdSchema("Scanned mold ID"),
 });
+
+// ── Inferred types ───────────────────────────────────────────────────────────
+export type ScannedMoldCreateRequest = z.infer<typeof ScannedMoldCreateSchema>;
+export type ScannedMoldUpdateRequest = z.infer<typeof ScannedMoldUpdateSchema>;
+export type ScannedMoldIdParams = z.infer<typeof ScannedMoldIdSchema>;

@@ -1,12 +1,8 @@
 import z from "zod";
+import {FirestoreIdSchema, zTimestamp} from "./shared";
 
 export const MoldIdSchema = z.object({
-  id: z
-    .string({required_error: "UID is required "})
-    .nonempty({message: "UID is required"})
-    .min(20, {message: "UID must be exactly 20 characters"})
-    .max(20, {message: "UID token must be exactly 20 characters"})
-    .regex(/^[A-Za-z0-9-_]+$/, {message: "UID format is invalid"}),
+  id: FirestoreIdSchema(20, "Mold ID"),
 });
 
 export const MoldSchema = z.object({
@@ -60,8 +56,8 @@ export const CultivationDetailsSchema = z.object({
     in_vivo_details: z.record(z.any()).optional(),
     in_vitro_details: z.record(z.any()).optional(),
   }).optional(),
-  start_date: z.string().datetime().optional(),
-  end_date: z.string().datetime().optional(),
+  start_date: zTimestamp.optional(),
+  end_date: zTimestamp.optional(),
 });
 
 export const SearchMoldCasesQuerySchema = z.object({
@@ -70,3 +66,11 @@ export const SearchMoldCasesQuerySchema = z.object({
   limit: z.string().regex(/^\d+$/).optional(),
   pageToken: z.string().optional(),
 });
+
+// ── Inferred types ───────────────────────────────────────────────────────────
+export type MoldIdParams = z.infer<typeof MoldIdSchema>;
+export type MoldRequest = z.infer<typeof MoldSchema>;
+export type MoldUpdateRequest = z.infer<typeof MoldUpdateSchema>;
+export type CultivationLogRequest = z.infer<typeof CultivationLogSchema>;
+export type CultivationDetailsRequest = z.infer<typeof CultivationDetailsSchema>;
+export type SearchMoldCasesQuery = z.infer<typeof SearchMoldCasesQuerySchema>;

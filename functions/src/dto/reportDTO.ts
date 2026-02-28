@@ -1,5 +1,6 @@
 import {z} from "zod";
 import {ReportReason} from "../types/enums";
+import {FlexibleIdSchema, zTimestamp} from "./shared";
 
 export const ReportCreateSchema = z.object({
   reporter_id: z.string({required_error: "Reporter ID is required."}).min(1),
@@ -11,17 +12,12 @@ export const ReportCreateSchema = z.object({
 });
 
 export const ReportIdSchema = z.object({
-  id: z
-    .string({required_error: "ID is required"})
-    .nonempty({message: "ID is required"})
-    .min(20, {message: "ID must be at least 20 characters"})
-    .max(28, {message: "ID must be at most 28 characters"})
-    .regex(/^[A-Za-z0-9-_]+$/, {message: "ID format is invalid"}),
+  id: FlexibleIdSchema("Report ID"),
 });
 
 export const MoldReportSchema = z.object({
   case_name: z.string({required_error: "Case name is required."}).min(1, {message: "Case name is required."}),
-  date_observed: z.string({required_error: "Date observed is required."}).min(1, {message: "Date observed is required."}),
+  date_observed: zTimestamp,
   user_id: z.string({required_error: "User ID is required."}).min(1, {message: "User ID is required."}),
   host: z.string({required_error: "Host is required."}).min(1, {message: "Host is required."}),
   description: z.string({required_error: "Description is required."}).min(1, {message: "Description is required."}),
@@ -48,3 +44,12 @@ export const SearchMoldReportsQuerySchema = z.object({
   limit: z.string().regex(/^\d+$/).optional(),
   pageToken: z.string().optional(),
 });
+
+// ── Inferred types ───────────────────────────────────────────────────────────
+export type ReportCreateRequest = z.infer<typeof ReportCreateSchema>;
+export type ReportIdParams = z.infer<typeof ReportIdSchema>;
+export type MoldReportRequest = z.infer<typeof MoldReportSchema>;
+export type MoldReportUpdateRequest = z.infer<typeof MoldReportUpdateSchema>;
+export type CaseDetailRequest = z.infer<typeof CaseDetailSchema>;
+export type AssignMoldReportRequest = z.infer<typeof AssignMoldReportSchema>;
+export type SearchMoldReportsQuery = z.infer<typeof SearchMoldReportsQuerySchema>;

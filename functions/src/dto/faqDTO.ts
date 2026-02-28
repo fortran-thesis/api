@@ -1,12 +1,8 @@
 import {z} from "zod";
+import {FirestoreIdSchema} from "./shared";
 
 export const FAQIdSchema = z.object({
-  id: z
-    .string({required_error: "ID is required"})
-    .nonempty({message: "ID is required"})
-    .min(20, {message: "ID must be at least 20 characters"})
-    .max(20, {message: "ID must be at most 20 characters"})
-    .regex(/^[A-Za-z0-9-_]+$/, {message: "ID format is invalid"}),
+  id: FirestoreIdSchema(20, "FAQ ID"),
 });
 
 export const FAQCreateSchema = z.object({
@@ -32,3 +28,9 @@ export const SearchFAQQuerySchema = z.object({
   limit: z.string().regex(/^\d+$/).optional(),
   pageToken: z.string().optional(),
 });
+
+// ── Inferred types ───────────────────────────────────────────────────────────
+export type FAQIdParams = z.infer<typeof FAQIdSchema>;
+export type FAQCreateRequest = z.infer<typeof FAQCreateSchema>;
+export type FAQUpdateRequest = z.infer<typeof FAQUpdateSchema>;
+export type SearchFAQQuery = z.infer<typeof SearchFAQQuerySchema>;
