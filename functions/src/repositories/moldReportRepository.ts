@@ -1,4 +1,4 @@
-import {FieldPath, getFirestore} from "firebase-admin/firestore";
+import {FieldPath, getFirestore, Timestamp} from "firebase-admin/firestore";
 import {
   addDocument,
   getDocumentById,
@@ -9,7 +9,6 @@ import {
 } from "../lib/firestore";
 import {firebase} from "../configs/firebase";
 import {MoldReport, MoldReportDetails} from "../types/types";
-import {Timestamp} from "firebase-admin/firestore";
 import {devLog} from "../utils/dev";
 import {
   getCollectionName,
