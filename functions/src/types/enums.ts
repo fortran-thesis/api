@@ -13,16 +13,6 @@ export enum Role {
   CURATOR = "mycologist",
 }
 
-export enum FeedbackStatus {
-  PENDING = 0,
-  REVIEWED = 1,
-}
-
-export enum PhotoSource {
-  CAMERA = 0,
-  UPLOAD = 1,
-}
-
 export enum AuditAction {
   // ── User management ────────────────────────────────────────────────────────
   PROFILE_UPDATE = "profile_update",
