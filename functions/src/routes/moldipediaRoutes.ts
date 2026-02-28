@@ -23,6 +23,7 @@ import {
 import {sanitizeParams} from "../middlewares/sanitation";
 import {cacheGet, cacheInvalidate} from "../middlewares/cacheMiddleware";
 import {upload} from "../middlewares/upload";
+import {parseMultipartJson} from "../middlewares/parseMultipartJson";
 
 const router = Router();
 
@@ -30,6 +31,7 @@ router.post(
   "/",
   verifyUser(Role.CURATOR),
   upload.single("cover_photo"),
+  parseMultipartJson(["details"]),
   auditLog(AuditAction.ADD_WIKIMOLD, "Created moldipedia article"),
   cacheInvalidate("moldipedia", "create"),
   async (req: Request, res: Response) => {
@@ -58,6 +60,8 @@ router.get(
 router.patch(
   "/:id",
   verifyUser(Role.CURATOR),
+  upload.single("cover_photo"),
+  parseMultipartJson(["details"]),
   validateBody(MoldipediaUpdateSchema),
   sanitizeParams,
   validateParams(MoldipediaIdSchema),

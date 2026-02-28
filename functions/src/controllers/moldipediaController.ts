@@ -104,8 +104,10 @@ export const createMoldipedia = async (req: Request, res: Response) => {
    */
   try {
     const rawDetails = req.body.details;
+    // After parseMultipartJson middleware, "details" is promoted to root body;
+    // fall back to flat req.body so both form-data and JSON work.
     const details: Omit<Moldipedia, "cover_photo"> =
-      typeof rawDetails === "string" ? JSON.parse(rawDetails) : rawDetails;
+      typeof rawDetails === "string" ? JSON.parse(rawDetails) : (rawDetails ?? req.body);
     // Auto-populate author_id from the authenticated user if not provided
     const authorId = details.author_id || req.user?.id || "";
     const photo: Express.Multer.File = req.file as Express.Multer.File;
@@ -390,9 +392,26 @@ export const patchMoldipedia = async (req: Request, res: Response) => {
    */
   try {
     const id: string = req.params.id;
-    // Support both { details: {...} } and flat body formats
+    // Support both { details: {...} } and flat body formats (after parseMultipartJson, fields are at root)
     const details: Partial<Moldipedia> = req.body.details ?? req.body;
-    const updated = await updateMoldipediaInFirestore(id, details);
+
+    // Upload new cover photo if provided via multipart/form-data
+    const photo = req.file as Express.Multer.File | undefined;
+    let coverPhotoUrl: string | undefined;
+    if (photo) {
+      const filePath = generateStoragePath(StorageFolder.MOLDIPEDIA, photo.originalname);
+      coverPhotoUrl = (await uploadFile(filePath, photo.buffer, photo.mimetype)) || undefined;
+      if (!coverPhotoUrl) {
+        return sendError(res, "Invalid cover photo, please upload a different image.", 400);
+      }
+    }
+
+    const updateData: Partial<Moldipedia> = {
+      ...details,
+      ...(coverPhotoUrl && {cover_photo: coverPhotoUrl}),
+    };
+
+    const updated = await updateMoldipediaInFirestore(id, updateData);
     if (!updated) {
       return sendError(res, "Failed to update moldipedia article", 404);
     }
