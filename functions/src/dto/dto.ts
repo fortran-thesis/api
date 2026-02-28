@@ -64,6 +64,23 @@ export const ChangePasswordSchema = z.object({
   newPassword: PasswordSchema,
 });
 
+export const VerificationCodeSchema = z.object({
+  email: z
+    .string({required_error: "Email is required"})
+    .nonempty({message: "Email is required"})
+    .email({message: "Invalid email address"}),
+  code: z
+    .string({required_error: "Code is required"})
+    .nonempty({message: "Code is required"}),
+});
+
+export const VerifiedChangePasswordSchema = z.object({
+  token: z
+    .string({required_error: "Token is required"})
+    .nonempty({message: "Token is required"}),
+  newPassword: PasswordSchema,
+});
+
 export const ChangeEmailSchema = z.object({
   oldEmail: z
     .string({required_error: "Email is required"})
@@ -105,12 +122,21 @@ export const SearchUsersQuerySchema = z.object({
   pageToken: z.string().optional(),
 });
 
+export const OAuthSchema = z.object({
+  token: z
+    .string({required_error: "OAuth token is required"})
+    .nonempty({message: "OAuth token is required"}),
+});
+
 // ── Inferred types ───────────────────────────────────────────────────────────
 export type RegisterRequest = z.infer<typeof RegisterSchema>;
 export type LoginRequest = z.infer<typeof LoginSchema>;
 export type TokenRequest = z.infer<typeof TokenSchema>;
 export type UserIdParams = z.infer<typeof UserIdSchema>;
 export type ChangePasswordRequest = z.infer<typeof ChangePasswordSchema>;
+export type VerificationCodeRequest = z.infer<typeof VerificationCodeSchema>;
+export type VerifiedChangePasswordRequest = z.infer<typeof VerifiedChangePasswordSchema>;
+export type OAuthRequest = z.infer<typeof OAuthSchema>;
 export type ChangeEmailRequest = z.infer<typeof ChangeEmailSchema>;
 export type UserDetailsRequest = z.infer<typeof UserDetailsSchema>;
 export type UserDetailsUpdateRequest = z.infer<typeof UserDetailsUpdateSchema>;

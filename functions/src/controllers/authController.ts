@@ -133,12 +133,7 @@ export const createUser = async (req: Request, res: Response) => {
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             properties:
- *               email:
- *                 type: string
- *               password:
- *                 type: string
+ *             $ref: '#/components/schemas/LoginRequest'
  *     responses:
  *       200:
  *         description: Successfully logged in
@@ -158,26 +153,19 @@ export const createUser = async (req: Request, res: Response) => {
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 error:
- *                   type: string
- *                   example: "Incorrect credentials"
+ *               $ref: '#/components/schemas/ApiResponseError'
+ *       403:
+ *         description: Role not permitted
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponseError'
  *       500:
  *         description: Server error
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 error:
- *                   type: string
+ *               $ref: '#/components/schemas/ApiResponseError'
  */
 export const loginUser = async (req: Request, res: Response) => {
   try {
@@ -223,7 +211,13 @@ export const loginUser = async (req: Request, res: Response) => {
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/TokenRequest'
+ *             type: object
+ *             required:
+ *               - token
+ *             properties:
+ *               token:
+ *                 type: string
+ *                 description: OAuth ID token from the provider
  *     responses:
  *       200:
  *         description: Successfully logged in
@@ -243,26 +237,19 @@ export const loginUser = async (req: Request, res: Response) => {
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 error:
- *                   type: string
- *                   example: "Something went wrong identifying user."
+ *               $ref: '#/components/schemas/ApiResponseError'
+ *       403:
+ *         description: Role not permitted
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponseError'
  *       500:
  *         description: Server error
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 error:
- *                   type: string
+ *               $ref: '#/components/schemas/ApiResponseError'
  */
 export const oAuth = async (req: Request, res: Response) => {
   try {
@@ -459,8 +446,7 @@ export const sendVerificationCodeEmail = async (
  *   post:
  *     summary: Check verification code
  *     tags: [Auth]
- *     description:
- *       - Public endpoint to check verification code.
+ *     description: Validate a verification code sent to email. Now validated via VerificationCodeSchema (email + code required).
  *     requestBody:
  *       required: true
  *       content:
@@ -483,30 +469,17 @@ export const sendVerificationCodeEmail = async (
  *                   description: Verification token (UUID)
  *                   example: "550e8400-e29b-41d4-a716-446655440000"
  *       400:
- *         description: Invalid code
+ *         description: Invalid code or validation error
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 error:
- *                   type: string
- *                   example: "Invalid code!"
+ *               $ref: '#/components/schemas/ApiResponseError'
  *       500:
  *         description: Server error
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 error:
- *                   type: string
+ *               $ref: '#/components/schemas/ApiResponseError'
  */
 export const checkVerificationCodeEmail = async (
   req: Request,
@@ -536,8 +509,7 @@ export const checkVerificationCodeEmail = async (
  *   post:
  *     summary: Change password with verification
  *     tags: [Auth]
- *     description:
- *       - Public endpoint to change password after verification.
+ *     description: Change password after email verification. Now validated via VerifiedChangePasswordSchema (token + newPassword required, password rules enforced).
  *     requestBody:
  *       required: true
  *       content:
@@ -559,30 +531,17 @@ export const checkVerificationCodeEmail = async (
  *                   type: string
  *                   example: "Successfully changed password!"
  *       400:
- *         description: Invalid code or password change failed
+ *         description: Invalid token, validation error, or password change failed
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 error:
- *                   type: string
- *                   example: "Invalid code!"
+ *               $ref: '#/components/schemas/ApiResponseError'
  *       500:
  *         description: Server error
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 error:
- *                   type: string
+ *               $ref: '#/components/schemas/ApiResponseError'
  */
 export const verifiedChangePassword = async (req: Request, res: Response) => {
   try {
@@ -609,8 +568,7 @@ export const verifiedChangePassword = async (req: Request, res: Response) => {
  *   post:
  *     summary: Send username to email after verification
  *     tags: [Auth]
- *     description:
- *       - Public endpoint to send username after verification.
+ *     description: Send username to email after email verification. Now validated via TokenSchema (token required).
  *     requestBody:
  *       required: true
  *       content:
@@ -632,30 +590,17 @@ export const verifiedChangePassword = async (req: Request, res: Response) => {
  *                   type: string
  *                   example: "Successfully sent email to show username!"
  *       400:
- *         description: Invalid code or user not found
+ *         description: Invalid token or validation error
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 error:
- *                   type: string
- *                   example: "Invalid code!"
+ *               $ref: '#/components/schemas/ApiResponseError'
  *       500:
  *         description: Server error
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 error:
- *                   type: string
+ *               $ref: '#/components/schemas/ApiResponseError'
  */
 export const verifiedForgetUsername = async (req: Request, res: Response) => {
   try {

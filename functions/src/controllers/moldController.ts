@@ -216,12 +216,19 @@ export const createMold = async (req: Request, res: Response) => {
  *     security:
  *       - bearerAuth: []
  *       - cookieAuth: []
- *     description: Retrieve all molds with pagination. Requires curator role.
+ *     description: Retrieve all molds with pagination. Requires curator role. Query validated via PaginationQuerySchema.
  *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: string
+ *           default: "1"
+ *         description: Page number (default 1)
  *       - in: query
  *         name: limit
  *         schema:
- *           type: integer
+ *           type: string
+ *           default: "10"
  *         description: Number of items per page (default 10)
  *       - in: query
  *         name: pageToken

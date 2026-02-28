@@ -127,12 +127,19 @@ export const createScannedMold = async (req: Request, res: Response) => {
  *     security:
  *       - bearerAuth: []
  *       - cookieAuth: []
- *     description: Retrieve all scanned molds with pagination. Requires authentication (Bearer token or session cookie).
+ *     description: Retrieve all scanned molds with pagination. Requires authentication. Query validated via PaginationQuerySchema.
  *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: string
+ *           default: "1"
+ *         description: Page number (default 1)
  *       - in: query
  *         name: limit
  *         schema:
- *           type: integer
+ *           type: string
+ *           default: "10"
  *         description: Number of items per page (default 10)
  *       - in: query
  *         name: pageToken
@@ -179,25 +186,13 @@ export const createScannedMold = async (req: Request, res: Response) => {
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 error:
- *                   type: string
+ *               $ref: '#/components/schemas/ApiResponseError'
  *       500:
  *         description: Server error
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 error:
- *                   type: string
+ *               $ref: '#/components/schemas/ApiResponseError'
  */
 export const getAllScannedMolds = async (req: Request, res: Response) => {
   const limit: number = parseInt(req.query.limit as string) || 10;

@@ -62,6 +62,7 @@ router.get(
 router.patch(
   "/:id",
   verifyUser(Role.ADMIN),
+  validateParams(SystemRequestIdSchema),
   validateBody(SystemRequestUpdateSchema),
   auditLog(AuditAction.UPDATE_SYSTEM_REQUEST, (req) => `Updated system request ${req.params.id}`),
   cacheInvalidate("system-requests", "update"),
@@ -74,6 +75,7 @@ router.patch(
 router.delete(
   "/hard/:id",
   verifyUser(Role.ADMIN),
+  validateParams(SystemRequestIdSchema),
   auditLog(AuditAction.DELETE_SYSTEM_REQUEST, (req) => `Deleted system request ${req.params.id}`),
   cacheInvalidate("system-requests", "delete"),
   async (req: Request, res: Response): Promise<void> => {
@@ -85,6 +87,7 @@ router.delete(
 router.delete(
   "/soft/:id",
   verifyUser(Role.ADMIN),
+  validateParams(SystemRequestIdSchema),
   auditLog(AuditAction.SOFT_DELETE_SYSTEM_REQUEST, (req) => `Soft deleted system request ${req.params.id}`),
   cacheInvalidate("system-requests", "delete"),
   async (req: Request, res: Response): Promise<void> => {

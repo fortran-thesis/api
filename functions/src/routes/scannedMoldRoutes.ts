@@ -2,11 +2,12 @@ import {Request, Response, Router} from "express";
 import {upload} from "../middlewares/upload";
 import {verifyUser} from "../middlewares/verification";
 import {sanitizeBody} from "../middlewares/sanitation";
-import {validateBody, validateParams} from "../middlewares/validation";
+import {validateBody, validateParams, validateQuery} from "../middlewares/validation";
 import {AuditAction} from "../types/enums";
 import {auditLog} from "../middlewares/auditLogger";
 import {cacheGet, cacheInvalidate} from "../middlewares/cacheMiddleware";
 import {ScannedMoldIdSchema, ScannedMoldUpdateSchema} from "../dto/scannedMoldDTO";
+import {PaginationQuerySchema} from "../dto/paginationDTO";
 import {
   createScannedMold,
   getAllScannedMolds,
@@ -30,7 +31,7 @@ router.post(
   }
 );
 
-router.get("/", verifyUser(), cacheGet("scanned-molds"), async (req: Request, res: Response): Promise<void> => {
+router.get("/", verifyUser(), validateQuery(PaginationQuerySchema), cacheGet("scanned-molds"), async (req: Request, res: Response): Promise<void> => {
   await getAllScannedMolds(req, res);
 });
 

@@ -10,13 +10,14 @@ import {
   softDeleteMold,
 } from "../controllers/moldController";
 import {sanitizeBody, sanitizeParams} from "../middlewares/sanitation";
-import {validateBody, validateParams} from "../middlewares/validation";
+import {validateBody, validateParams, validateQuery} from "../middlewares/validation";
 import {
   MoldIdSchema,
   MoldSchema,
   MoldUpdateSchema,
   NameParamSchema,
 } from "../dto/moldDTO";
+import {PaginationQuerySchema} from "../dto/paginationDTO";
 import {Role, AuditAction} from "../types/enums";
 import {auditLog} from "../middlewares/auditLogger";
 import {upload} from "../middlewares/upload";
@@ -40,6 +41,7 @@ router.post(
 router.get(
   "/",
   verifyUser(Role.CURATOR),
+  validateQuery(PaginationQuerySchema),
   cacheGet("molds"),
   async (req: Request, res: Response) => {
     await getAllMolds(req, res);

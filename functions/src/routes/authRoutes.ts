@@ -16,6 +16,10 @@ import {
   LoginSchema,
   EmailSchema,
   ChangePasswordSchema,
+  OAuthSchema,
+  TokenSchema,
+  VerificationCodeSchema,
+  VerifiedChangePasswordSchema,
 } from "../dto/dto";
 import {sanitizeBody} from "../middlewares/sanitation";
 import {
@@ -51,6 +55,7 @@ router.post(
 router.post(
   "/login/oauth",
   verifyDevice(),
+  validateBody(OAuthSchema),
   async (req: Request, res: Response) => {
     await oAuth(req, res);
   }
@@ -59,6 +64,8 @@ router.post(
 router.post(
   "/verify-code",
   rateLimit(verifyCodeLimiter),
+  sanitizeBody,
+  validateBody(VerificationCodeSchema),
   async (req: Request, res: Response) => {
     await checkVerificationCodeEmail(req, res);
   }
@@ -104,6 +111,8 @@ router.post(
 router.post(
   "/forgot-password/verify",
   rateLimit(finalActionLimiter),
+  sanitizeBody,
+  validateBody(VerifiedChangePasswordSchema),
   async (req: Request, res: Response) => {
     await verifiedChangePassword(req, res);
   }
@@ -112,6 +121,8 @@ router.post(
 router.post(
   "/forgot-username/verify",
   rateLimit(finalActionLimiter),
+  sanitizeBody,
+  validateBody(TokenSchema),
   async (req: Request, res: Response) => {
     await verifiedForgetUsername(req, res);
   }

@@ -276,14 +276,17 @@ export const patchSystemRequest = async (req: Request, res: Response) => {
    *     security:
    *       - bearerAuth: []
    *       - cookieAuth: []
-   *     description: Update a system request by its ID. Admin only.
+   *     description: Update a system request by its ID. Admin only. Params validated via SystemRequestIdSchema (20-char Firestore ID), body validated via SystemRequestUpdateSchema.
    *     parameters:
    *       - in: path
    *         name: id
    *         required: true
    *         schema:
    *           type: string
-   *         description: System request ID
+   *           minLength: 20
+   *           maxLength: 20
+   *           pattern: '^[A-Za-z0-9_-]+$'
+   *         description: System request ID (20-character Firestore auto-ID)
    *     requestBody:
    *       required: true
    *       content:
@@ -386,14 +389,17 @@ export const deleteSystemRequest = async (req: Request, res: Response) => {
    *     security:
    *       - bearerAuth: []
    *       - cookieAuth: []
-   *     description: Hard delete a system request by its ID. Admin only.
+   *     description: Hard delete a system request by its ID. Admin only. Params validated via SystemRequestIdSchema (20-char Firestore ID).
    *     parameters:
    *       - in: path
    *         name: id
    *         required: true
    *         schema:
    *           type: string
-   *         description: System request ID
+   *           minLength: 20
+   *           maxLength: 20
+   *           pattern: '^[A-Za-z0-9_-]+$'
+   *         description: System request ID (20-character Firestore auto-ID)
    *     responses:
    *       200:
    *         description: Successfully deleted system request
@@ -441,14 +447,17 @@ export const softDeleteSystemRequest = async (req: Request, res: Response) => {
    *     security:
    *       - bearerAuth: []
    *       - cookieAuth: []
-   *     description: Soft delete a system request by its ID. Admin only.
+   *     description: Soft delete a system request by its ID. Admin only. Params validated via SystemRequestIdSchema (20-char Firestore ID).
    *     parameters:
    *       - in: path
    *         name: id
    *         required: true
    *         schema:
    *           type: string
-   *         description: System request ID
+   *           minLength: 20
+   *           maxLength: 20
+   *           pattern: '^[A-Za-z0-9_-]+$'
+   *         description: System request ID (20-character Firestore auto-ID)
    *     responses:
    *       200:
    *         description: Successfully soft deleted system request
