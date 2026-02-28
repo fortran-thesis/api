@@ -392,17 +392,6 @@ export const getResolvedMoldReportsCountController = async (
  *                           status:
  *                             type: string
  *                             enum: [pending, "in progress", resolved, rejected]
- *                           case_details:
- *                             type: array
- *                             items:
- *                               type: object
- *                               properties:
- *                                 description:
- *                                   type: string
- *                                 cover_photo:
- *                                   type: array
- *                                   items:
- *                                     type: string
  *                           reporter:
  *                             type: object
  *                             properties:
@@ -503,10 +492,6 @@ export const getAllMoldReports = async (req: Request, res: Response) => {
  *                           status:
  *                             type: string
  *                             enum: [pending, "in progress", resolved, rejected]
- *                           case_details:
- *                             type: array
- *                             items:
- *                               type: object
  *                     nextPageToken:
  *                       type: string
  *                       nullable: true
@@ -588,8 +573,6 @@ export const getAllMoldReportsByUser = async (req: Request, res: Response) => {
  *                             type: string
  *                           status:
  *                             type: string
- *                           case_details:
- *                             type: array
  *                     nextPageToken:
  *                       type: string
  *                       nullable: true
@@ -740,44 +723,18 @@ export const getUnassignedMoldReports = async (req: Request, res: Response) => {
  *               properties:
  *                 data:
  *                   type: object
+ *                   description: The newly created case detail document
  *                   properties:
  *                     id:
  *                       type: string
- *                     case_name:
- *                       type: string
- *                     date_observed:
- *                       type: string
- *                       format: date
- *                     user_id:
- *                       type: string
- *                     assigned_mycologist_id:
- *                       type: string
- *                       nullable: true
- *                     host:
- *                       type: string
- *                     location:
- *                       type: string
- *                     status:
- *                       type: string
- *                       enum: [pending, in progress, resolved, rejected, closed]
- *                     case_details:
+ *                       description: Subcollection document ID
+ *                     cover_photo:
  *                       type: array
  *                       items:
- *                         type: object
- *                         properties:
- *                           cover_photo:
- *                             type: array
- *                             items:
- *                               type: string
- *                           description:
- *                             type: string
- *                           timestamp:
- *                             type: string
- *                             format: date-time
- *                     created_at:
+ *                         type: string
+ *                     description:
  *                       type: string
- *                       format: date-time
- *                     updated_at:
+ *                     timestamp:
  *                       type: string
  *                       format: date-time
  *       400:
@@ -907,6 +864,10 @@ export const postCaseDetail = async (req: Request, res: Response) => {
  *                       type: array
  *                       items:
  *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             description: Subcollection document ID
  *                     created_at:
  *                       type: string
  *                       format: date-time
@@ -987,6 +948,10 @@ export const assignReport = async (req: Request, res: Response) => {
  *                       type: array
  *                       items:
  *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             description: Subcollection document ID
  *                     created_at:
  *                       type: string
  *                       format: date-time
@@ -1069,10 +1034,6 @@ export const rejectReport = async (req: Request, res: Response) => {
  *                           status:
  *                             type: string
  *                             enum: [in progress, resolved]
- *                           case_details:
- *                             type: array
- *                             items:
- *                               type: object
  *                           created_at:
  *                             type: string
  *                             format: date-time
@@ -1215,6 +1176,9 @@ export const getAssignedReportsCountController = async (
  *                       items:
  *                         type: object
  *                         properties:
+ *                           id:
+ *                             type: string
+ *                             description: Subcollection document ID
  *                           cover_photo:
  *                             type: array
  *                             items:
@@ -1305,6 +1269,10 @@ export const getMoldReportById = async (req: Request, res: Response) => {
  *                       type: array
  *                       items:
  *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             description: Subcollection document ID
  *                     created_at:
  *                       type: string
  *                       format: date-time

@@ -894,54 +894,21 @@ export const getMoldCaseByReportId = async (req: Request, res: Response) => {
  *                   example: true
  *                 data:
  *                   type: object
+ *                   description: The newly created cultivation log document
  *                   properties:
  *                     id:
  *                       type: string
- *                     mycologist_id:
+ *                       description: Subcollection document ID
+ *                     type:
  *                       type: string
- *                     name:
- *                       type: string
- *                     mold_report_id:
- *                       type: string
- *                     photo_url:
+ *                       enum: [vivo, vitro]
+ *                     image_url:
  *                       type: string
  *                       nullable: true
- *                     priority:
- *                       type: string
- *                       enum: [low, medium, high]
- *                     start_date:
- *                       type: string
- *                       format: date-time
- *                     end_date:
- *                       type: string
- *                       format: date-time
- *                     is_archived:
- *                       type: boolean
- *                     cultivation_logs:
- *                       type: array
- *                       items:
- *                         type: object
- *                         properties:
- *                           type:
- *                             type: string
- *                             enum: [vivo, vitro]
- *                           image_url:
- *                             type: string
- *                             nullable: true
- *                           characteristics:
- *                             type: object
- *                           additional_info:
- *                             type: string
- *                     cultivation_details:
+ *                     characteristics:
  *                       type: object
- *                       nullable: true
- *                       properties:
- *                         growth_medium:
- *                           type: string
- *                         in_vivo_details:
- *                           type: object
- *                         in_vitro_details:
- *                           type: object
+ *                     additional_info:
+ *                       type: string
  *       400:
  *         description: Failed to add cultivation log
  *         content:
@@ -1081,10 +1048,6 @@ export const addCultivationLog = async (req: Request, res: Response) => {
  *                       format: date-time
  *                     is_archived:
  *                       type: boolean
- *                     cultivation_logs:
- *                       type: array
- *                       items:
- *                         type: object
  *                     cultivation_details:
  *                       type: object
  *                       properties:
@@ -1446,10 +1409,6 @@ export const getMoldCaseById = async (req: Request, res: Response) => {
    *                       format: date-time
    *                     is_archived:
    *                       type: boolean
-   *                     cultivation_logs:
-   *                       type: array
-   *                       items:
-   *                         type: object
    *                     cultivation_details:
    *                       type: object
    *                       nullable: true
@@ -1647,8 +1606,7 @@ export const getCultivationLogs = async (req: Request, res: Response) => {
    *     security:
    *       - bearerAuth: []
    *       - cookieAuth: []
-   *     description:
-   *       - Returns the cultivation_logs array of the specified mold case. Requires authentication.
+   *     description: Returns paginated cultivation logs from the subcollection. Requires authentication.
    *     parameters:
    *       - in: path
    *         name: id
@@ -1656,6 +1614,17 @@ export const getCultivationLogs = async (req: Request, res: Response) => {
    *         schema:
    *           type: string
    *         description: Mold case ID
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           default: 50
+   *         description: Maximum number of logs to return
+   *       - in: query
+   *         name: pageToken
+   *         schema:
+   *           type: string
+   *         description: Cursor token for pagination
    *     responses:
    *       200:
    *         description: Cultivation logs retrieved successfully
@@ -1668,20 +1637,30 @@ export const getCultivationLogs = async (req: Request, res: Response) => {
    *                   type: boolean
    *                   example: true
    *                 data:
-   *                   type: array
-   *                   items:
-   *                     type: object
-   *                     properties:
-   *                       type:
-   *                         type: string
-   *                         enum: [vivo, vitro]
-   *                       image_url:
-   *                         type: string
-   *                         nullable: true
-   *                       characteristics:
+   *                   type: object
+   *                   properties:
+   *                     snapshot:
+   *                       type: array
+   *                       items:
    *                         type: object
-   *                       additional_info:
-   *                         type: string
+   *                         properties:
+   *                           id:
+   *                             type: string
+   *                             description: Subcollection document ID
+   *                           type:
+   *                             type: string
+   *                             enum: [vivo, vitro]
+   *                           image_url:
+   *                             type: string
+   *                             nullable: true
+   *                           characteristics:
+   *                             type: object
+   *                           additional_info:
+   *                             type: string
+   *                     nextPageToken:
+   *                       type: string
+   *                       nullable: true
+   *                       description: Token for fetching next page of results
    *       404:
    *         description: Mold case not found
    *         content:
