@@ -394,6 +394,58 @@ export const retrieveMoldCaseByReportId = async (
   }
 };
 
+/**
+ * Batch-retrieve mold cases for multiple report IDs in a single Firestore query.
+ * Returns a Map<reportId, MoldCase> for O(1) lookups.
+ * Uses Firestore 'in' operator (max 30 per batch, chunked automatically).
+ */
+export const batchRetrieveMoldCasesByReportIds = async (
+  reportIds: string[]
+): Promise<Map<string, MoldCase>> => {
+  const resultMap = new Map<string, MoldCase>();
+  if (!reportIds || reportIds.length === 0) return resultMap;
+
+  try {
+    // Firestore 'in' operator supports up to 30 values; chunk if needed
+    const chunks: string[][] = [];
+    for (let i = 0; i < reportIds.length; i += 30) {
+      chunks.push(reportIds.slice(i, i + 30));
+    }
+
+    const {getFirestore} = await import("firebase-admin/firestore");
+    const {firebase} = await import("../configs/firebase.js");
+    const db = getFirestore(firebase);
+    const {getCollectionName, FirestoreCollection} = await import("../types/models/firestoreCollections.js");
+    const col = getCollectionName(FirestoreCollection.MOLD_CASES);
+
+    const snapshots = await Promise.all(
+      chunks.map((chunk) =>
+        db.collection(col)
+          .where("mold_report_id", "in", chunk)
+          .get()
+      )
+    );
+
+    for (const snap of snapshots) {
+      for (const doc of snap.docs) {
+        const data = doc.data() as MoldCase;
+        if (data.mold_report_id) {
+          resultMap.set(data.mold_report_id, {
+            ...data,
+            id: doc.id,
+          } as any);
+        }
+      }
+    }
+
+    devLog(`[BATCH_CASES] Fetched ${resultMap.size} cases for ${reportIds.length} report IDs`);
+  } catch (error) {
+    devLog(error, "BATCH_CASES_ERROR");
+  }
+
+  return resultMap;
+};
+
 export const updateMoldCaseInFirestore = async (
   id: string,
   details: Partial<MoldCase>

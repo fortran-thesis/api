@@ -6,6 +6,7 @@ import {
   updateDocument,
   deleteDocument,
   softDeleteDocument,
+  getDb,
 } from "../lib/firestore";
 import {firebase} from "../configs/firebase";
 import {MoldReport, MoldReportDetails} from "../types/types";
@@ -143,16 +144,22 @@ export const updateMoldReport = async (
 ) => updateDocument(collection, id, updatedData);
 export const appendCaseDetail = async (id: string, caseDetail: MoldReportDetails) => {
   try {
-    const doc = await getDocumentById(collection, id);
-    if (!doc) throw new Error("No document found");
-    const data = doc.data() as MoldReport;
-    const existing: MoldReportDetails[] = Array.isArray(data?.case_details) ?
-      data.case_details :
-      [];
-    const updated = [...existing, caseDetail];
-    return updateDocument(collection, id, {
-      case_details: updated,
-    } as Partial<MoldReport>);
+    const db = getDb();
+    const docRef = db.collection(collection).doc(id);
+    return await db.runTransaction(async (transaction) => {
+      const doc = await transaction.get(docRef);
+      if (!doc.exists) throw new Error("No document found");
+      const data = doc.data() as MoldReport;
+      const existing: MoldReportDetails[] = Array.isArray(data?.case_details) ?
+        data.case_details :
+        [];
+      const updated = [...existing, caseDetail];
+      transaction.update(docRef, {
+        case_details: updated,
+        "metadata.updated_at": Timestamp.now(),
+      });
+      return updated;
+    });
   } catch (err) {
     devLog(err);
     return null;

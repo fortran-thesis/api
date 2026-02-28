@@ -125,21 +125,29 @@ export const appendCultivationLog = async (
 };
 
 /**
- * Remove a cultivation log at a specific index by fetching the array,
- * splicing the entry, and writing the whole array back.
+ * Remove a cultivation log at a specific index using a transaction to
+ * prevent race conditions on concurrent array modifications.
  */
 export const removeCultivationLogAtIndex = async (
   caseId: string,
   logIndex: number
-): Promise<FirebaseFirestore.WriteResult | null> => {
+): Promise<CultivationLog[] | null> => {
   try {
-    const doc = await getDocumentById(collection, caseId);
-    if (!doc || !doc.exists) return null;
-    const data = doc.data() as MoldCase;
-    const logs: CultivationLog[] = Array.isArray(data?.cultivation_logs) ? [...data.cultivation_logs] : [];
-    if (logIndex < 0 || logIndex >= logs.length) return null;
-    logs.splice(logIndex, 1);
-    return await updateDocument(collection, caseId, {cultivation_logs: logs} as Partial<MoldCase>);
+    const db = getFirestore(firebase);
+    const docRef = db.collection(collection).doc(caseId);
+    return await db.runTransaction(async (transaction) => {
+      const doc = await transaction.get(docRef);
+      if (!doc.exists) return null;
+      const data = doc.data() as MoldCase;
+      const logs: CultivationLog[] = Array.isArray(data?.cultivation_logs) ? [...data.cultivation_logs] : [];
+      if (logIndex < 0 || logIndex >= logs.length) return null;
+      logs.splice(logIndex, 1);
+      transaction.update(docRef, {
+        cultivation_logs: logs,
+        "metadata.updated_at": Timestamp.now(),
+      });
+      return logs;
+    });
   } catch (err) {
     devLog(err);
     return null;

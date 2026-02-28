@@ -16,6 +16,12 @@ import {
 const db = getFirestore(firebase);
 
 /**
+ * Returns the Firestore database instance.
+ * Useful for running transactions or other operations requiring direct db access.
+ */
+export const getDb = () => db;
+
+/**
  * Returns a Firestore collection reference for the given collection name.
  * @param collection - The name of the Firestore collection
  * @return The collection reference
@@ -53,6 +59,7 @@ export const addDocument = async <T extends object>(
       }
       devLog("📝 addDocument: Document doesn't exist yet, calling set()");
       await ref.set(withMetadata);
+      // Re-read to get server-computed fields (Timestamp resolved by server)
       const result = await ref.get();
       devLog(`✅ addDocument: Successfully created document, exists=${result.exists}`);
       return result;
@@ -60,9 +67,15 @@ export const addDocument = async <T extends object>(
 
     devLog(`📝 addDocument: Creating auto-ID document in '${collection}'`);
     const docRef = await callFirebase(collection).add(withMetadata);
-    const result = await docRef.get();
-    devLog(`✅ addDocument: Successfully created auto-ID document with ID=${result.id}`);
-    return result;
+    devLog(`✅ addDocument: Successfully created auto-ID document with ID=${docRef.id}`);
+    // Avoid extra read: construct lightweight snapshot from written data
+    // Callers use documentToJson() which only needs .id and .data()
+    return {
+      id: docRef.id,
+      exists: true,
+      ref: docRef,
+      data: () => withMetadata,
+    } as unknown as FirebaseFirestore.DocumentSnapshot;
   } catch (error) {
     devLog(error, "ADD_DOCUMENT_ERROR");
     return null;
@@ -278,13 +291,32 @@ export const documentToJson = <T>(
   } as T & { id: string };
 };
 
+/**
+ * Deletes all documents in a Firestore collection using chunked batch deletes.
+ * Processes 500 documents at a time to avoid memory issues and Firestore batch limits.
+ * @param collection - The name of the Firestore collection to clear
+ */
 export const deleteCollection = async (collection: string) => {
-  const querySnap = await callFirebase(collection).get();
-  const batch = db.batch();
-  querySnap.docs.forEach((doc) => {
-    batch.delete(doc.ref);
-  });
-  await batch.commit();
+  const BATCH_SIZE = 500;
+  const collectionRef = callFirebase(collection);
+
+  let query = collectionRef.orderBy("__name__").limit(BATCH_SIZE);
+  let snapshot = await query.get();
+
+  while (!snapshot.empty) {
+    const batch = db.batch();
+    snapshot.docs.forEach((doc) => {
+      batch.delete(doc.ref);
+    });
+    await batch.commit();
+
+    if (snapshot.docs.length < BATCH_SIZE) break;
+
+    // Continue from after the last document
+    const lastDoc = snapshot.docs[snapshot.docs.length - 1];
+    query = collectionRef.orderBy("__name__").startAfter(lastDoc).limit(BATCH_SIZE);
+    snapshot = await query.get();
+  }
 };
 
 export {getFirestore};

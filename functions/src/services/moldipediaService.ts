@@ -24,6 +24,7 @@ import {
 } from "../types/types";
 import {transformToSignedUrl} from "../utils/storageTransform";
 import {retrieveUserById} from "./userService";
+import {getAuthUsersByIds} from "../lib/auth";
 
 export const addMoldipediaToFirestore = async (
   details: Moldipedia
@@ -70,12 +71,16 @@ export const retrieveAllMoldipedia = async (
       });
     }
 
-    // Transform cover_photo paths to signed URLs and get author name
+    // Batch-fetch all unique authors upfront instead of N+1 per item
+    const uniqueAuthorIds = [...new Set(items.map((i) => i.author_id).filter(Boolean))] as string[];
+    const authorsMap = await getAuthUsersByIds(uniqueAuthorIds);
+
+    // Transform cover_photo paths to signed URLs and resolve author names from pre-fetched data
     const itemsWithSignedUrls = await Promise.all(
       items.map(async (item) => {
         let authorName = "Unknown Author";
         if (item.author_id) {
-          const user = await retrieveUserById(item.author_id);
+          const user = authorsMap.get(item.author_id);
           if (user) {
             authorName =
               user.details.displayName ||
@@ -199,11 +204,15 @@ export const retrieveArchivedMoldipedia = async (
     if (!docs) throw new Error("No archived moldipedia entries found.");
     const items = queryToJson<Moldipedia>(docs.snapshot);
 
+    // Batch-fetch all unique authors upfront instead of N+1 per item
+    const uniqueAuthorIds = [...new Set(items.map((i) => i.author_id).filter(Boolean))] as string[];
+    const authorsMap = await getAuthUsersByIds(uniqueAuthorIds);
+
     const itemsWithSignedUrls = await Promise.all(
       items.map(async (item) => {
         let authorName = "Unknown Author";
         if (item.author_id) {
-          const user = await retrieveUserById(item.author_id);
+          const user = authorsMap.get(item.author_id);
           if (user) {
             authorName =
               user.details.displayName ||

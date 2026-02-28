@@ -33,8 +33,8 @@ import {
   WithId,
   WithMetadata,
 } from "../types/types";
-import {getAuthUserById} from "../lib/auth";
-import {retrieveMoldCaseByReportId} from "./moldCaseService";
+import {getAuthUserById, getAuthUsersByIds} from "../lib/auth";
+import {batchRetrieveMoldCasesByReportIds} from "./moldCaseService";
 import {transformToSignedUrl} from "../utils/storageTransform";
 
 // Helper: transform cover_photo arrays to signed URLs
@@ -193,33 +193,38 @@ export const retrieveAllMoldReports = async (
       "[DEBUG] retrieveAllMoldReports - report IDs:",
       raw.map((r) => (r as any).id).join(", ")
     );
-    // Normalize date_observed and enrich each report with reporter info in parallel
+
+    // Batch-fetch all Auth users + mold cases upfront instead of N+1 per report
+    const uniqueUserIds = [...new Set(raw.map((r) => r.user_id).filter(Boolean))];
+    const reportIds = raw.map((r: any) => r.id).filter(Boolean);
+
+    const [authUsersMap, moldCasesMap] = await Promise.all([
+      getAuthUsersByIds(uniqueUserIds),
+      batchRetrieveMoldCasesByReportIds(reportIds),
+    ]);
+
+    // Enrich each report using pre-fetched data (no additional DB calls)
     const enriched = await Promise.all(
       raw.map(async (r) => {
         const nr = normalizeDateObserved(r) as unknown as MoldReport & any;
-        try {
-          const authUser = await getAuthUserById(nr.user_id);
-          if (authUser) {
-            nr.reporter = {
-              id: authUser.id,
-              name:
-                authUser.details.displayName ||
-                authUser.user.first_name + " " + authUser.user.last_name,
-            };
-          }
-        } catch (e) {
-          devLog(e, "ENRICH_REPORT_USER");
+
+        // Use pre-fetched auth user
+        const authUser = authUsersMap.get(nr.user_id);
+        if (authUser) {
+          nr.reporter = {
+            id: authUser.id,
+            name:
+              authUser.details.displayName ||
+              authUser.user.first_name + " " + authUser.user.last_name,
+          };
         }
-        // Enrich with mold case if available
-        try {
-          const moldCase = await retrieveMoldCaseByReportId(nr.id);
-          if (moldCase) {
-            nr.mold_case = {
-              priority: moldCase.priority,
-            };
-          }
-        } catch (e) {
-          devLog(e, "ENRICH_REPORT_CASE");
+
+        // Use pre-fetched mold case
+        const moldCase = moldCasesMap.get(nr.id);
+        if (moldCase) {
+          nr.mold_case = {
+            priority: moldCase.priority,
+          };
         }
 
         // Transform cover photos to signed URLs
@@ -659,39 +664,38 @@ export const searchAndFilterMoldReports = async (
     // Then trim to limit to further reduce enrichment calls
     const toEnrich = filteredRaw.slice(0, limit);
 
-    // Normalize dates and enrich in parallel
+    // Batch-fetch all Auth users + mold cases upfront instead of N+1 per report
+    const uniqueUserIds = [...new Set(toEnrich.map((r) => r.user_id).filter(Boolean))];
+    const enrichReportIds = toEnrich.map((r: any) => r.id).filter(Boolean);
+
+    const [authUsersMap, moldCasesMap] = await Promise.all([
+      getAuthUsersByIds(uniqueUserIds),
+      batchRetrieveMoldCasesByReportIds(enrichReportIds),
+    ]);
+
+    // Normalize dates and enrich using pre-fetched data (no additional DB calls per report)
     const reportList = await Promise.all(
       toEnrich.map(async (r) => {
         const nr = normalizeDateObserved(r) as unknown as MoldReport & any;
 
-        // Enrich with reporter info
-        try {
-          const authUser = await getAuthUserById(nr.user_id);
-          if (authUser) {
-            nr.reporter = {
-              id: authUser.id,
-              name:
-                authUser.details.displayName ||
-                authUser.user.first_name + " " + authUser.user.last_name,
-            };
-          }
-        } catch (e) {
-          devLog(e, "ENRICH_REPORT_USER");
+        // Use pre-fetched auth user
+        const authUser = authUsersMap.get(nr.user_id);
+        if (authUser) {
+          nr.reporter = {
+            id: authUser.id,
+            name:
+              authUser.details.displayName ||
+              authUser.user.first_name + " " + authUser.user.last_name,
+          };
         }
 
-        // Enrich with mold case priority (always try to fetch, may not exist yet)
-        try {
-          const moldCase = await retrieveMoldCaseByReportId(nr.id);
-          if (moldCase) {
-            nr.mold_case = {
-              priority: moldCase.priority,
-            };
-          } else {
-            // No mold case yet - will show as "unassigned" on frontend
-            nr.mold_case = null;
-          }
-        } catch (e) {
-          devLog(e, "ENRICH_REPORT_CASE");
+        // Use pre-fetched mold case
+        const moldCase = moldCasesMap.get(nr.id);
+        if (moldCase) {
+          nr.mold_case = {
+            priority: moldCase.priority,
+          };
+        } else {
           nr.mold_case = null;
         }
 

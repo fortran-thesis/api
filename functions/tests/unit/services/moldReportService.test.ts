@@ -11,6 +11,7 @@ const mockCountTotalReports = jest.fn() as jest.MockedFunction<any>;
 const mockDocumentToJson = jest.fn() as jest.MockedFunction<any>;
 const mockQueryToJson = jest.fn() as jest.MockedFunction<any>;
 const mockGetAuthUserById = jest.fn() as jest.MockedFunction<any>;
+const mockGetAuthUsersByIds = jest.fn() as jest.MockedFunction<any>;
 
 jest.mock("../../../src/repositories/moldReportRepository", () => ({
   addMoldReport: (...args: any[]) => mockAddMoldReport(...args),
@@ -28,9 +29,13 @@ jest.mock("../../../src/lib/firestore", () => ({
 }));
 jest.mock("../../../src/lib/auth", () => ({
   getAuthUserById: (...args: any[]) => mockGetAuthUserById(...args),
+  getAuthUsersByIds: (...args: any[]) => mockGetAuthUsersByIds(...args),
 }));
 jest.mock("../../../src/utils/dev");
-jest.mock("../../../src/services/moldCaseService");
+jest.mock("../../../src/services/moldCaseService", () => ({
+  retrieveMoldCaseByReportId: jest.fn().mockResolvedValue(null),
+  batchRetrieveMoldCasesByReportIds: jest.fn().mockResolvedValue(new Map()),
+}));
 jest.mock("../../../src/configs/redis", () => ({
   redis: {},
   redisReady: Promise.resolve(),
@@ -82,6 +87,7 @@ describe("moldReportService (unit)", () => {
         {id: "2", user_id: "user2", date_observed: new Date()},
       ]);
       mockGetAuthUserById.mockResolvedValue(null);
+      mockGetAuthUsersByIds.mockResolvedValue(new Map());
 
       const result = await moldReportService.retrieveAllMoldReports(
         10,
