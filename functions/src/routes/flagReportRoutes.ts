@@ -16,7 +16,7 @@ import {
   validateQuery,
 } from "../middlewares/validation";
 import {PaginationQuerySchema} from "../dto/paginationDTO";
-import {CreateFlagReportSchema, FlagReportIdSchema} from "../dto/flagReportDTO";
+import {CreateFlagReportSchema, FlagReportIdSchema, UpdateFlagReportSchema} from "../dto/flagReportDTO";
 import {cacheGet, cacheInvalidate} from "../middlewares/cacheMiddleware";
 
 const router = Router();
@@ -60,6 +60,7 @@ router.patch(
   "/:id",
   verifyUser(Role.CURATOR),
   validateParams(FlagReportIdSchema),
+  validateBody(UpdateFlagReportSchema),
   cacheInvalidate("flag-reports", "update"),
   async (req, res) => {
     await patchFlagReport(req, res);
