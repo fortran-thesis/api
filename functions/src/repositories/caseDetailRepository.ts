@@ -1,13 +1,13 @@
 import {Timestamp} from "firebase-admin/firestore";
 import {getDb} from "../lib/firestore";
-import {MoldReportDetails} from "../types/types";
+import {MoldReportDetails, WithMetadata} from "../types/types";
 import {devLog} from "../utils/dev";
 import {
   FirestoreCollection,
   FirestoreSubcollection,
   getCollectionName,
 } from "../types/models/firestoreCollections";
-import {WithMetadata} from "../types/types";
+
 
 const parentCollection = getCollectionName(FirestoreCollection.MOLD_REPORTS);
 const subcollection = FirestoreSubcollection.CASE_DETAILS;
