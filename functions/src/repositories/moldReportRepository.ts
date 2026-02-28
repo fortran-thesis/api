@@ -8,7 +8,8 @@ import {
   softDeleteDocument,
 } from "../lib/firestore";
 import {firebase} from "../configs/firebase";
-import {MoldReport} from "../types/types";
+import {MoldReport, MoldReportDetails} from "../types/types";
+import {Timestamp} from "firebase-admin/firestore";
 import {devLog} from "../utils/dev";
 import {
   getCollectionName,
@@ -141,12 +142,12 @@ export const updateMoldReport = async (
   id: string,
   updatedData: Partial<MoldReport>
 ) => updateDocument(collection, id, updatedData);
-export const appendCaseDetail = async (id: string, caseDetail: any) => {
+export const appendCaseDetail = async (id: string, caseDetail: MoldReportDetails) => {
   try {
     const doc = await getDocumentById(collection, id);
     if (!doc) throw new Error("No document found");
-    const data = doc.data() as any;
-    const existing: any[] = Array.isArray(data?.case_details) ?
+    const data = doc.data() as MoldReport;
+    const existing: MoldReportDetails[] = Array.isArray(data?.case_details) ?
       data.case_details :
       [];
     const updated = [...existing, caseDetail];
@@ -269,8 +270,8 @@ export const countReportsByAssignedMycologist = async (
 };
 
 export const countReportsByDateRange = async (
-  startTimestamp: any,
-  endTimestamp: any
+  startTimestamp: Timestamp,
+  endTimestamp: Timestamp
 ): Promise<number | null> => {
   try {
     const db = getFirestore(firebase);

@@ -11,7 +11,8 @@ import {
   getPaginatedDocuments,
   getDocumentById,
 } from "../lib/firestore";
-import {MoldCase} from "../types/types";
+import {CultivationDetails, CultivationLog, MoldCase} from "../types/types";
+import {Timestamp} from "firebase-admin/firestore";
 import {devLog} from "../utils/dev";
 import {FirestoreCollection, getCollectionName} from "../types/models/firestoreCollections";
 import {firebase} from "../configs/firebase";
@@ -110,13 +111,13 @@ export const softDeleteMoldCase = async (uid: string) =>
 
 export const appendCultivationLog = async (
   caseId: string,
-  log: any
+  log: CultivationLog
 ): Promise<FirebaseFirestore.WriteResult | null> => {
   try {
     // Use shared updateDocument helper so metadata is preserved and consistent
     return await updateDocument(collection, caseId, {
       cultivation_logs: FieldValue.arrayUnion(log),
-    } as any);
+    } as unknown as Partial<MoldCase>);
   } catch (err) {
     devLog(err);
     return null;
@@ -134,23 +135,33 @@ export const removeCultivationLogAtIndex = async (
   try {
     const doc = await getDocumentById(collection, caseId);
     if (!doc || !doc.exists) return null;
-    const data = doc.data() as any;
-    const logs: any[] = Array.isArray(data?.cultivation_logs) ? [...data.cultivation_logs] : [];
+    const data = doc.data() as MoldCase;
+    const logs: CultivationLog[] = Array.isArray(data?.cultivation_logs) ? [...data.cultivation_logs] : [];
     if (logIndex < 0 || logIndex >= logs.length) return null;
     logs.splice(logIndex, 1);
-    return await updateDocument(collection, caseId, {cultivation_logs: logs} as any);
+    return await updateDocument(collection, caseId, {cultivation_logs: logs} as Partial<MoldCase>);
   } catch (err) {
     devLog(err);
     return null;
   }
 };
 
+/** Shape accepted by the cultivation-details PATCH endpoint */
+export interface CultivationDetailsUpdate {
+  cultivation_details?: Partial<CultivationDetails>;
+  growth_medium?: string;
+  in_vivo_details?: CultivationDetails["in_vivo_details"];
+  in_vitro_details?: CultivationDetails["in_vitro_details"];
+  start_date?: Timestamp;
+  end_date?: Timestamp;
+}
+
 export const updateCultivationDetails = async (
   caseId: string,
-  details: Partial<any>
+  details: CultivationDetailsUpdate
 ): Promise<FirebaseFirestore.WriteResult | null> => {
   try {
-    const updates: any = {};
+    const updates: Record<string, unknown> = {};
 
     // If the entire cultivation_details object is provided, use it directly
     if (details.cultivation_details !== undefined) {
@@ -176,7 +187,7 @@ export const updateCultivationDetails = async (
       updates["end_date"] = details.end_date;
     }
 
-    return await updateDocument(collection, caseId, updates);
+    return await updateDocument(collection, caseId, updates as Partial<MoldCase>);
   } catch (err) {
     devLog(err);
     return null;
