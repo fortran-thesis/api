@@ -51,8 +51,8 @@ export enum AuditAction {
   ADD_WIKIMOLD = "add_wikimold",
   EDIT_WIKIMOLD = "edit_wikimold",
   DELETE_WIKIMOLD = "delete_wikimold",
-  SOFT_DELETE_WIKIMOLD = "soft_delete_wikimold",
-
+  SOFT_DELETE_WIKIMOLD = "soft_delete_wikimold",  ARCHIVE_WIKIMOLD = "archive_wikimold",
+  UNARCHIVE_WIKIMOLD = "unarchive_wikimold",
   // ── Mold reports (crop infestation reports) ────────────────────────────────
   CREATE_MOLD_REPORT = "create_mold_report",
   UPDATE_MOLD_REPORT = "update_mold_report",
@@ -102,5 +102,5 @@ export enum AuditAction {
   /** @deprecated Use RESOLVE_MOLD_REPORT */
   RESOLVE_REPORT = "resolve_report",
   /** @deprecated Use SOFT_DELETE_WIKIMOLD */
-  ARCHIVE_WIKIMOLD = "archive_wikimold",
+  // ARCHIVE_WIKIMOLD preserved as ARCHIVE_WIKIMOLD above
 }

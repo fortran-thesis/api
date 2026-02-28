@@ -23,6 +23,17 @@ export const findAllMoldipedia = async (
   orderFields: OrderField[] = ["metadata.created_at", "author_id", FieldPath.documentId()]
 ) =>
   getPaginatedDocuments(collection, limit, token, orderFields);
+export const findArchivedMoldipedia = async (
+  limit: number,
+  token?: string
+) =>
+  getPaginatedDocuments(
+    collection,
+    limit,
+    token,
+    ["metadata.created_at", FieldPath.documentId()],
+    {queryModifier: (q) => q.where("is_archived", "==", true)}
+  );
 export const updateMoldipedia = async (
   id: string,
   updatedData: Partial<Moldipedia>

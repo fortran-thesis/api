@@ -19,6 +19,9 @@ import {
   patchMoldipedia,
   deleteMoldipedia,
   softDeleteMoldipedia,
+  getAllArchivedMoldipedia,
+  archiveMoldipediaArticle,
+  unarchiveMoldipediaArticle,
 } from "../controllers/moldipediaController";
 import {sanitizeParams} from "../middlewares/sanitation";
 import {cacheGet, cacheInvalidate} from "../middlewares/cacheMiddleware";
@@ -48,6 +51,16 @@ router.get(
   }
 );
 
+// ─── Archived list (before /:id to avoid param capture) ────────────────────────
+router.get(
+  "/archive",
+  verifyUser(Role.CURATOR),
+  validateQuery(SearchMoldipediaQuerySchema),
+  async (req: Request, res: Response) => {
+    await getAllArchivedMoldipedia(req, res);
+  }
+);
+
 router.get(
   "/:id",
   sanitizeParams,
@@ -69,6 +82,31 @@ router.patch(
   cacheInvalidate("moldipedia", "update"),
   async (req: Request, res: Response) => {
     await patchMoldipedia(req, res);
+  }
+);
+
+// ─── Archive / Unarchive ─────────────────────────────────────────────────────────
+router.patch(
+  "/:id/archive",
+  verifyUser(Role.CURATOR),
+  sanitizeParams,
+  validateParams(MoldipediaIdSchema),
+  auditLog(AuditAction.ARCHIVE_WIKIMOLD, (req) => `Archived moldipedia ${req.params.id}`),
+  cacheInvalidate("moldipedia", "update"),
+  async (req: Request, res: Response) => {
+    await archiveMoldipediaArticle(req, res);
+  }
+);
+
+router.patch(
+  "/:id/unarchive",
+  verifyUser(Role.CURATOR),
+  sanitizeParams,
+  validateParams(MoldipediaIdSchema),
+  auditLog(AuditAction.UNARCHIVE_WIKIMOLD, (req) => `Unarchived moldipedia ${req.params.id}`),
+  cacheInvalidate("moldipedia", "update"),
+  async (req: Request, res: Response) => {
+    await unarchiveMoldipediaArticle(req, res);
   }
 );
 

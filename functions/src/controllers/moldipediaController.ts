@@ -11,6 +11,9 @@ import {
   updateMoldipediaInFirestore,
   removeMoldipedia,
   softRemoveMoldipedia,
+  archiveMoldipedia,
+  unarchiveMoldipedia,
+  retrieveArchivedMoldipedia,
 } from "../services/moldipediaService";
 
 export const createMoldipedia = async (req: Request, res: Response) => {
@@ -77,6 +80,15 @@ export const createMoldipedia = async (req: Request, res: Response) => {
  *                     updated_at:
  *                       type: string
  *                       format: date-time
+ *                     mycologist_id:
+ *                       type: string
+ *                       nullable: true
+ *                       description: ID of the mycologist who reviewed/approved this article
+ *                     approved_at:
+ *                       type: string
+ *                       format: date-time
+ *                       nullable: true
+ *                       description: Timestamp when the article was reviewed/approved
    *       400:
    *         description: Validation error
    *         content:
@@ -201,6 +213,15 @@ export const getAllMoldipedia = async (req: Request, res: Response) => {
  *                           updated_at:
  *                             type: string
  *                             format: date-time
+ *                           mycologist_id:
+ *                             type: string
+ *                             nullable: true
+ *                             description: ID of the mycologist who reviewed/approved this article
+ *                           approved_at:
+ *                             type: string
+ *                             format: date-time
+ *                             nullable: true
+ *                             description: Timestamp when the article was reviewed/approved
    *                     nextPageToken:
    *                       type: string
    *                       nullable: true
@@ -291,6 +312,15 @@ export const getMoldipediaById = async (req: Request, res: Response) => {
    *                     updated_at:
    *                       type: string
    *                       format: date-time
+   *                     mycologist_id:
+   *                       type: string
+   *                       nullable: true
+   *                       description: ID of the mycologist who reviewed/approved this article
+   *                     approved_at:
+   *                       type: string
+   *                       format: date-time
+   *                       nullable: true
+   *                       description: Timestamp when the article was reviewed/approved
    *       404:
    *         description: Not found
    *         content:
@@ -383,6 +413,15 @@ export const patchMoldipedia = async (req: Request, res: Response) => {
  *                     updated_at:
  *                       type: string
  *                       format: date-time
+ *                     mycologist_id:
+ *                       type: string
+ *                       nullable: true
+ *                       description: ID of the mycologist who reviewed/approved this article
+ *                     approved_at:
+ *                       type: string
+ *                       format: date-time
+ *                       nullable: true
+ *                       description: Timestamp when the article was reviewed/approved
  *       400:
    *         description: Validation error
    *       404:
@@ -506,4 +545,256 @@ export const softDeleteMoldipedia = async (req: Request, res: Response) => {
   }
 };
 
+// ─── Archive / Unarchive ─────────────────────────────────────────────────────────
 
+export const getAllArchivedMoldipedia = async (req: Request, res: Response) => {
+  /**
+   * @swagger
+   * /api/v1/moldipedia/archive:
+   *   get:
+   *     summary: Get all archived moldipedia articles
+   *     tags: [Moldipedia]
+   *     security:
+   *       - bearerAuth: []
+   *       - cookieAuth: []
+   *     description:
+   *       - Returns all moldipedia articles where is_archived is true. Requires Curator role.
+   *     parameters:
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *         description: Page size
+   *       - in: query
+   *         name: pageToken
+   *         schema:
+   *           type: string
+   *         description: Cursor token for pagination
+   *     responses:
+   *       200:
+   *         description: Paginated list of archived moldipedia articles
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     snapshot:
+   *                       type: array
+   *                       items:
+   *                         type: object
+   *                         properties:
+   *                           id:
+   *                             type: string
+   *                           title:
+   *                             type: string
+   *                           body:
+   *                             type: string
+   *                           author:
+   *                             type: string
+   *                           cover_photo:
+   *                             type: string
+   *                           tags:
+   *                             type: array
+   *                             items:
+   *                               type: string
+   *                           is_archived:
+   *                             type: boolean
+   *                             example: true
+   *                           created_at:
+   *                             type: string
+   *                             format: date-time
+   *                           updated_at:
+   *                             type: string
+   *                             format: date-time   *                           mycologist_id:
+   *                             type: string
+   *                             nullable: true
+   *                             description: ID of the mycologist who reviewed/approved this article
+   *                           approved_at:
+   *                             type: string
+   *                             format: date-time
+   *                             nullable: true
+   *                             description: Timestamp when the article was reviewed/approved   *                     nextPageToken:
+   *                       type: string
+   *                       nullable: true
+   *       500:
+   *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
+   */
+  try {
+    const limit: number = parseInt(req.query.limit as string) || 10;
+    const pageToken: string | undefined = req.query.pageToken as string | undefined;
+    const result = await retrieveArchivedMoldipedia(limit, pageToken);
+    if (!result) return sendError(res, "Failed to retrieve archived moldipedia articles", 500);
+    return sendSuccess(res, result);
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
+export const archiveMoldipediaArticle = async (req: Request, res: Response) => {
+  /**
+   * @swagger
+   * /api/v1/moldipedia/{id}/archive:
+   *   patch:
+   *     summary: Archive a moldipedia article
+   *     tags: [Moldipedia]
+   *     security:
+   *       - bearerAuth: []
+   *       - cookieAuth: []
+   *     description:
+   *       - Sets is_archived to true on the specified article. Requires Curator role.
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Moldipedia article ID
+   *     responses:
+   *       200:
+   *         description: Moldipedia article archived successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     id:
+   *                       type: string
+   *                     title:
+   *                       type: string
+   *                     is_archived:
+   *                       type: boolean
+   *                       example: true
+   *       404:
+   *         description: Not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
+   *       500:
+   *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
+   */
+  try {
+    const id: string = req.params.id;
+    const updated = await archiveMoldipedia(id);
+    if (!updated) return sendError(res, "Failed to archive moldipedia article", 404);
+    return sendSuccess(res, updated);
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
+export const unarchiveMoldipediaArticle = async (req: Request, res: Response) => {
+  /**
+   * @swagger
+   * /api/v1/moldipedia/{id}/unarchive:
+   *   patch:
+   *     summary: Restore a moldipedia article from archive
+   *     tags: [Moldipedia]
+   *     security:
+   *       - bearerAuth: []
+   *       - cookieAuth: []
+   *     description:
+   *       - Sets is_archived to false on the specified article. Requires Curator role.
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Moldipedia article ID
+   *     responses:
+   *       200:
+   *         description: Moldipedia article restored successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     id:
+   *                       type: string
+   *                     title:
+   *                       type: string
+   *                     is_archived:
+   *                       type: boolean
+   *                       example: false
+   *       404:
+   *         description: Not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
+   *       500:
+   *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 error:
+   *                   type: string
+   */
+  try {
+    const id: string = req.params.id;
+    const updated = await unarchiveMoldipedia(id);
+    if (!updated) return sendError(res, "Failed to unarchive moldipedia article", 404);
+    return sendSuccess(res, updated);
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};

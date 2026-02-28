@@ -10,6 +10,7 @@ import {
   addMoldipedia,
   deleteMoldipedia,
   findAllMoldipedia,
+  findArchivedMoldipedia,
   findMoldipediaById,
   softDeleteMoldipedia,
   updateMoldipedia,
@@ -160,6 +161,73 @@ export const softRemoveMoldipedia = async (id: string): Promise<void> => {
     if (!result) throw new Error("Failed to soft delete moldipedia");
   } catch (error) {
     devLog(error);
+  }
+};
+
+export const archiveMoldipedia = async (
+  id: string
+): Promise<MoldipediaResponse | null> => {
+  try {
+    const result: WriteResult | null = await updateMoldipedia(id, {is_archived: true});
+    if (!result) throw new Error("Failed to archive moldipedia.");
+    return await retrieveMoldipediaById(id);
+  } catch (error) {
+    devLog(error);
+    return null;
+  }
+};
+
+export const unarchiveMoldipedia = async (
+  id: string
+): Promise<MoldipediaResponse | null> => {
+  try {
+    const result: WriteResult | null = await updateMoldipedia(id, {is_archived: false});
+    if (!result) throw new Error("Failed to unarchive moldipedia.");
+    return await retrieveMoldipediaById(id);
+  } catch (error) {
+    devLog(error);
+    return null;
+  }
+};
+
+export const retrieveArchivedMoldipedia = async (
+  limit: number,
+  token?: string
+): Promise<PaginatedResult<MoldipediaResponse[]> | null> => {
+  try {
+    const docs: PaginatedResult<QuerySnapshot> | null = await findArchivedMoldipedia(limit, token);
+    if (!docs) throw new Error("No archived moldipedia entries found.");
+    const items = queryToJson<Moldipedia>(docs.snapshot);
+
+    const itemsWithSignedUrls = await Promise.all(
+      items.map(async (item) => {
+        let authorName = "Unknown Author";
+        if (item.author_id) {
+          const user = await retrieveUserById(item.author_id);
+          if (user) {
+            authorName =
+              user.details.displayName ||
+              `${user.user.first_name} ${user.user.last_name}`;
+          }
+        }
+        // eslint-disable-next-line camelcase
+        const {author_id, ...rest} = item;
+        return {
+          ...rest,
+          cover_photo:
+            (await transformToSignedUrl(item.cover_photo)) || item.cover_photo,
+          author: authorName,
+        };
+      })
+    );
+
+    return {
+      snapshot: itemsWithSignedUrls,
+      nextPageToken: docs.nextPageToken,
+    };
+  } catch (error) {
+    devLog(error);
+    return null;
   }
 };
 
