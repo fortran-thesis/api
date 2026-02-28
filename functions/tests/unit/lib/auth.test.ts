@@ -21,6 +21,11 @@ jest.mock("../../../src/utils/storageTransform", () => ({
 }));
 
 describe("auth lib (unit)", () => {
+  beforeEach(() => {
+    // Clear cached auth users between tests to prevent LRU cache bleed
+    authLib.invalidateAuthUserCache("mocked");
+  });
+
   describe("getAuthUserBy (id or email)", () => {
     it("should return WithId<APIUser>", async () => {
       (getAuth().getUser as jest.Mock<any>).mockResolvedValue({

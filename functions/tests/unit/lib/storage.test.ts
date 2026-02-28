@@ -186,12 +186,10 @@ describe("storage lib (unit)", () => {
   describe("getSignedUrl", () => {
     it("should generate signed URL successfully", async () => {
       const signedUrl = "https://storage.googleapis.com/signed-url";
-      mockFile.exists.mockResolvedValue([true]);
       mockFile.getSignedUrl.mockResolvedValue([signedUrl]);
 
       const result = await storage.getSignedUrl("test.txt");
 
-      expect(mockFile.exists).toHaveBeenCalled();
       expect(mockFile.getSignedUrl).toHaveBeenCalledWith({
         action: "read",
         expires: expect.any(Number),
@@ -201,17 +199,14 @@ describe("storage lib (unit)", () => {
 
     it("should use custom expiration time", async () => {
       const signedUrl = "https://signed-url";
-      mockFile.exists.mockResolvedValue([true]);
       mockFile.getSignedUrl.mockResolvedValue([signedUrl]);
 
       await storage.getSignedUrl("test.txt", 7200);
 
-      expect(mockFile.exists).toHaveBeenCalled();
       expect(mockFile.getSignedUrl).toHaveBeenCalled();
     });
 
     it("should return null on error", async () => {
-      mockFile.exists.mockResolvedValue([true]);
       mockFile.getSignedUrl.mockRejectedValue(new Error("Signing failed"));
 
       const result = await storage.getSignedUrl("test.txt");
@@ -220,12 +215,13 @@ describe("storage lib (unit)", () => {
     });
     
     it("should return null if file does not exist", async () => {
-      mockFile.exists.mockResolvedValue([false]);
+      const notFoundError: any = new Error("No such object");
+      notFoundError.code = 404;
+      mockFile.getSignedUrl.mockRejectedValue(notFoundError);
 
       const result = await storage.getSignedUrl("nonexistent.txt");
 
-      expect(mockFile.exists).toHaveBeenCalled();
-      expect(mockFile.getSignedUrl).not.toHaveBeenCalled();
+      expect(mockFile.getSignedUrl).toHaveBeenCalled();
       expect(result).toBeNull();
     });
   });
