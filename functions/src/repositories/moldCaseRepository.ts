@@ -1,7 +1,7 @@
 // All references to moldFolderService and moldFolderRespository should now use moldCaseService and moldCaseRepository.
 
 // ...existing code...
-import {FieldPath, FieldValue, getFirestore} from "firebase-admin/firestore";
+import {FieldPath, getFirestore} from "firebase-admin/firestore";
 import {
   addDocument,
   getDocumentsByField,
@@ -11,7 +11,7 @@ import {
   getPaginatedDocuments,
   getDocumentById,
 } from "../lib/firestore";
-import {CultivationDetails, CultivationLog, MoldCase} from "../types/types";
+import {CultivationDetails, MoldCase} from "../types/types";
 import {Timestamp} from "firebase-admin/firestore";
 import {devLog} from "../utils/dev";
 import {FirestoreCollection, getCollectionName} from "../types/models/firestoreCollections";
@@ -109,50 +109,7 @@ export const deleteMoldCase = async (uid: string) =>
 export const softDeleteMoldCase = async (uid: string) =>
   softDeleteDocument(collection, uid);
 
-export const appendCultivationLog = async (
-  caseId: string,
-  log: CultivationLog
-): Promise<FirebaseFirestore.WriteResult | null> => {
-  try {
-    // Use shared updateDocument helper so metadata is preserved and consistent
-    return await updateDocument(collection, caseId, {
-      cultivation_logs: FieldValue.arrayUnion(log),
-    } as unknown as Partial<MoldCase>);
-  } catch (err) {
-    devLog(err);
-    return null;
-  }
-};
-
-/**
- * Remove a cultivation log at a specific index using a transaction to
- * prevent race conditions on concurrent array modifications.
- */
-export const removeCultivationLogAtIndex = async (
-  caseId: string,
-  logIndex: number
-): Promise<CultivationLog[] | null> => {
-  try {
-    const db = getFirestore(firebase);
-    const docRef = db.collection(collection).doc(caseId);
-    return await db.runTransaction(async (transaction) => {
-      const doc = await transaction.get(docRef);
-      if (!doc.exists) return null;
-      const data = doc.data() as MoldCase;
-      const logs: CultivationLog[] = Array.isArray(data?.cultivation_logs) ? [...data.cultivation_logs] : [];
-      if (logIndex < 0 || logIndex >= logs.length) return null;
-      logs.splice(logIndex, 1);
-      transaction.update(docRef, {
-        cultivation_logs: logs,
-        "metadata.updated_at": Timestamp.now(),
-      });
-      return logs;
-    });
-  } catch (err) {
-    devLog(err);
-    return null;
-  }
-};
+// cultivation log operations moved to cultivationLogRepository (subcollection)
 
 /** Shape accepted by the cultivation-details PATCH endpoint */
 export interface CultivationDetailsUpdate {

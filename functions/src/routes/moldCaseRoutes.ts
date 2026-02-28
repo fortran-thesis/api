@@ -141,7 +141,7 @@ router.get(
 );
 
 router.delete(
-  "/:id/logs/:logIndex",
+  "/:id/logs/:logId",
   verifyUser(),
   validateParams(MoldIdSchema),
   async (req: Request, res: Response) => {

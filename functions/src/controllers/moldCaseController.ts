@@ -969,8 +969,8 @@ export const getMoldCaseByReportId = async (req: Request, res: Response) => {
  */
 export const addCultivationLog = async (req: Request, res: Response) => {
   /**
-   * POST /api/v1/mold-cases/:caseId/logs
-   * Add a cultivation log entry to a mold case with optional image upload
+   * POST /api/v1/mold-cases/:id/logs
+   * Add a cultivation log entry to a mold case (stored in subcollection)
    */
   try {
     const caseId: string = req.params.id;
@@ -992,9 +992,9 @@ export const addCultivationLog = async (req: Request, res: Response) => {
       logData.image_url = uploadedPath;
     }
 
-    const updated = await addCultivationLogToCase(caseId, logData);
-    if (!updated) return sendError(res, "Failed to add cultivation log", 400);
-    return sendSuccess(res, updated);
+    const created = await addCultivationLogToCase(caseId, logData);
+    if (!created) return sendError(res, "Failed to add cultivation log", 400);
+    return sendSuccess(res, created);
   } catch (error) {
     devLog(error);
     return defaultError(res);
@@ -1709,9 +1709,11 @@ export const getCultivationLogs = async (req: Request, res: Response) => {
    */
   try {
     const id: string = req.params.id;
-    const logs = await getCultivationLogsFromCase(id);
-    if (logs === null) return sendError(res, "Mold case not found", 404);
-    return sendSuccess(res, logs);
+    const limit = parseInt(req.query.limit as string, 10) || 50;
+    const pageToken = req.query.pageToken as string | undefined;
+    const result = await getCultivationLogsFromCase(id, limit, pageToken);
+    if (result === null) return sendError(res, "Mold case not found", 404);
+    return sendSuccess(res, result);
   } catch (error) {
     devLog(error);
     return defaultError(res);
@@ -1721,15 +1723,15 @@ export const getCultivationLogs = async (req: Request, res: Response) => {
 export const removeCultivationLog = async (req: Request, res: Response) => {
   /**
    * @swagger
-   * /api/v1/mold-case/{id}/logs/{logIndex}:
+   * /api/v1/mold-case/{id}/logs/{logId}:
    *   delete:
-   *     summary: Remove a cultivation log entry by index
+   *     summary: Remove a cultivation log entry by ID
    *     tags: [MoldCases]
    *     security:
    *       - bearerAuth: []
    *       - cookieAuth: []
    *     description:
-   *       - Removes the cultivation log at the given zero-based index. Requires authentication.
+   *       - Removes the cultivation log with the given document ID from the subcollection. Requires authentication.
    *     parameters:
    *       - in: path
    *         name: id
@@ -1738,12 +1740,11 @@ export const removeCultivationLog = async (req: Request, res: Response) => {
    *           type: string
    *         description: Mold case ID
    *       - in: path
-   *         name: logIndex
+   *         name: logId
    *         required: true
    *         schema:
-   *           type: integer
-   *           minimum: 0
-   *         description: Zero-based index of the cultivation log to remove
+   *           type: string
+   *         description: Cultivation log document ID
    *     responses:
    *       200:
    *         description: Cultivation log removed successfully
@@ -1757,9 +1758,11 @@ export const removeCultivationLog = async (req: Request, res: Response) => {
    *                   example: true
    *                 data:
    *                   type: object
-   *                   description: Updated mold case
+   *                   properties:
+   *                     deleted:
+   *                       type: boolean
    *       400:
-   *         description: Invalid log index
+   *         description: Invalid log ID
    *         content:
    *           application/json:
    *             schema:
@@ -1771,7 +1774,7 @@ export const removeCultivationLog = async (req: Request, res: Response) => {
    *                 error:
    *                   type: string
    *       404:
-   *         description: Mold case not found or log index out of range
+   *         description: Mold case or log not found
    *         content:
    *           application/json:
    *             schema:
@@ -1797,13 +1800,13 @@ export const removeCultivationLog = async (req: Request, res: Response) => {
    */
   try {
     const id: string = req.params.id;
-    const logIndex = parseInt(req.params.logIndex, 10);
-    if (isNaN(logIndex) || logIndex < 0) {
-      return sendError(res, "Invalid log index. Must be a non-negative integer.", 400);
+    const logId: string = req.params.logId;
+    if (!logId || !logId.trim()) {
+      return sendError(res, "Log ID is required.", 400);
     }
-    const updated = await removeCultivationLogFromCase(id, logIndex);
-    if (!updated) return sendError(res, "Mold case not found or log index out of range", 404);
-    return sendSuccess(res, updated);
+    const deleted = await removeCultivationLogFromCase(id, logId);
+    if (!deleted) return sendError(res, "Mold case or log not found", 404);
+    return sendSuccess(res, {deleted: true});
   } catch (error) {
     devLog(error);
     return defaultError(res);

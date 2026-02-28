@@ -62,7 +62,7 @@ describe("moldReportService (unit)", () => {
         case_details: [],
       } as any);
 
-      expect(result).toEqual({id: "report123", location: "Kitchen"});
+      expect(result).toEqual({id: "report123", location: "Kitchen", case_details: []});
       expect(mockAddMoldReport).toHaveBeenCalled();
     });
 

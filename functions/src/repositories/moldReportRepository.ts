@@ -6,10 +6,9 @@ import {
   updateDocument,
   deleteDocument,
   softDeleteDocument,
-  getDb,
 } from "../lib/firestore";
 import {firebase} from "../configs/firebase";
-import {MoldReport, MoldReportDetails} from "../types/types";
+import {MoldReport} from "../types/types";
 import {devLog} from "../utils/dev";
 import {
   getCollectionName,
@@ -142,29 +141,7 @@ export const updateMoldReport = async (
   id: string,
   updatedData: Partial<MoldReport>
 ) => updateDocument(collection, id, updatedData);
-export const appendCaseDetail = async (id: string, caseDetail: MoldReportDetails) => {
-  try {
-    const db = getDb();
-    const docRef = db.collection(collection).doc(id);
-    return await db.runTransaction(async (transaction) => {
-      const doc = await transaction.get(docRef);
-      if (!doc.exists) throw new Error("No document found");
-      const data = doc.data() as MoldReport;
-      const existing: MoldReportDetails[] = Array.isArray(data?.case_details) ?
-        data.case_details :
-        [];
-      const updated = [...existing, caseDetail];
-      transaction.update(docRef, {
-        case_details: updated,
-        "metadata.updated_at": Timestamp.now(),
-      });
-      return updated;
-    });
-  } catch (err) {
-    devLog(err);
-    return null;
-  }
-};
+// case detail operations moved to caseDetailRepository (subcollection)
 export const deleteMoldReport = async (id: string) =>
   deleteDocument(collection, id);
 export const softDeleteMoldReport = async (id: string) =>

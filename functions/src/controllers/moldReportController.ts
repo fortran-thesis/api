@@ -800,14 +800,14 @@ export const postCaseDetail = async (req: Request, res: Response) => {
     // If the requester is the report owner, treat this as a user follow-up:
     // append the case detail, reset status to 'pending', and unassign the mycologist.
     if (actor && actor.id === report.user_id) {
-      const appended = await addCaseDetailToReport(
+      const created = await addCaseDetailToReport(
         id,
         details as MoldReportDetails
       );
-      if (!appended) {
+      if (!created) {
         return sendError(res, "Failed to add case detail to report", 400);
       }
-      const updated = await updateMoldReportInFirestore(id, {
+      await updateMoldReportInFirestore(id, {
         status: "pending",
       });
       // Audit log
@@ -824,18 +824,18 @@ export const postCaseDetail = async (req: Request, res: Response) => {
           id
         );
       }
-      return sendSuccess(res, updated);
+      return sendSuccess(res, created);
     }
 
     // Otherwise (curator/mycologist/admin), just append the case detail
-    const appended = await addCaseDetailToReport(
+    const created = await addCaseDetailToReport(
       id,
       details as MoldReportDetails
     );
-    if (!appended) {
+    if (!created) {
       return sendError(res, "Failed to add case detail to report", 400);
     }
-    return sendSuccess(res, appended);
+    return sendSuccess(res, created);
   } catch (error) {
     devLog(error);
     return defaultError(res);

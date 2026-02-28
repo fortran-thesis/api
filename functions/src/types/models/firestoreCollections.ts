@@ -14,6 +14,17 @@ export enum FirestoreCollection {
   FAQ = "faq"
 }
 
+/**
+ * Subcollection names used under parent documents.
+ * Path examples:
+ *   mold_cases/{caseId}/cultivation_logs
+ *   mold_reports/{reportId}/case_details
+ */
+export enum FirestoreSubcollection {
+  CULTIVATION_LOGS = "cultivation_logs",
+  CASE_DETAILS = "case_details",
+}
+
 export function getCollectionName(collection: FirestoreCollection): string {
   return collection;
 }

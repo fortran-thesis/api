@@ -18,20 +18,23 @@ import {
   findMoldCaseByReportId,
   softDeleteMoldCase,
   updateMoldCase as updateMoldCaseRepo,
-  appendCultivationLog,
   updateCultivationDetails,
   countCasesByPriority,
   countAllMoldCasesWithMetadata,
-  removeCultivationLogAtIndex,
 } from "../repositories/moldCaseRepository";
-import {MoldCase, PaginatedResult, WithMetadata} from "../types/types";
+import {
+  addCultivationLog as addCultivationLogRepo,
+  findCultivationLogsByCaseId,
+  deleteCultivationLog as deleteCultivationLogRepo,
+} from "../repositories/cultivationLogRepository";
+import {CultivationLog, MoldCase, PaginatedResult, WithId, WithMetadata} from "../types/types";
 import {transformToSignedUrl} from "../utils/storageTransform";
 import {cacheItem, getCachedItem, cacheList, getCachedList} from "../utils/cacheManager";
 import {getRoleCounts, getDisabledCounts} from "./userService";
 import {getMoldReportStatusCounts} from "./moldReportService";
 import {getAuthUserById} from "../lib/auth";
 
-// Helper function to transform MoldCase photo_url and cultivation_logs image_urls
+// Helper function to transform MoldCase photo_url to signed URL
 const transformMoldCaseImages = async (moldCase: MoldCase): Promise<MoldCase> => {
   const transformed = {...moldCase};
 
@@ -40,17 +43,15 @@ const transformMoldCaseImages = async (moldCase: MoldCase): Promise<MoldCase> =>
     transformed.photo_url = await transformToSignedUrl(transformed.photo_url);
   }
 
-  // Transform cultivation_logs image_urls if present
-  if (transformed.cultivation_logs && Array.isArray(transformed.cultivation_logs)) {
-    transformed.cultivation_logs = await Promise.all(
-      transformed.cultivation_logs.map(async (log) => ({
-        ...log,
-        image_url: await transformToSignedUrl(log.image_url) || log.image_url,
-      }))
-    );
-  }
-
   return transformed;
+};
+
+// Helper: transform a single cultivation log's image_url to a signed URL
+const transformLogImageUrl = async (log: WithId<CultivationLog>): Promise<WithId<CultivationLog>> => {
+  if (log.image_url) {
+    log.image_url = await transformToSignedUrl(log.image_url) || log.image_url;
+  }
+  return log;
 };
 
 export const addMoldCaseToFirestore = async (
@@ -523,43 +524,78 @@ export const removeMoldCase = async (id: string): Promise<void> => {
   }
 };
 
+/**
+ * Retrieve cultivation logs for a case from the subcollection.
+ * Returns a paginated list of logs with signed image URLs.
+ */
 export const getCultivationLogsFromCase = async (
-  caseId: string
-): Promise<MoldCase["cultivation_logs"] | null> => {
+  caseId: string,
+  limit = 50,
+  token?: string
+): Promise<PaginatedResult<WithId<CultivationLog>[]> | null> => {
   try {
-    const moldCase = await retrieveMoldCaseById(caseId);
+    // Ensure the parent case exists
+    const moldCase = await findMoldCaseById(caseId);
     if (!moldCase) throw new Error("No case found.");
-    return moldCase.cultivation_logs ?? [];
+
+    const result = await findCultivationLogsByCaseId(caseId, limit, token);
+    if (!result) return {snapshot: [], nextPageToken: null};
+
+    const logs: WithId<CultivationLog>[] = result.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    } as WithId<CultivationLog>));
+
+    // Transform image URLs
+    const transformed = await Promise.all(logs.map(transformLogImageUrl));
+
+    return {
+      snapshot: transformed,
+      nextPageToken: result.nextPageToken,
+    };
   } catch (error) {
     devLog(error);
     return null;
   }
 };
 
+/**
+ * Remove a cultivation log by its document ID (subcollection).
+ * Returns the deleted log or null.
+ */
 export const removeCultivationLogFromCase = async (
   caseId: string,
-  logIndex: number
-): Promise<MoldCase | null> => {
+  logId: string
+): Promise<boolean> => {
   try {
-    const result = await removeCultivationLogAtIndex(caseId, logIndex);
+    const result = await deleteCultivationLogRepo(caseId, logId);
     if (!result) throw new Error("Failed to remove cultivation log");
-    return await retrieveMoldCaseById(caseId);
+    return true;
   } catch (error) {
     devLog(error);
-    return null;
+    return false;
   }
 };
 
+/**
+ * Add a cultivation log to the subcollection.
+ * Returns the newly created log document with its ID.
+ */
 export const addCultivationLogToCase = async (
   caseId: string,
-  log: any
-): Promise<MoldCase | null> => {
+  log: CultivationLog
+): Promise<WithId<CultivationLog> | null> => {
   try {
-    const result = await appendCultivationLog(caseId, log);
-    if (!result) throw new Error("Failed to add cultivation log");
+    const doc = await addCultivationLogRepo(caseId, log);
+    if (!doc) throw new Error("Failed to add cultivation log");
 
-    const updated = await retrieveMoldCaseById(caseId);
-    return updated;
+    const created: WithId<CultivationLog> = {
+      id: doc.id,
+      ...doc.data() as CultivationLog,
+    };
+
+    // Transform image URL in the returned log
+    return await transformLogImageUrl(created);
   } catch (error) {
     devLog(error);
     return null;

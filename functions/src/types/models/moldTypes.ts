@@ -45,7 +45,6 @@ export interface MoldCase {
   start_date: Timestamp;
   end_date: Timestamp;
   cultivation_details?: CultivationDetails;
-  cultivation_logs?: Array<CultivationLog>;
   is_archived: boolean;
 }
 

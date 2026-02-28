@@ -16,7 +16,6 @@ import {
   findMoldReportById,
   softDeleteMoldReport,
   updateMoldReport as updateMoldReportRepo,
-  appendCaseDetail as appendCaseDetailRepo,
   countReportsByStatuses,
   countTotalReports,
   findAllMoldReportsByUser,
@@ -24,6 +23,10 @@ import {
   findMoldReportsBySearch,
   countReportsByDateRange,
 } from "../repositories/moldReportRepository";
+import {
+  addCaseDetail as addCaseDetailToSubcollection,
+  findAllCaseDetailsByReportId,
+} from "../repositories/caseDetailRepository";
 import {findMoldCasesByPriority} from "../repositories/moldCaseRepository";
 import {
   APIUser,
@@ -102,27 +105,12 @@ export const addMoldReportToFirestore = async (
 ): Promise<MoldReport | null> => {
   try {
     devLog(`addMoldReportToFirestore: Creating report with case_name="${details.case_name}"`);
-    devLog(`addMoldReportToFirestore: case_details type: ${typeof details.case_details}, isArray: ${Array.isArray(details.case_details)}`);
 
-    // Ensure case_details is treated as an array and attach metadata to each entry
+    // Extract case_details — they will be written to subcollection, not embedded
     const caseDetailsArray = Array.isArray(details.case_details) ?
       details.case_details :
       [];
-
-    devLog(`addMoldReportToFirestore: case_details count: ${caseDetailsArray.length}`);
-    caseDetailsArray.forEach((d: any, idx: number) => {
-      devLog(`addMoldReportToFirestore[${idx}]: cover_photo=${JSON.stringify(d.cover_photo)}, description="${d.description}"`);
-    });
-
-    const caseDetailsWithMeta: WithMetadata<MoldReportDetails>[] =
-      caseDetailsArray.map((d) => ({
-        ...d,
-        metadata: {
-          created_at: Timestamp.now(),
-          updated_at: null,
-          deleted_at: null,
-        },
-      }));
+    devLog(`addMoldReportToFirestore: ${caseDetailsArray.length} case details will be written to subcollection`);
 
     // convert date_observed (string from DTO) to Firestore Timestamp
     const rawDate = details.date_observed;
@@ -133,10 +121,12 @@ export const addMoldReportToFirestore = async (
         Timestamp.fromDate(parsedDate) :
         Timestamp.now();
 
-    const detailsWithMetadata: WithMetadata<MoldReport> = {
-      ...details,
+    // Build parent document WITHOUT case_details (moved to subcollection)
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const {case_details: _omitted, ...parentFields} = details;
+    const detailsWithMetadata: WithMetadata<Omit<MoldReport, "case_details">> = {
+      ...parentFields,
       date_observed: dateObservedTimestamp,
-      case_details: caseDetailsWithMeta,
       metadata: {
         created_at: Timestamp.now(),
         updated_at: null,
@@ -144,9 +134,19 @@ export const addMoldReportToFirestore = async (
       },
     };
     const doc: DocumentSnapshot | null =
-      await addMoldReport(detailsWithMetadata);
+      await addMoldReport(detailsWithMetadata as any);
     if (!doc) throw new Error("Cannot add mold report.");
-    devLog("addMoldReportToFirestore: ✅ Report created successfully");
+    devLog("addMoldReportToFirestore: ✅ Parent document created");
+
+    const reportId = doc.id;
+
+    // Write each case_detail to the subcollection
+    if (caseDetailsArray.length > 0) {
+      await Promise.all(
+        caseDetailsArray.map((d) => addCaseDetailToSubcollection(reportId, d))
+      );
+      devLog(`addMoldReportToFirestore: ✅ ${caseDetailsArray.length} case details written to subcollection`);
+    }
 
     // Invalidate all report caches since new report was added
     await invalidateAllLists("mold-reports-search");
@@ -155,7 +155,10 @@ export const addMoldReportToFirestore = async (
     await invalidateAllLists("mold-reports-unassigned");
     await invalidateAllLists("mold-reports-assigned");
 
-    return documentToJson<MoldReport>(doc);
+    // Return with case_details included in response for backward compat
+    const result = documentToJson<MoldReport>(doc);
+    result.case_details = caseDetailsArray;
+    return result;
   } catch (error) {
     devLog(`addMoldReportToFirestore: ❌ Error - ${error}`);
     devLog(error);
@@ -227,10 +230,9 @@ export const retrieveAllMoldReports = async (
           };
         }
 
-        // Transform cover photos to signed URLs
-        if (nr.case_details) {
-          nr.case_details = await transformCoverPhotos(nr.case_details);
-        }
+        // case_details now live in subcollection — omit from list responses
+        // Clients should fetch via GET /mold-reports/:id for full details
+        delete nr.case_details;
 
         return nr as MoldReport;
       })
@@ -332,11 +334,20 @@ export const retrieveMoldReportById = async (
       devLog(e, "ENRICH_REPORT_USER");
     }
 
+    // Fetch case_details from subcollection instead of embedded field
+    const detailDocs = await findAllCaseDetailsByReportId(id);
+    const caseDetails = detailDocs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    })) as Array<WithId<MoldReportDetails>>;
+
     // Transform cover photos to signed URLs
-    if (nr.case_details) {
-      devLog(`retrieveMoldReportById: Transforming cover photos for ${nr.case_details.length} case details`);
-      nr.case_details = await transformCoverPhotos(nr.case_details);
+    if (caseDetails.length > 0) {
+      devLog(`retrieveMoldReportById: Transforming cover photos for ${caseDetails.length} case details`);
+      nr.case_details = await transformCoverPhotos(caseDetails);
       devLog(`retrieveMoldReportById: After transform case_details: ${JSON.stringify(nr.case_details)}`);
+    } else {
+      nr.case_details = [];
     }
 
     devLog("retrieveMoldReportById: ✅ Report retrieved successfully");
@@ -429,19 +440,10 @@ export const retrieveAssignedMoldReports = async (
 export const addCaseDetailToReport = async (
   reportId: string,
   detail: MoldReportDetails
-): Promise<MoldReport | null> => {
+): Promise<WithId<MoldReportDetails> | null> => {
   try {
-    const detailWithMeta: WithMetadata<MoldReportDetails> = {
-      ...detail,
-      metadata: {
-        created_at: Timestamp.now(),
-        updated_at: null,
-        deleted_at: null,
-      },
-    };
-
-    const result = await appendCaseDetailRepo(reportId, detailWithMeta);
-    if (!result) throw new Error("Failed to add case detail to report.");
+    const doc = await addCaseDetailToSubcollection(reportId, detail);
+    if (!doc) throw new Error("Failed to add case detail to report.");
 
     // Invalidate all report caches since report was modified
     await invalidateAllLists("mold-reports-search");
@@ -450,7 +452,10 @@ export const addCaseDetailToReport = async (
     await invalidateAllLists("mold-reports-unassigned");
     await invalidateAllLists("mold-reports-assigned");
 
-    return await retrieveMoldReportById(reportId);
+    return {
+      id: doc.id,
+      ...doc.data() as MoldReportDetails,
+    };
   } catch (error) {
     devLog(error);
     return null;
@@ -699,10 +704,8 @@ export const searchAndFilterMoldReports = async (
           nr.mold_case = null;
         }
 
-        // Transform cover photos to signed URLs
-        if (nr.case_details) {
-          nr.case_details = await transformCoverPhotos(nr.case_details);
-        }
+        // case_details now live in subcollection — omit from list responses
+        delete nr.case_details;
 
         return nr as MoldReport;
       })
