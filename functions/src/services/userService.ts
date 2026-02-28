@@ -192,29 +192,29 @@ export const getRoleCounts = async (): Promise<Record<
   number
 > | null> => {
   try {
-    // Check cache first
     const cached = await getCachedItem<Record<string, number>>(
       RESOURCE,
       "role-counts"
     );
     if (cached) return cached;
 
-    // Cache miss - fetch from database
-    // Map current role values to include legacy role names
     const mapping: Record<string, string[]> = {
       [Role.USER]: [Role.USER, "user"],
       [Role.CURATOR]: [Role.CURATOR, "curator"],
       [Role.ADMIN]: [Role.ADMIN, "administrator"],
     };
 
-    const result: Record<string, number> = {};
-    for (const key of Object.keys(mapping)) {
-      const roles = mapping[key];
-      const count = await countUsersByRoles(roles);
-      result[key] = typeof count === "number" ? count : 0;
-    }
+    // Parallelize all role count queries
+    const keys = Object.keys(mapping);
+    const counts = await Promise.all(
+      keys.map((key) => countUsersByRoles(mapping[key]))
+    );
 
-    // Cache the result
+    const result: Record<string, number> = {};
+    keys.forEach((key, idx) => {
+      result[key] = typeof counts[idx] === "number" ? counts[idx]! : 0;
+    });
+
     await cacheItem(RESOURCE, "role-counts", result, {ttl: TTL});
 
     return result;

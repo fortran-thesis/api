@@ -67,14 +67,14 @@ export const deleteFirestoreUser = async (uid: string) =>
 export const softDeleteFirestoreUser = async (uid: string) =>
   softDeleteDocument(collection, uid);
 
+// Replace countUsersByRoles in userRepository.ts:
+
 export const countUsersByRoles = async (roles: string[]): Promise<number | null> => {
   try {
     const db = getFirestore(firebase);
-    const snap = await db.collection(collection).where("role", "in", roles).get();
-    return snap.size;
+    const snapshot = await db.collection(collection).where("role", "in", roles).count().get();
+    return snapshot.data().count;
   } catch (error) {
-    // If query fails (e.g., roles list empty), log and return null
-    // Firestore 'in' requires 1-10 values; caller should ensure valid input
     return null;
   }
 };

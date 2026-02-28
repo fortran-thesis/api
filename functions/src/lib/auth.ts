@@ -6,30 +6,45 @@ import {concurrent} from "../utils/concurrent";
 import {devLog} from "../utils/dev";
 import {envOptions} from "../configs/environment";
 import {transformToSignedUrl} from "../utils/storageTransform";
+import {LRUCache} from "lru-cache";
 
 const auth = getAuth(firebase);
 
+// In-memory LRU cache for auth user objects — avoids 5+ external calls per request
+// TTL of 5 minutes balances freshness with performance. Max 500 entries fits in memory.
+const authUserCache = new LRUCache<string, WithId<APIUser>>({
+  max: 500,
+  ttl: 5 * 60 * 1000, // 5 minutes
+});
+
 /**
- * Retrieves a user's basic information from Firebase Auth.
+ * Retrieves a user's information from Firebase Auth + Firestore.
+ * Results are cached in-memory for 5 minutes to avoid repeated external calls.
  * @param uid - The user's UID
- * @return The user's public info (uid, email, displayName, photoURL)
+ * @return The user's public info
  */
 export const getAuthUserById = async (uid: string): Promise<WithId<APIUser> | null> => {
   try {
+    // Check LRU cache first
+    const cached = authUserCache.get(uid);
+    if (cached) {
+      devLog(`[AUTH_CACHE] Hit for uid=${uid}`);
+      return cached;
+    }
+
     const result = await concurrent(auth.getUser(uid), findFirestoreUserById(uid));
     const user = result[0] as UserRecord;
     const firestoreUser = result[1].data() as User | null;
     if (!user || !firestoreUser) {
       throw new Error("User does not exist in Firebase Authentication.");
     }
-    // Prefer Firebase Auth `photoURL` (which stores the storage path), transform it to a signed URL for client
     let finalPhotoUrl = "";
     if (user.photoURL) {
       const signed = await transformToSignedUrl(user.photoURL);
       finalPhotoUrl = signed || user.photoURL;
     }
 
-    return {
+    const apiUser: WithId<APIUser> = {
       id: user.uid,
       user: {
         username: firestoreUser.username,
@@ -48,6 +63,11 @@ export const getAuthUserById = async (uid: string): Promise<WithId<APIUser> | nu
         address: firestoreUser.address,
       },
     };
+
+    // Store in cache
+    authUserCache.set(uid, apiUser);
+
+    return apiUser;
   } catch (error) {
     devLog(error);
     return null;
@@ -57,17 +77,24 @@ export const getAuthUserById = async (uid: string): Promise<WithId<APIUser> | nu
 export const getAuthUserByEmail = async (email: string): Promise<WithId<APIUser> | null> => {
   try {
     const user = await auth.getUserByEmail(email);
+
+    // Check if we already have this user cached by UID
+    const cached = authUserCache.get(user.uid);
+    if (cached) {
+      devLog(`[AUTH_CACHE] Hit by email->uid for uid=${user.uid}`);
+      return cached;
+    }
+
     const firestoreUserDocs = await findFirestoreUserById(user.uid);
     if (!user || !firestoreUserDocs) throw new Error("User does not exist in Firebase Authentication.");
     const firestoreUser = firestoreUserDocs.data() as User;
-    // Prefer Firebase Auth `photoURL` and transform it to a signed URL for client
     let finalPhotoUrl = "";
     if (user.photoURL) {
       const signed = await transformToSignedUrl(user.photoURL);
       finalPhotoUrl = signed || user.photoURL;
     }
 
-    return {
+    const apiUser: WithId<APIUser> = {
       id: user.uid,
       user: {
         username: firestoreUser.username,
@@ -86,6 +113,11 @@ export const getAuthUserByEmail = async (email: string): Promise<WithId<APIUser>
         address: firestoreUser.address,
       },
     };
+
+    // Cache by UID
+    authUserCache.set(user.uid, apiUser);
+
+    return apiUser;
   } catch (error) {
     devLog(error);
     return null;
@@ -93,10 +125,14 @@ export const getAuthUserByEmail = async (email: string): Promise<WithId<APIUser>
 };
 
 /**
- * Verifies a Firebase ID token and optionally checks for a required user role.
- * @param token - The Firebase ID token
- * @param requiredRole - (Optional) The required user role
- * @return True if valid and (if specified) role matches, else false
+ * Invalidate a specific user from the auth cache (call after user updates).
+ */
+export const invalidateAuthUserCache = (uid: string): void => {
+  authUserCache.delete(uid);
+};
+
+/**
+ * Verifies a Firebase ID token and returns the user.
  */
 export const verifyToken = async (token: string): Promise<WithId<APIUser> | null> => {
   try {
@@ -112,10 +148,7 @@ export const verifyToken = async (token: string): Promise<WithId<APIUser> | null
 };
 
 /**
- * Verifies a Firebase session cookie and optionally checks for a required user role.
- * @param sessionCookie - The Firebase session cookie
- * @param requiredRole - (Optional) The required user role
- * @return True if valid and (if specified) role matches, else false
+ * Verifies a Firebase session cookie and returns the user.
  */
 export const verifyCookie = async (
   sessionCookie: string

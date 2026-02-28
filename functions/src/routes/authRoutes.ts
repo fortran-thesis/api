@@ -34,7 +34,7 @@ router.post(
   sanitizeBody,
   validateBody(RegisterSchema),
   async (req: Request, res: Response) => {
-    createUser(req, res);
+    await createUser(req, res);
   }
 );
 
@@ -44,7 +44,7 @@ router.post(
   sanitizeBody,
   validateBody(LoginSchema),
   async (req: Request, res: Response) => {
-    loginUser(req, res);
+    await loginUser(req, res);
   }
 );
 
@@ -52,7 +52,7 @@ router.post(
   "/login/oauth",
   verifyDevice(),
   async (req: Request, res: Response) => {
-    oAuth(req, res);
+    await oAuth(req, res);
   }
 );
 
@@ -60,7 +60,7 @@ router.post(
   "/verify-code",
   rateLimit(verifyCodeLimiter),
   async (req: Request, res: Response) => {
-    checkVerificationCodeEmail(req, res);
+    await checkVerificationCodeEmail(req, res);
   }
 );
 
@@ -70,7 +70,7 @@ router.post(
   sanitizeBody,
   validateBody(EmailSchema),
   async (req: Request, res: Response) => {
-    sendVerificationCodeEmail(req, res);
+    await sendVerificationCodeEmail(req, res);
   }
 );
 
@@ -80,24 +80,24 @@ router.post(
   sanitizeBody,
   validateBody(EmailSchema),
   async (req: Request, res: Response) => {
-    sendVerificationCodeEmail(req, res);
+    await sendVerificationCodeEmail(req, res);
   }
 );
 
 router.post(
   "/change-password",
+  verifyUser(),
   sanitizeBody,
   validateBody(ChangePasswordSchema),
-  verifyUser(),
   async (req: Request, res: Response) => {
-    changeUserPassword(req, res);
+    await changeUserPassword(req, res);
   }
 );
 
 router.post(
   "/logout",
   async (req: Request, res: Response) => {
-    logoutUser(req, res);
+    await logoutUser(req, res);
   }
 );
 
@@ -105,7 +105,7 @@ router.post(
   "/forgot-password/verify",
   rateLimit(finalActionLimiter),
   async (req: Request, res: Response) => {
-    verifiedChangePassword(req, res);
+    await verifiedChangePassword(req, res);
   }
 );
 
@@ -113,7 +113,7 @@ router.post(
   "/forgot-username/verify",
   rateLimit(finalActionLimiter),
   async (req: Request, res: Response) => {
-    verifiedForgetUsername(req, res);
+    await verifiedForgetUsername(req, res);
   }
 );
 

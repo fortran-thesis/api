@@ -529,8 +529,6 @@ export const getMoldReportStatusCounts = async (userId?: string): Promise<{
   closed: number;
 } | null> => {
   try {
-    // Map current canonical status keys to arrays that include legacy/alternate values.
-    // Assumption: older documents might have used variants like 'in_progress' or 'assigned'.
     const mapping: Record<string, string[]> = {
       pending: ["pending"],
       in_progress: ["in progress", "in_progress", "assigned"],
@@ -538,12 +536,14 @@ export const getMoldReportStatusCounts = async (userId?: string): Promise<{
       rejected: ["closed", "rejected"],
     };
 
-    const total = await countTotalReports(userId);
-
-    const pending = await countReportsByStatuses(mapping.pending, userId);
-    const inProgress = await countReportsByStatuses(mapping.in_progress, userId);
-    const resolved = await countReportsByStatuses(mapping.resolved, userId);
-    const closed = await countReportsByStatuses(mapping.rejected, userId);
+    // Parallelize all 5 independent count queries
+    const [total, pending, inProgress, resolved, closed] = await Promise.all([
+      countTotalReports(userId),
+      countReportsByStatuses(mapping.pending, userId),
+      countReportsByStatuses(mapping.in_progress, userId),
+      countReportsByStatuses(mapping.resolved, userId),
+      countReportsByStatuses(mapping.rejected, userId),
+    ]);
 
     return {
       total: total ?? 0,
@@ -730,32 +730,28 @@ export const getMoldReportMonthlyTotals = async (year?: number): Promise<Array<{
     const currentYear = year || new Date().getFullYear();
     const cacheKey = `mold-report-monthly-${currentYear}`;
 
-    // Try to get from cache
     const cached = await getCachedItem<Array<{month: string; total: number}>>("mold-reports", cacheKey);
     if (cached) {
       devLog(`[CACHE] Hit monthly totals for ${currentYear}`);
       return cached;
     }
 
-    const monthlyTotals: Array<{month: string; total: number}> = [];
-
-    for (let month = 0; month < 12; month++) {
+    // Parallelize all 12 month queries instead of sequential loop
+    const monthPromises = Array.from({length: 12}, (_, month) => {
       const startDate = new Date(currentYear, month, 1);
       const endDate = new Date(currentYear, month + 1, 1);
 
       const startTimestamp = Timestamp.fromDate(startDate);
       const endTimestamp = Timestamp.fromDate(endDate);
 
-      const count = await countReportsByDateRange(startTimestamp, endTimestamp);
-      const monthName = startDate.toLocaleString("default", {month: "long", year: "numeric"});
-
-      monthlyTotals.push({
-        month: monthName,
+      return countReportsByDateRange(startTimestamp, endTimestamp).then((count) => ({
+        month: startDate.toLocaleString("default", {month: "long", year: "numeric"}),
         total: count ?? 0,
-      });
-    }
+      }));
+    });
 
-    // Cache result for 1 hour
+    const monthlyTotals = await Promise.all(monthPromises);
+
     await cacheItem("mold-reports", cacheKey, monthlyTotals, {ttl: 3600});
 
     return monthlyTotals;

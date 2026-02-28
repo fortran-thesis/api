@@ -155,16 +155,8 @@ export const getSignedUrl = async (
     devLog(`getSignedUrl: Attempting to generate URL for: ${filePath}`);
     const file = getFileRef(filePath, bucketName);
 
-    // Check if file exists first
-    const [exists] = await file.exists();
-    devLog(`getSignedUrl: File exists check for '${filePath}': ${exists ? "EXISTS" : "NOT_FOUND"}`);
-
-    if (!exists) {
-      devLog(`getSignedUrl: ❌ File does not exist: ${filePath}`);
-      return null;
-    }
-
     // Generate signed URL with explicit expiration date
+    // Removed file.exists() pre-check — catch errors instead to halve GCS API calls
     const expirationTime = Date.now() + expiresInSeconds * 1000;
     devLog(`getSignedUrl: Generating signed URL, expires in ${expiresInSeconds}s (${new Date(expirationTime).toISOString()})`);
 
@@ -174,7 +166,12 @@ export const getSignedUrl = async (
     });
     devLog(`getSignedUrl: ✅ Successfully generated signed URL (${url.substring(0, 50)}...)`);
     return url;
-  } catch (error) {
+  } catch (error: any) {
+    // Handle file-not-found gracefully instead of pre-checking with exists()
+    if (error?.code === 404 || error?.errors?.[0]?.reason === "notFound") {
+      devLog(`getSignedUrl: ❌ File does not exist: ${filePath}`);
+      return null;
+    }
     devLog(`getSignedUrl: ❌ Error generating signed URL for ${filePath}: ${error}`);
     return null;
   }

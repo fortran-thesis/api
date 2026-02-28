@@ -84,22 +84,19 @@ export const updateDocument = async <T extends object>(
   updateData: Partial<T>
 ): Promise<FirebaseFirestore.WriteResult | null> => {
   try {
-    // Fetch existing document to preserve metadata fields
     const docRef = callFirebase(collection).doc(documentUid);
-    const existingDoc = await docRef.get();
-    const existingMetadata = existingDoc.exists ?
-      (existingDoc.data() as any)?.metadata :
-      {};
 
+    // Build metadata update without reading the existing document.
+    // created_at is set only during addDocument and is preserved automatically
+    // since update() only touches specified fields.
     const withMetadata: WithMetadata<Partial<T>> = {
       ...updateData,
       metadata: {
-        created_at: existingMetadata?.created_at || Timestamp.now(), // Preserve or create
         updated_at: Timestamp.now(),
-        deleted_at: existingMetadata?.deleted_at || null, // Preserve soft delete status
-        ...(updateData as any).metadata, // Allow explicit metadata overrides
+        ...(updateData as any).metadata, // Allow explicit metadata overrides (e.g., deleted_at for soft delete)
       },
     };
+
     return await docRef.update(withMetadata);
   } catch (error) {
     devLog(error);

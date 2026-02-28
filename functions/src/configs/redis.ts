@@ -10,6 +10,17 @@ const createRedisClient = (): RedisClientType<any> => {
     socket: {
       host: envOptions.redisHost,
       port: Number(envOptions.redisPort),
+      // Reconnection strategy with exponential backoff
+      reconnectStrategy: (retries: number) => {
+        if (retries > 10) {
+          console.error("Redis: Max reconnection attempts reached, giving up");
+          return new Error("Max reconnection attempts reached");
+        }
+        // Exponential backoff: 100ms, 200ms, 400ms, ... up to 30s
+        const delay = Math.min(100 * Math.pow(2, retries), 30000);
+        console.log(`Redis: Reconnecting in ${delay}ms (attempt ${retries + 1})`);
+        return delay;
+      },
     },
   };
 
@@ -22,6 +33,8 @@ const createRedisClient = (): RedisClientType<any> => {
 
   const client = createClient(redisOptions);
   client.on("error", (err: Error) => console.log("Redis Client Error", err));
+  client.on("reconnecting", () => console.log("Redis: Reconnecting..."));
+  client.on("ready", () => console.log("Redis: Connected and ready"));
   return client as RedisClientType<any>;
 };
 
@@ -33,6 +46,8 @@ const ensureRedisConnection = async (): Promise<RedisClientType<any>> => {
   if (!redisReady) {
     redisReady = redis.connect().catch((err) => {
       console.error("Failed to connect to Redis:", err);
+      // Reset so next call attempts reconnection
+      redisReady = null;
       return redis as RedisClientType<any>;
     });
   }
@@ -41,10 +56,8 @@ const ensureRedisConnection = async (): Promise<RedisClientType<any>> => {
 };
 
 const getRedisClient = async (): Promise<RedisClientType<any>> => {
-  if (!redis) {
-    redis = createRedisClient();
-  }
-  return redis as RedisClientType<any>;
+  // Always ensure connection is established before returning client
+  return ensureRedisConnection();
 };
 
 export const disconnectRedis = async () => {

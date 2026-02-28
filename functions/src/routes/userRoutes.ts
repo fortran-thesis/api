@@ -37,7 +37,7 @@ router.get(
   validateQuery(PaginationQuerySchema),
   cacheGet("users"),
   async (req: Request, res: Response) => {
-    getAllUsers(req, res);
+    await getAllUsers(req, res);
   }
 );
 
@@ -47,14 +47,12 @@ router.get(
   verifyUser(Role.ADMIN),
   validateQuery(SearchUsersQuerySchema),
   async (req: Request, res: Response) => {
-    searchUsers(req, res);
+    await searchUsers(req, res);
   }
 );
 
-// NOTE: the dynamic `/:id` route is defined later to avoid catching static routes
-
 router.get("/profile", verifyUser(), async (req: Request, res: Response) => {
-  getUserProfile(req, res);
+  await getUserProfile(req, res);
 });
 
 // Handle PATCH with JSON body (no photo)
@@ -63,7 +61,6 @@ router.patch(
   verifyUser(),
   (req: Request, res: Response, next: NextFunction) => {
     const contentType = req.headers["content-type"] || "";
-    // Only apply multipart middleware if Content-Type is multipart/form-data
     if (contentType.includes("multipart")) {
       return upload.single("photo")(req, res, next);
     }
@@ -74,14 +71,15 @@ router.patch(
   validateBody(UserProfileUpdateSchema),
   auditLog(AuditAction.PROFILE_UPDATE, "Updated own profile"),
   async (req: Request, res: Response) => {
-    patchUserProfile(req, res);
+    await patchUserProfile(req, res);
   }
 );
+
 router.get(
   "/counts/roles",
   verifyUser(Role.ADMIN),
   async (req: Request, res: Response) => {
-    getRoleCountsController(req, res);
+    await getRoleCountsController(req, res);
   }
 );
 
@@ -91,18 +89,18 @@ router.get(
   validateQuery(PaginationQuerySchema),
   cacheGet("mycologists"),
   async (req: Request, res: Response) => {
-    getAllMycologists(req, res);
+    await getAllMycologists(req, res);
   }
 );
 
-// Dynamic user by id route - keep after static routes so specific paths are matched first
+// Dynamic user by id route - keep after static routes
 router.get(
   "/:id",
+  verifyUser(),
   sanitizeParams,
   validateParams(UserIdSchema),
-  verifyUser(),
   async (req: Request, res: Response) => {
-    getUserById(req, res);
+    await getUserById(req, res);
   }
 );
 
@@ -110,7 +108,7 @@ router.get(
   "/counts/disabled",
   verifyUser(Role.ADMIN),
   async (req: Request, res: Response) => {
-    getDisabledCountsController(req, res);
+    await getDisabledCountsController(req, res);
   }
 );
 
@@ -118,53 +116,53 @@ router.get(
   "/filter/disabled",
   verifyUser(Role.ADMIN),
   async (req: Request, res: Response) => {
-    getUsersByActiveController(req, res);
+    await getUsersByActiveController(req, res);
   }
 );
 
 router.get(
   "/email/:email",
+  verifyUser(),
   sanitizeParams,
   validateParams(EmailSchema),
-  verifyUser(),
   async (req: Request, res: Response) => {
-    getUserByEmail(req, res);
+    await getUserByEmail(req, res);
   }
 );
 
 router.patch(
   "/:id",
+  verifyUser(Role.ADMIN),
   sanitizeParams,
   validateParams(UserIdSchema),
   sanitizeBody,
   validateBody(UserDetailsUpdateSchema),
-  verifyUser(Role.ADMIN),
   auditLog(AuditAction.UPDATE_USER, (req) => `Admin updated user ${req.params.id}`),
   cacheInvalidate("users", "update"),
   async (req: Request, res: Response) => {
-    patchUser(req, res);
+    await patchUser(req, res);
   }
 );
 
 router.delete(
   "/hard/:id",
+  verifyUser(Role.ADMIN),
   sanitizeParams,
   validateParams(UserIdSchema),
-  verifyUser(Role.ADMIN),
   cacheInvalidate("users", "delete"),
   async (req: Request, res: Response) => {
-    deleteUser(req, res);
+    await deleteUser(req, res);
   }
 );
 
 router.delete(
   "/soft/:id",
+  verifyUser(),
   sanitizeParams,
   validateParams(UserIdSchema),
-  verifyUser(),
   cacheInvalidate("users", "delete"),
   async (req: Request, res: Response) => {
-    softDeleteUser(req, res);
+    await softDeleteUser(req, res);
   }
 );
 

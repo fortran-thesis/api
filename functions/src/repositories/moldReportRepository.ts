@@ -163,60 +163,6 @@ export const deleteMoldReport = async (id: string) =>
 export const softDeleteMoldReport = async (id: string) =>
   softDeleteDocument(collection, id);
 
-export const countReportsByStatuses = async (
-  statuses: string[],
-  userId?: string
-): Promise<number | null> => {
-  try {
-    const db = getFirestore(firebase);
-    let query = db.collection(collection).where("status", "in", statuses);
-
-    if (userId) {
-      query = query.where("user_id", "==", userId);
-    }
-
-    const snap = await query.get();
-    return snap.size;
-  } catch (err) {
-    devLog(err);
-    return null;
-  }
-};
-
-export const countTotalReports = async (userId?: string): Promise<number | null> => {
-  try {
-    const db = getFirestore(firebase);
-    let query = db.collection(collection);
-
-    if (userId) {
-      query = query.where("user_id", "==", userId) as FirebaseFirestore.CollectionReference;
-    }
-
-    const snap = await query.get();
-    return snap.size;
-  } catch (err) {
-    devLog(err);
-    return null;
-  }
-};
-
-export const countReportsByAssignedMycologist = async (
-  mycologistId: string
-): Promise<number | null> => {
-  try {
-    const db = getFirestore(firebase);
-    const snap = await db
-      .collection(collection)
-      .where("assigned_mycologist_id", "==", mycologistId)
-      .where("is_archived", "==", false)
-      .get();
-    return snap.size;
-  } catch (err) {
-    devLog(err);
-    return null;
-  }
-};
-
 export const findMoldReportsBySearch = async (
   limit: number,
   token?: string,
@@ -265,19 +211,77 @@ export const findMoldReportsBySearch = async (
   }
 };
 
+// Replace these 4 functions in moldReportRepository.ts:
+
+export const countReportsByStatuses = async (
+  statuses: string[],
+  userId?: string
+): Promise<number | null> => {
+  try {
+    const db = getFirestore(firebase);
+    let query: FirebaseFirestore.Query = db.collection(collection).where("status", "in", statuses);
+
+    if (userId) {
+      query = query.where("user_id", "==", userId);
+    }
+
+    const snapshot = await query.count().get();
+    return snapshot.data().count;
+  } catch (err) {
+    devLog(err);
+    return null;
+  }
+};
+
+export const countTotalReports = async (userId?: string): Promise<number | null> => {
+  try {
+    const db = getFirestore(firebase);
+    let query: FirebaseFirestore.Query = db.collection(collection);
+
+    if (userId) {
+      query = query.where("user_id", "==", userId);
+    }
+
+    const snapshot = await query.count().get();
+    return snapshot.data().count;
+  } catch (err) {
+    devLog(err);
+    return null;
+  }
+};
+
+export const countReportsByAssignedMycologist = async (
+  mycologistId: string
+): Promise<number | null> => {
+  try {
+    const db = getFirestore(firebase);
+    const snapshot = await db
+      .collection(collection)
+      .where("assigned_mycologist_id", "==", mycologistId)
+      .where("is_archived", "==", false)
+      .count()
+      .get();
+    return snapshot.data().count;
+  } catch (err) {
+    devLog(err);
+    return null;
+  }
+};
+
 export const countReportsByDateRange = async (
   startTimestamp: any,
   endTimestamp: any
 ): Promise<number | null> => {
   try {
     const db = getFirestore(firebase);
-    const snap = await db
+    const snapshot = await db
       .collection(collection)
       .where("is_archived", "==", false)
       .where("metadata.created_at", ">=", startTimestamp)
       .where("metadata.created_at", "<", endTimestamp)
+      .count()
       .get();
-    return snap.size;
+    return snapshot.data().count;
   } catch (err) {
     devLog(err);
     return null;

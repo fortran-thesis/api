@@ -18,8 +18,8 @@ const router = Router();
 
 router.post(
   "/",
-  sanitizeBody,
   verifyUser(),
+  sanitizeBody,
   upload.single("photo"),
   auditLog(AuditAction.IDENTIFY_MOLD, "Scanned mold image"),
   cacheInvalidate("scanned-molds", "create"),
@@ -38,8 +38,8 @@ router.get("/:id", verifyUser(), async (req: Request, res: Response): Promise<vo
 
 router.patch(
   "/:id",
-  sanitizeBody,
   verifyUser(),
+  sanitizeBody,
   auditLog(AuditAction.UPDATE_SCANNED_MOLD, (req) => `Updated scan ${req.params.id}`),
   cacheInvalidate("scanned-molds", "update"),
   async (req: Request, res: Response): Promise<void> => {

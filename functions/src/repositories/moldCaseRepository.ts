@@ -189,14 +189,19 @@ export const updateCultivationDetails = async (
  */
 export const countCasesByPriority = async (): Promise<{low: number; medium: number; high: number} | null> => {
   try {
-    const lowCases = await findMoldCasesByPriority("low");
-    const mediumCases = await findMoldCasesByPriority("medium");
-    const highCases = await findMoldCasesByPriority("high");
+    const db = getFirestore(firebase);
+    const col = db.collection(collection);
+
+    const [lowSnap, mediumSnap, highSnap] = await Promise.all([
+      col.where("priority", "==", "low").count().get(),
+      col.where("priority", "==", "medium").count().get(),
+      col.where("priority", "==", "high").count().get(),
+    ]);
 
     return {
-      low: lowCases.length,
-      medium: mediumCases.length,
-      high: highCases.length,
+      low: lowSnap.data().count,
+      medium: mediumSnap.data().count,
+      high: highSnap.data().count,
     };
   } catch (err) {
     devLog(err);

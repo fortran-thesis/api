@@ -11,7 +11,7 @@ router.post(
   verifyUser(Role.ADMIN),
   auditLog(AuditAction.DISABLE_USER, "Disabled user", (req) => req.body.id),
   async (req: Request, res: Response) => {
-    disableUser(req, res);
+    await disableUser(req, res);
   }
 );
 
@@ -20,7 +20,7 @@ router.post(
   verifyUser(Role.ADMIN),
   auditLog(AuditAction.ENABLE_USER, "Enabled user", (req) => req.body.id),
   async (req: Request, res: Response) => {
-    enableUser(req, res);
+    await enableUser(req, res);
   }
 );
 
@@ -29,7 +29,7 @@ router.post(
   verifyUser(Role.ADMIN),
   auditLog(AuditAction.BAN_USER, "Banned user", (req) => req.body.id),
   async (req: Request, res: Response) => {
-    banUserController(req, res);
+    await banUserController(req, res);
   }
 );
 
