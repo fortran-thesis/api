@@ -105,6 +105,7 @@ export const UserDetailsSchema = z.object({
 export const UserDetailsUpdateSchema = UserDetailsSchema.partial();
 
 export const UserProfileUpdateSchema = z.object({
+  username: z.string().optional(),
   firstName: z.string().optional(),
   lastName: z.string().optional(),
   first_name: z.string().optional(),
@@ -116,6 +117,7 @@ export const UserProfileUpdateSchema = z.object({
   phone_number: z.string().optional(),
   photo_url: z.string().optional(),
 }).transform((data) => ({
+  username: data.username,
   firstName: data.firstName ?? data.first_name,
   lastName: data.lastName ?? data.last_name,
   email: data.email,
