@@ -10,8 +10,8 @@ import {
 import {devLog} from "../utils/dev";
 import {getAuth} from "firebase-admin/auth";
 import {queryToJson} from "../lib/firestore";
+import {normalizeRole} from "../utils/roleNormalizer";
 import {Role} from "../types/enums";
-import {normalizeRole} from "../lib/auth";
 import {
   getCachedList,
   cacheList,
