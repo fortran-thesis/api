@@ -24,6 +24,7 @@ import systemRequestRoutes from "./routes/systemRequestRoutes";
 import testRoute from "./routes/testRoute";
 import faqRoutes from "./routes/faqRoutes";
 import flagReportRoutes from "./routes/flagReportRoutes";
+import modelRoutes from "./routes/modelRoutes";
 import {cloudRunMultipartFix} from "./middlewares/cloudRunMultipartFix";
 import {globalErrorHandler} from "./middlewares/errorHandler";
 import {httpLogger} from "./middlewares/httpLogger";
@@ -102,6 +103,7 @@ router.use("/v1/system-request", systemRequestRoutes);
 router.use("/v1/audit-log", auditLogRoutes);
 router.use("/v1/faq", faqRoutes);
 router.use("/v1/flag-report", flagReportRoutes);
+router.use("/v1/model", modelRoutes);
 router.use("/v1/test", testRoute);
 
 app.use("/api", router);
