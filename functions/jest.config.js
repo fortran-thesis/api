@@ -6,6 +6,6 @@ module.exports = {
   transform: {
     '^.+\\.ts$': 'ts-jest',
   },
-  collectCoverageFrom: ['src/**/*.ts'],
-  silent: true,
+  collectCoverageFrom: ['src/**/*.ts'],  // Exclude integration tests — they require emulators and have their own config
+  testPathIgnorePatterns: ['/node_modules/', '/tests/integration/'],  silent: true,
 };
