@@ -343,6 +343,10 @@ export const logoutUser = async (req: Request, res: Response) => {
       idToken = req.headers.authorization.split(" ")[1];
     }
 
+    if (!sessionCookie && !idToken) {
+      return sendError(res, "Not authenticated", 401);
+    }
+
     const process = await logoutUserSession(sessionCookie, idToken);
     if (!process) throw new Error("Unable to verify token");
 
