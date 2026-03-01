@@ -103,11 +103,39 @@ export const cloudRunMultipartFix = (req: Request, res: Response, next: NextFunc
         if (!hasError) {
           const buffer = Buffer.concat(chunks);
           const fileDuration = Date.now() - fileStartTime;
+
+          // Detect actual MIME type when client sends application/octet-stream
+          let resolvedMimeType = info.mimeType;
+          if (!resolvedMimeType || resolvedMimeType === "application/octet-stream") {
+            // Try magic bytes first
+            if (buffer.length >= 4) {
+              const head = buffer.subarray(0, 8);
+              if (head[0] === 0x89 && head[1] === 0x50 && head[2] === 0x4E && head[3] === 0x47) {
+                resolvedMimeType = "image/png";
+              } else if (head[0] === 0xFF && head[1] === 0xD8 && head[2] === 0xFF) {
+                resolvedMimeType = "image/jpeg";
+              }
+            }
+            // Fallback to file extension
+            if (resolvedMimeType === "application/octet-stream" && info.filename) {
+              const ext = (info.filename as string).split(".").pop()?.toLowerCase();
+              const extMap: Record<string, string> = {
+                png: "image/png",
+                jpg: "image/jpeg",
+                jpeg: "image/jpeg",
+              };
+              if (ext && extMap[ext]) resolvedMimeType = extMap[ext];
+            }
+            if (resolvedMimeType !== info.mimeType) {
+              devLog(`[CLOUD RUN FIX] 🔄 Resolved MIME type: ${info.mimeType} → ${resolvedMimeType}`);
+            }
+          }
+
           const multerFile: Express.Multer.File = {
             fieldname,
             originalname: info.filename,
             encoding: info.encoding,
-            mimetype: info.mimeType,
+            mimetype: resolvedMimeType,
             buffer,
             size: buffer.length,
           } as Express.Multer.File;
