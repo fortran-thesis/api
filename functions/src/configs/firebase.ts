@@ -6,9 +6,11 @@ const firebaseConfig: any = {
   storageBucket: getDefaultBucket(), // Add default storage bucket
 };
 
-// Only use service account file in local development or emulator
+// Only use service account file in local development (not in prod, emulator, or test)
 // In production (Cloud Functions/Cloud Run), Firebase SDK auto-initializes
-if (!envOptions.isProd && !process.env.FUNCTIONS_EMULATOR) {
+// In test mode, the emulator env vars handle auth — loading the service account
+// would override the project ID and cause a mismatch with the emulator config.
+if (!envOptions.isProd && !envOptions.isTest && !process.env.FUNCTIONS_EMULATOR) {
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const serviceAccount = require("./firebase-config.json");

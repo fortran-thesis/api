@@ -39,6 +39,11 @@ const createRedisClient = (): RedisClientType<any> => {
 };
 
 const ensureRedisConnection = async (): Promise<RedisClientType<any>> => {
+  // Skip Redis entirely in test environment (no Redis server available)
+  if (envOptions.isTest) {
+    throw new Error("Redis is disabled in test environment");
+  }
+
   if (!redis) {
     redis = createRedisClient();
   }
