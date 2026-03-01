@@ -7,6 +7,20 @@ import {devLog} from "../utils/dev";
 import {envOptions} from "../configs/environment";
 import {transformToSignedUrl} from "../utils/storageTransform";
 import {LRUCache} from "lru-cache";
+import {Role} from "../types/enums";
+
+/**
+ * Maps legacy Firestore role strings to current Role enum values.
+ * "administrator" → Role.ADMIN, "curator" → Role.CURATOR, "user" → Role.USER
+ */
+export const normalizeRole = (role: string): Role => {
+  const LEGACY_ROLE_MAP: Record<string, Role> = {
+    administrator: Role.ADMIN,
+    curator: Role.CURATOR,
+    user: Role.USER,
+  };
+  return LEGACY_ROLE_MAP[role] ?? (role as Role);
+};
 
 const auth = getAuth(firebase);
 
@@ -51,7 +65,7 @@ export const getAuthUserById = async (uid: string): Promise<WithId<APIUser> | nu
         first_name: firestoreUser.first_name,
         last_name: firestoreUser.last_name,
         address: firestoreUser.address,
-        role: firestoreUser.role,
+        role: normalizeRole(firestoreUser.role),
         is_banned: firestoreUser.is_banned,
       },
       details: {
@@ -137,7 +151,7 @@ export const getAuthUsersByIds = async (
           first_name: firestoreUser.first_name,
           last_name: firestoreUser.last_name,
           address: firestoreUser.address,
-          role: firestoreUser.role,
+          role: normalizeRole(firestoreUser.role),
           is_banned: firestoreUser.is_banned,
         },
         details: {
@@ -194,7 +208,7 @@ export const getAuthUserByEmail = async (email: string): Promise<WithId<APIUser>
         first_name: firestoreUser.first_name,
         last_name: firestoreUser.last_name,
         address: firestoreUser.address,
-        role: firestoreUser.role,
+        role: normalizeRole(firestoreUser.role),
         is_banned: firestoreUser.is_banned,
       },
       details: {

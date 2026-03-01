@@ -11,6 +11,7 @@ import {devLog} from "../utils/dev";
 import {getAuth} from "firebase-admin/auth";
 import {queryToJson} from "../lib/firestore";
 import {Role} from "../types/enums";
+import {normalizeRole} from "../lib/auth";
 import {
   getCachedList,
   cacheList,
@@ -56,7 +57,7 @@ export const retrieveAllUsers = async (
           first_name: firestoreUser.first_name,
           last_name: firestoreUser.last_name,
           address: firestoreUser.address,
-          role: firestoreUser.role,
+          role: normalizeRole(firestoreUser.role),
           is_banned: firestoreUser.is_banned,
         },
         details: {
@@ -123,7 +124,7 @@ export const retrieveUsersByRole = async (
           first_name: firestoreUser.first_name,
           last_name: firestoreUser.last_name,
           address: firestoreUser.address,
-          role: firestoreUser.role,
+          role: normalizeRole(firestoreUser.role),
           is_banned: firestoreUser.is_banned,
         },
         details: {
@@ -347,7 +348,7 @@ export const searchAndFilterUsers = async (
           first_name: firestoreUser.first_name,
           last_name: firestoreUser.last_name,
           address: firestoreUser.address,
-          role: firestoreUser.role,
+          role: normalizeRole(firestoreUser.role),
           is_banned: firestoreUser.is_banned,
         },
         details: {
