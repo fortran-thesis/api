@@ -34,7 +34,11 @@ export const toggleUser = async (
       <p>If you believe this is a mistake, please contact support.</p>
       <p>Thanks,<br/>The Moldify Team</p>
     `;
-    await sendEmail(email, `Your account has been ${message}`, html);
+    try {
+      await sendEmail(user.email ?? email, `Your account has been ${message}`, html);
+    } catch (emailErr) {
+      devLog(emailErr, "toggleUser:sendEmail");
+    }
 
     // Invalidate user cache (disabled status doesn't affect ordering, but affects filtering)
     await handlePatchCache("users", id, true);
@@ -48,7 +52,7 @@ export const toggleUser = async (
 
 export const banUser = async (
   id: string,
-  email: string
+  email?: string
 ): Promise<ApiResponse<string>> => {
   try {
     const user = await findFirestoreUserById(id);
@@ -57,13 +61,29 @@ export const banUser = async (
       is_banned: true,
     } as Partial<User>);
     if (!process) throw new Error("Failed to ban user.");
+    // Resolve email: prefer caller-supplied value, fall back to Firebase Auth record
+    let resolvedEmail = email;
+    if (!resolvedEmail) {
+      try {
+        const authUser = await getAuth().getUser(id);
+        resolvedEmail = authUser.email;
+      } catch (_) {
+        // email notification is best-effort
+      }
+    }
     const html = `
       <h2>Account Banned</h2>
       <p>Hello,</p>
       <p>Your account has been <strong>banned</strong> due to violation of our terms or community guidelines.</p>
       <p>Thanks,<br/>The Moldify Team</p>
     `;
-    await sendEmail(email, "Your account has been banned", html);
+    if (resolvedEmail) {
+      try {
+        await sendEmail(resolvedEmail, "Your account has been banned", html);
+      } catch (emailErr) {
+        devLog(emailErr, "banUser:sendEmail");
+      }
+    }
 
     // Invalidate user cache (is_banned affects filtering, needs list invalidation)
     await handlePatchCache("users", id, true);
