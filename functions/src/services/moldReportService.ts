@@ -533,9 +533,9 @@ export const updateMoldReportInFirestore = async (
 export const softRemoveMoldReport = async (id: string): Promise<void> => {
   try {
     const result: WriteResult | null = await softDeleteMoldReport(id);
-    if (!result) throw new Error("Failed to soft delete mold report");
+    if (!result) throw new Error("Failed to close mold report");
 
-    // Invalidate all report caches since report was deleted
+    // Invalidate all report caches since report status was closed
     await invalidateAllLists("mold-reports-search");
     await invalidateAllLists("mold-reports-all");
     await invalidateAllLists("mold-reports-user");

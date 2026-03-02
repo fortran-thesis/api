@@ -19,7 +19,7 @@ import {
 import {
   createMoldReport,
   getAllMoldReports,
-  getAllArchivedMoldReports,
+  getAllClosedMoldReports,
   getUnassignedMoldReports,
   getMoldReportById,
   patchMoldReport,
@@ -134,11 +134,21 @@ router.patch(
 );
 
 router.get(
+  "/closed",
+  verifyUser(),
+  validateQuery(PaginationQuerySchema),
+  async (req: Request, res: Response) => {
+    await getAllClosedMoldReports(req, res);
+  }
+);
+
+// Legacy alias kept for backward compatibility
+router.get(
   "/archive",
   verifyUser(),
   validateQuery(PaginationQuerySchema),
   async (req: Request, res: Response) => {
-    await getAllArchivedMoldReports(req, res);
+    await getAllClosedMoldReports(req, res);
   }
 );
 
@@ -229,7 +239,7 @@ router.delete(
   "/soft/:id",
   verifyUser(),
   validateParams(ReportIdSchema),
-  auditLog(AuditAction.SOFT_DELETE_MOLD_REPORT, (req) => `Soft deleted report ${req.params.id}`),
+  auditLog(AuditAction.SOFT_DELETE_MOLD_REPORT, (req) => `Closed report ${req.params.id}`),
   cacheInvalidate("mold-reports", "delete"),
   async (req: Request, res: Response) => {
     await softDeleteMoldReport(req, res);

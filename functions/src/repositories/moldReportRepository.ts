@@ -5,7 +5,6 @@ import {
   getPaginatedDocuments,
   updateDocument,
   deleteDocument,
-  softDeleteDocument,
 } from "../lib/firestore";
 import {firebase} from "../configs/firebase";
 import {MoldReport} from "../types/types";
@@ -16,6 +15,7 @@ import {
 } from "../types/models/firestoreCollections";
 
 const collection = getCollectionName(FirestoreCollection.MOLD_REPORTS);
+const CLOSED_STATUSES = ["closed", "rejected"];
 
 export const addMoldReport = async (data: MoldReport) =>
   addDocument(collection, data);
@@ -30,13 +30,11 @@ export const findAllMoldReports = async (
   nextPageToken: string | null;
 } | null> => {
   try {
-    // Filter at the DB level: archived docs have metadata.deleted_at set (non-null)
-    // Non-archived docs have metadata.deleted_at == null
-    const queryModifier = isArchived ?
-      (q: FirebaseFirestore.Query) =>
-        q.where("metadata.deleted_at", "!=", null) :
-      (q: FirebaseFirestore.Query) =>
-        q.where("metadata.deleted_at", "==", null);
+    // Backward-compatible param name: isArchived=true means closed/rejected reports
+    const queryModifier = (q: FirebaseFirestore.Query) =>
+      isArchived ?
+        q.where("status", "in", CLOSED_STATUSES) :
+        q.where("status", "not-in", CLOSED_STATUSES);
 
     const paged = await getPaginatedDocuments(
       collection,
@@ -63,9 +61,11 @@ export const findAllMoldReportsByUser = async (
 } | null> => {
   try {
     const queryModifier = (q: FirebaseFirestore.Query) => {
-      return q
-        .where("user_id", "==", uid)
-        .where("is_archived", "==", isArchived);
+      let query = q.where("user_id", "==", uid);
+      query = isArchived ?
+        query.where("status", "in", CLOSED_STATUSES) :
+        query.where("status", "not-in", CLOSED_STATUSES);
+      return query;
     };
 
     const paged = await getPaginatedDocuments(
@@ -93,7 +93,7 @@ export const findUnassignedMoldReports = async (
     const queryModifier = (q: FirebaseFirestore.Query) =>
       q
         .where("assigned_mycologist_id", "==", null)
-        .where("is_archived", "==", false);
+        .where("status", "not-in", CLOSED_STATUSES);
 
     const paged = await getPaginatedDocuments(
       collection,
@@ -121,7 +121,7 @@ export const findReportsByAssignedMycologist = async (
     const queryModifier = (q: FirebaseFirestore.Query) =>
       q
         .where("assigned_mycologist_id", "==", mycologistId)
-        .where("is_archived", "==", false);
+        .where("status", "not-in", CLOSED_STATUSES);
 
     const paged = await getPaginatedDocuments(
       collection,
@@ -145,7 +145,12 @@ export const updateMoldReport = async (
 export const deleteMoldReport = async (id: string) =>
   deleteDocument(collection, id);
 export const softDeleteMoldReport = async (id: string) =>
-  softDeleteDocument(collection, id);
+  updateDocument(collection, id, {
+    status: "closed",
+    metadata: {
+      deleted_at: Timestamp.now(),
+    },
+  } as any);
 
 export const findMoldReportsBySearch = async (
   limit: number,
@@ -159,7 +164,7 @@ export const findMoldReportsBySearch = async (
 } | null> => {
   try {
     const queryModifier = (q: FirebaseFirestore.Query) => {
-      let query = q.where("is_archived", "==", false);
+      let query = q.where("status", "not-in", CLOSED_STATUSES);
 
       if (userId) {
         query = query.where("user_id", "==", userId);
@@ -242,7 +247,7 @@ export const countReportsByAssignedMycologist = async (
     const snapshot = await db
       .collection(collection)
       .where("assigned_mycologist_id", "==", mycologistId)
-      .where("is_archived", "==", false)
+      .where("status", "not-in", CLOSED_STATUSES)
       .count()
       .get();
     return snapshot.data().count;
@@ -260,7 +265,7 @@ export const countReportsByDateRange = async (
     const db = getFirestore(firebase);
     const snapshot = await db
       .collection(collection)
-      .where("is_archived", "==", false)
+      .where("status", "not-in", CLOSED_STATUSES)
       .where("metadata.created_at", ">=", startTimestamp)
       .where("metadata.created_at", "<", endTimestamp)
       .count()

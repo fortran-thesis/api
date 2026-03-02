@@ -533,14 +533,14 @@ export const getAllMoldReportsByUser = async (req: Request, res: Response) => {
 
 /**
  * @swagger
- * /api/v1/mold-report/archive:
+ * /api/v1/mold-report/closed:
  *   get:
- *     summary: Get all archived mold reports
+ *     summary: Get all closed mold reports
  *     tags: [MoldReport]
  *     security:
  *       - bearerAuth: []
  *       - cookieAuth: []
- *     description: Retrieve all archived mold reports with pagination. Requires authentication.
+ *     description: Retrieve all closed mold reports (including rejected) with pagination. Requires authentication.
  *     parameters:
  *       - in: query
  *         name: limit
@@ -554,7 +554,7 @@ export const getAllMoldReportsByUser = async (req: Request, res: Response) => {
  *         description: Cursor token for pagination
  *     responses:
  *       200:
- *         description: List of archived mold reports
+ *         description: List of closed mold reports
  *         content:
  *           application/json:
  *             schema:
@@ -586,7 +586,7 @@ export const getAllMoldReportsByUser = async (req: Request, res: Response) => {
  *       500:
  *         description: Server error
  */
-export const getAllArchivedMoldReports = async (
+export const getAllClosedMoldReports = async (
   req: Request,
   res: Response
 ) => {
@@ -606,6 +606,9 @@ export const getAllArchivedMoldReports = async (
     return defaultError(res);
   }
 };
+
+// Backward-compatible alias for legacy route handlers/imports
+export const getAllArchivedMoldReports = getAllClosedMoldReports;
 
 /**
  * @swagger
@@ -1345,12 +1348,12 @@ export const deleteMoldReport = async (req: Request, res: Response) => {
  * @swagger
  * /api/v1/mold-report/soft/{id}:
  *   delete:
- *     summary: Soft delete a mold report
+ *     summary: Close a mold report
  *     tags: [MoldReport]
  *     security:
  *       - bearerAuth: []
  *       - cookieAuth: []
- *     description: Soft delete a mold report by marking it as archived. Requires authentication.
+ *     description: Close a mold report by setting its status to closed. Requires authentication.
  *     parameters:
  *       - in: path
  *         name: id
@@ -1360,7 +1363,7 @@ export const deleteMoldReport = async (req: Request, res: Response) => {
  *         description: Mold report ID
  *     responses:
  *       200:
- *         description: Mold report soft deleted successfully
+ *         description: Mold report closed successfully
  *         content:
  *           application/json:
  *             schema:
@@ -1375,7 +1378,7 @@ export const softDeleteMoldReport = async (req: Request, res: Response) => {
   try {
     const id: string = req.params.id;
     await softRemoveMoldReport(id);
-    return sendSuccess(res, "Successfully soft deleted mold report.");
+    return sendSuccess(res, "Successfully closed mold report.");
   } catch (error) {
     devLog(error);
     return defaultError(res);
