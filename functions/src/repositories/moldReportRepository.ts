@@ -40,7 +40,8 @@ export const findAllMoldReports = async (
       collection,
       limit,
       token,
-      ["metadata.created_at", FieldPath.documentId()],
+      // "status" must be first because not-in is an inequality filter
+      ["status", "metadata.created_at", FieldPath.documentId()],
       {queryModifier}
     );
 
@@ -72,7 +73,8 @@ export const findAllMoldReportsByUser = async (
       collection,
       limit,
       token,
-      ["metadata.created_at", FieldPath.documentId()],
+      // "status" must be first because not-in is an inequality filter
+      ["status", "metadata.created_at", FieldPath.documentId()],
       {queryModifier}
     );
 
@@ -99,7 +101,8 @@ export const findUnassignedMoldReports = async (
       collection,
       limit,
       token,
-      ["metadata.created_at", FieldPath.documentId()],
+      // "status" must be first because not-in is an inequality filter
+      ["status", "metadata.created_at", FieldPath.documentId()],
       {queryModifier}
     );
 
@@ -127,7 +130,8 @@ export const findReportsByAssignedMycologist = async (
       collection,
       limit,
       token,
-      ["metadata.created_at", FieldPath.documentId()],
+      // "status" must be first because not-in is an inequality filter
+      ["status", "metadata.created_at", FieldPath.documentId()],
       {queryModifier}
     );
 
@@ -189,7 +193,8 @@ export const findMoldReportsBySearch = async (
       collection,
       limit,
       token,
-      ["metadata.created_at", FieldPath.documentId()],
+      // "status" must be first because not-in is an inequality filter
+      ["status", "metadata.created_at", FieldPath.documentId()],
       {queryModifier}
     );
 
