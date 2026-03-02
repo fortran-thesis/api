@@ -1,6 +1,40 @@
 # Thesis API Functions
 
-## Setup Instructions
+## Docker Setup (Recommended)
+
+The easiest way to start the entire backend stack (API, Firebase emulators, Redis, MailHog) is using Docker.
+
+### 1. Prerequisite
+
+Ensure you have [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running.
+
+---
+
+### 2. Start Services
+
+From the `api` directory, run:
+
+```bash
+docker compose up --build
+```
+
+This will:
+- Build the API application container
+- Start the Firebase Emulator suite (Auth, Firestore, Storage)
+- Automatically seed test users and data
+- Start Redis and MailHog
+
+### 3. Service Access
+
+| Service | Host | Port |
+|---|---|---|
+| API | `localhost` | `5001` |
+| Emulator UI | `localhost` | `4000` |
+| MailHog UI | `localhost` | `8025` |
+
+---
+
+## Manual Setup Instructions
 
 ### 1. Clone the Repository
 
