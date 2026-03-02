@@ -319,4 +319,189 @@ export const deleteCollection = async (collection: string) => {
   }
 };
 
+/**
+ * Returns a reference to a subcollection under a parent document.
+ * @param parentCollection - The parent collection name
+ * @param parentId - The parent document ID
+ * @param subcollection - The subcollection name
+ * @return The subcollection reference
+ */
+const getSubcollectionRef = (
+  parentCollection: string,
+  parentId: string,
+  subcollection: string
+): FirebaseFirestore.CollectionReference =>
+  db.collection(parentCollection).doc(parentId).collection(subcollection);
+
+/**
+ * Adds a new document to a subcollection.
+ * @template T
+ * @param parentCollection - The parent collection name
+ * @param parentId - The parent document ID
+ * @param subcollection - The subcollection name
+ * @param document - The document data to add
+ * @return The document snapshot or null on error
+ */
+export const addSubcollectionDocument = async <T extends object>(
+  parentCollection: string,
+  parentId: string,
+  subcollection: string,
+  document: T
+): Promise<FirebaseFirestore.DocumentSnapshot | null> => {
+  try {
+    const withMetadata: WithMetadata<T> = {
+      ...document,
+      metadata: {
+        created_at: Timestamp.now(),
+        updated_at: null,
+        deleted_at: null,
+      },
+    };
+    const docRef = await getSubcollectionRef(parentCollection, parentId, subcollection).add(
+      withMetadata
+    );
+    // Avoid extra read: synthetic snapshot
+    return {
+      id: docRef.id,
+      exists: true,
+      ref: docRef,
+      data: () => withMetadata,
+    } as unknown as FirebaseFirestore.DocumentSnapshot;
+  } catch (error) {
+    devLog(error, "ADD_SUBCOLLECTION_DOCUMENT_ERROR");
+    return null;
+  }
+};
+
+/**
+ * Updates a document in a subcollection.
+ * @template T
+ * @param parentCollection - The parent collection name
+ * @param parentId - The parent document ID
+ * @param subcollection - The subcollection name
+ * @param docId - The document ID to update
+ * @param updateData - The partial data to update
+ * @return The write result or null on error
+ */
+export const updateSubcollectionDocument = async <T extends object>(
+  parentCollection: string,
+  parentId: string,
+  subcollection: string,
+  docId: string,
+  updateData: Partial<T>
+): Promise<FirebaseFirestore.WriteResult | null> => {
+  try {
+    const docRef = getSubcollectionRef(parentCollection, parentId, subcollection).doc(docId);
+
+    const withMetadata: WithMetadata<Partial<T>> = {
+      ...updateData,
+      metadata: {
+        updated_at: Timestamp.now(),
+        ...(updateData as any).metadata,
+      },
+    };
+
+    return await docRef.update(withMetadata);
+  } catch (error) {
+    devLog(error, "UPDATE_SUBCOLLECTION_DOCUMENT_ERROR");
+    return null;
+  }
+};
+
+/**
+ * Retrieves a single document from a subcollection by ID.
+ * @param parentCollection - The parent collection name
+ * @param parentId - The parent document ID
+ * @param subcollection - The subcollection name
+ * @param docId - The document ID to retrieve
+ * @return The document snapshot or null if not found/error
+ */
+export const getSubcollectionDocumentById = async (
+  parentCollection: string,
+  parentId: string,
+  subcollection: string,
+  docId: string
+): Promise<FirebaseFirestore.DocumentSnapshot | null> => {
+  try {
+    const doc = await getSubcollectionRef(parentCollection, parentId, subcollection)
+      .doc(docId)
+      .get();
+    if (!doc.exists) return null;
+    return doc;
+  } catch (error) {
+    devLog(error, "GET_SUBCOLLECTION_DOCUMENT_ERROR");
+    return null;
+  }
+};
+
+/**
+ * Retrieves all documents from a subcollection.
+ * @param parentCollection - The parent collection name
+ * @param parentId - The parent document ID
+ * @param subcollection - The subcollection name
+ * @return Array of document snapshots or empty array on error
+ */
+export const getAllSubcollectionDocuments = async (
+  parentCollection: string,
+  parentId: string,
+  subcollection: string
+): Promise<FirebaseFirestore.QueryDocumentSnapshot[]> => {
+  try {
+    const snapshot = await getSubcollectionRef(parentCollection, parentId, subcollection)
+      .orderBy("metadata.created_at", "asc")
+      .get();
+    return snapshot.docs;
+  } catch (error) {
+    devLog(error, "GET_ALL_SUBCOLLECTION_DOCUMENTS_ERROR");
+    return [];
+  }
+};
+
+/**
+ * Deletes a document from a subcollection.
+ * @param parentCollection - The parent collection name
+ * @param parentId - The parent document ID
+ * @param subcollection - The subcollection name
+ * @param docId - The document ID to delete
+ * @return The write result or null on error
+ */
+export const deleteSubcollectionDocument = async (
+  parentCollection: string,
+  parentId: string,
+  subcollection: string,
+  docId: string
+): Promise<FirebaseFirestore.WriteResult | null> => {
+  try {
+    return await getSubcollectionRef(parentCollection, parentId, subcollection)
+      .doc(docId)
+      .delete();
+  } catch (error) {
+    devLog(error, "DELETE_SUBCOLLECTION_DOCUMENT_ERROR");
+    return null;
+  }
+};
+
+/**
+ * Counts the total number of documents in a subcollection.
+ * @param parentCollection - The parent collection name
+ * @param parentId - The parent document ID
+ * @param subcollection - The subcollection name
+ * @return The document count
+ */
+export const countSubcollectionDocuments = async (
+  parentCollection: string,
+  parentId: string,
+  subcollection: string
+): Promise<number> => {
+  try {
+    const snap = await getSubcollectionRef(parentCollection, parentId, subcollection)
+      .count()
+      .get();
+    return snap.data().count;
+  } catch (error) {
+    devLog(error, "COUNT_SUBCOLLECTION_DOCUMENTS_ERROR");
+    return 0;
+  }
+};
+
 export {getFirestore};

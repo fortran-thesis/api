@@ -26,6 +26,7 @@ import {
 import {
   addCaseDetail as addCaseDetailToSubcollection,
   findAllCaseDetailsByReportId,
+  updateCaseDetail as updateCaseDetailRepo,
 } from "../repositories/caseDetailRepository";
 import {findMoldCasesByPriority} from "../repositories/moldCaseRepository";
 import {
@@ -102,7 +103,7 @@ const normalizeDateObserved = <T>(obj: T): T => {
 
 export const addMoldReportToFirestore = async (
   details: MoldReport
-): Promise<MoldReport | null> => {
+): Promise<(MoldReport & {_caseDetailIds?: string[]}) | null> => {
   try {
     devLog(`addMoldReportToFirestore: Creating report with case_name="${details.case_name}"`);
 
@@ -139,13 +140,19 @@ export const addMoldReportToFirestore = async (
     devLog("addMoldReportToFirestore: ✅ Parent document created");
 
     const reportId = doc.id;
+    const caseDetailIds: string[] = [];
 
-    // Write each case_detail to the subcollection
+    // Write each case_detail to the subcollection and collect IDs
     if (caseDetailsArray.length > 0) {
-      await Promise.all(
+      const detailDocs = await Promise.all(
         caseDetailsArray.map((d) => addCaseDetailToSubcollection(reportId, d))
       );
-      devLog(`addMoldReportToFirestore: ✅ ${caseDetailsArray.length} case details written to subcollection`);
+      detailDocs.forEach((detailDoc) => {
+        if (detailDoc && detailDoc.id) {
+          caseDetailIds.push(detailDoc.id);
+        }
+      });
+      devLog(`addMoldReportToFirestore: ✅ ${caseDetailsArray.length} case details written to subcollection with IDs: ${caseDetailIds.join(", ")}`);
     }
 
     // Invalidate all report caches since new report was added
@@ -158,6 +165,7 @@ export const addMoldReportToFirestore = async (
     // Return with case_details included in response for backward compat
     const result = documentToJson<MoldReport>(doc);
     result.case_details = caseDetailsArray;
+    (result as any)._caseDetailIds = caseDetailIds;
     return result;
   } catch (error) {
     devLog(`addMoldReportToFirestore: ❌ Error - ${error}`);
@@ -456,6 +464,29 @@ export const addCaseDetailToReport = async (
       id: doc.id,
       ...doc.data() as MoldReportDetails,
     };
+  } catch (error) {
+    devLog(error);
+    return null;
+  }
+};
+
+export const updateCaseDetailInReport = async (
+  reportId: string,
+  detailId: string,
+  updates: Partial<MoldReportDetails>
+): Promise<MoldReportDetails | null> => {
+  try {
+    const result = await updateCaseDetailRepo(reportId, detailId, updates);
+    if (!result) throw new Error("Failed to update case detail.");
+
+    // Invalidate all report caches since report was modified
+    await invalidateAllLists("mold-reports-search");
+    await invalidateAllLists("mold-reports-all");
+    await invalidateAllLists("mold-reports-user");
+    await invalidateAllLists("mold-reports-unassigned");
+    await invalidateAllLists("mold-reports-assigned");
+
+    return updates as MoldReportDetails;
   } catch (error) {
     devLog(error);
     return null;

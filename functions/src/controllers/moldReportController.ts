@@ -14,6 +14,7 @@ import {
   removeMoldReport,
   softRemoveMoldReport,
   addCaseDetailToReport,
+  updateCaseDetailInReport,
   getMoldReportStatusCounts,
   retrieveAllMoldReports,
   getAssignedReportsCount,
@@ -203,20 +204,22 @@ export const createMoldReport = async (req: Request, res: Response) => {
     if (photos && photos.length > 0 && moldReport) {
       devLog(`[createMoldReport] Starting async file upload in background for ${photos.length} photos`);
       const reportId = (moldReport as any)._id || (moldReport as any).id || Object.keys(moldReport)[0];
+      const caseDetailIds = (moldReport as any)._caseDetailIds || [];
+      
       uploadFiles(photos, StorageFolder.MOLD_REPORTS)
         .then(async (uploaded) => {
           devLog(`[createMoldReport] ✅ Async upload completed: ${uploaded?.length || 0} files`);
 
-          // Update firestore report with photo URLs
-          if (uploaded && uploaded.length > 0 && reportId) {
+          // Update the first case detail document in the subcollection with photo URLs
+          if (uploaded && uploaded.length > 0 && reportId && caseDetailIds.length > 0) {
             try {
-              caseDetails[0].cover_photo = uploaded;
-              await updateMoldReportInFirestore(reportId, {
-                case_details: caseDetails,
-              } as any);
-              devLog("[createMoldReport] ✅ Updated report with photo URLs");
+              const firstDetailId = caseDetailIds[0];
+              await updateCaseDetailInReport(reportId, firstDetailId, {
+                cover_photo: uploaded,
+              });
+              devLog("[createMoldReport] ✅ Updated case detail with photo URLs");
             } catch (err) {
-              devLog(`[createMoldReport] ⚠️ Failed to update with photo URLs: ${err}`);
+              devLog(`[createMoldReport] ⚠️ Failed to update case detail with photos: ${err}`);
             }
           }
         })
