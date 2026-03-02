@@ -28,6 +28,7 @@ import {sendEmail} from "../utils/email";
 import {getDocumentIdByField} from "../lib/firestore";
 import {ensureRedisConnection} from "../configs/redis";
 import {generateCode} from "../utils/code";
+import {transformToSignedUrl} from "../utils/storageTransform";
 import {v4 as uuidv4} from "uuid";
 import {envOptions} from "../configs/environment";
 
@@ -291,7 +292,17 @@ export const updateUserProfile = async (
     const authUpdate: UpdateRequest = {};
     if (profile.email !== undefined) authUpdate.email = profile.email;
     if (profile.displayName !== undefined) authUpdate.displayName = profile.displayName;
-    if (profile.photo_url !== undefined) authUpdate.photoURL = profile.photo_url;
+    if (profile.photo_url !== undefined) {
+      // Convert storage path to signed URL if not already a URL
+      if (profile.photo_url.startsWith("http")) {
+        authUpdate.photoURL = profile.photo_url;
+      } else {
+        const signedUrl = await transformToSignedUrl(profile.photo_url);
+        if (signedUrl) {
+          authUpdate.photoURL = signedUrl;
+        }
+      }
+    }
 
     // Normalize phone number if provided (E.164 PH normalization)
     const normalizePH = (raw?: string): string | undefined => {
