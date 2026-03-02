@@ -56,6 +56,15 @@ describe("storage lib (unit)", () => {
       
       expect(mockBucket.file).toHaveBeenCalledWith(filePath);
     });
+
+    it("should parse gs:// private URL into bucket + path", () => {
+      const privateUrl = "gs://private-bucket/path/to/file.jpg";
+
+      storage.getFileRef(privateUrl);
+
+      expect(mockStorage.bucket).toHaveBeenCalledWith("private-bucket");
+      expect(mockBucket.file).toHaveBeenCalledWith("path/to/file.jpg");
+    });
   });
 
   describe("uploadFile", () => {
@@ -70,7 +79,7 @@ describe("storage lib (unit)", () => {
         buffer,
         { metadata: { contentType: "text/plain" } }
       );
-      expect(result).toBe(filePath);
+      expect(result).toBe("gs://default-bucket/uploads/test.txt");
     });
 
     it("should upload without content type", async () => {
@@ -80,7 +89,7 @@ describe("storage lib (unit)", () => {
       const result = await storage.uploadFile("test.txt", buffer);
 
       expect(mockFile.save).toHaveBeenCalledWith(buffer, {});
-      expect(result).toBe("test.txt");
+      expect(result).toBe("gs://default-bucket/test.txt");
     });
 
     it("should return null on error", async () => {
@@ -98,7 +107,7 @@ describe("storage lib (unit)", () => {
       const result = await storage.uploadFile("test.txt", stream);
 
       expect(mockFile.save).toHaveBeenCalled();
-      expect(result).toBe("test.txt");
+      expect(result).toBe("gs://default-bucket/test.txt");
     });
   });
 

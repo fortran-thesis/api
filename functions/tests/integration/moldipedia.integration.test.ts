@@ -77,6 +77,26 @@ describe("Moldipedia Integration Tests", () => {
     });
   });
 
+  describe("POST /api/v1/moldipedia", () => {
+    it("should store uploaded cover photo as firebase private URL", async () => {
+      const agent = getTestAgent();
+      const res = await agent
+        .post(apiPath("/v1/moldipedia"))
+        .set("Authorization", `Bearer ${curatorUser.token}`)
+        .field("details", JSON.stringify({
+          title: "Storage URL article",
+          body: "Ensures upload stores private URL",
+        }))
+        .attach("cover_photo", Buffer.from("fake-image-bytes"), "cover.jpg")
+        .expect("Content-Type", /json/);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.cover_photo).toMatch(/^gs:\/\//);
+      expect(res.body.data.cover_photo).toContain("moldipedia/");
+    });
+  });
+
   describe("GET /api/v1/moldipedia/:id", () => {
     it("should return a specific moldipedia article", async () => {
       const agent = getTestAgent();

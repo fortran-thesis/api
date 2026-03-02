@@ -2,17 +2,22 @@ import {
   transformToSignedUrl,
   transformImageUrl,
   transformImageUrls,
+  clearSignedUrlCache,
 } from "../../../src/utils/storageTransform";
 import * as storage from "../../../src/lib/storage";
 
 jest.mock("../../../src/lib/storage");
 jest.mock("../../../src/utils/dev");
+jest.mock("../../../src/configs/storage", () => ({
+  getDefaultBucket: jest.fn(() => "thesis-2e701.firebasestorage.app"),
+}));
 
 const mockedGetSignedUrl = storage.getSignedUrl as jest.MockedFunction<typeof storage.getSignedUrl>;
 
 describe("storageTransform", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    clearSignedUrlCache();
   });
 
   describe("transformToSignedUrl", () => {
@@ -33,8 +38,32 @@ describe("storageTransform", () => {
 
       const result = await transformToSignedUrl(filePath);
 
-      expect(mockedGetSignedUrl).toHaveBeenCalledWith(filePath, 3600);
+      expect(mockedGetSignedUrl).toHaveBeenCalledWith(filePath, 7200, "thesis-2e701.firebasestorage.app");
       expect(result).toBe(signedUrl);
+    });
+
+    it("should transform firebase private URL to signed URL", async () => {
+      const privateUrl = "gs://thesis-2e701.firebasestorage.app/scanned-molds/123_photo.jpg";
+      const signedUrl = "https://storage.googleapis.com/signed-url";
+      mockedGetSignedUrl.mockResolvedValue(signedUrl);
+
+      const result = await transformToSignedUrl(privateUrl);
+
+      expect(mockedGetSignedUrl).toHaveBeenCalledWith("scanned-molds/123_photo.jpg", 7200, "thesis-2e701.firebasestorage.app");
+      expect(result).toBe(signedUrl);
+    });
+
+    it("should return cached signed URL on repeated calls", async () => {
+      const filePath = "scanned-molds/123_photo.jpg";
+      const signedUrl = "https://storage.googleapis.com/signed-url";
+      mockedGetSignedUrl.mockResolvedValue(signedUrl);
+
+      const first = await transformToSignedUrl(filePath);
+      const second = await transformToSignedUrl(filePath);
+
+      expect(first).toBe(signedUrl);
+      expect(second).toBe(signedUrl);
+      expect(mockedGetSignedUrl).toHaveBeenCalledTimes(1);
     });
 
     it("should use custom expiration time", async () => {
@@ -44,7 +73,7 @@ describe("storageTransform", () => {
 
       await transformToSignedUrl(filePath, 7200);
 
-      expect(mockedGetSignedUrl).toHaveBeenCalledWith(filePath, 7200);
+      expect(mockedGetSignedUrl).toHaveBeenCalledWith(filePath, 7200, "thesis-2e701.firebasestorage.app");
     });
 
     it("should return original path if signed URL generation fails", async () => {
@@ -63,6 +92,15 @@ describe("storageTransform", () => {
       const result = await transformToSignedUrl(filePath);
 
       expect(result).toBe(filePath);
+    });
+
+    it("should return existing public URL as-is", async () => {
+      const publicUrl = "https://example.com/image.jpg";
+
+      const result = await transformToSignedUrl(publicUrl);
+
+      expect(result).toBe(publicUrl);
+      expect(mockedGetSignedUrl).not.toHaveBeenCalled();
     });
   });
 
@@ -158,8 +196,8 @@ describe("storageTransform", () => {
       ];
       await transformImageUrls(items, 7200);
 
-      expect(mockedGetSignedUrl).toHaveBeenCalledWith(filePath1, 7200);
-      expect(mockedGetSignedUrl).toHaveBeenCalledWith(filePath2, 7200);
+      expect(mockedGetSignedUrl).toHaveBeenCalledWith(filePath1, 7200, "thesis-2e701.firebasestorage.app");
+      expect(mockedGetSignedUrl).toHaveBeenCalledWith(filePath2, 7200, "thesis-2e701.firebasestorage.app");
     });
   });
 });
