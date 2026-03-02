@@ -99,18 +99,25 @@ export const updateDocument = async <T extends object>(
   try {
     const docRef = callFirebase(collection).doc(documentUid);
 
-    // Build metadata update without reading the existing document.
-    // created_at is set only during addDocument and is preserved automatically
-    // since update() only touches specified fields.
-    const withMetadata: WithMetadata<Partial<T>> = {
-      ...updateData,
-      metadata: {
-        updated_at: Timestamp.now(),
-        ...(updateData as any).metadata, // Allow explicit metadata overrides (e.g., deleted_at for soft delete)
-      },
+    const {metadata, ...restUpdateData} = updateData as any;
+    const updatePayload: Record<string, unknown> = {
+      ...restUpdateData,
+      "metadata.updated_at": Timestamp.now(),
     };
 
-    return await docRef.update(withMetadata);
+    if (metadata && typeof metadata === "object") {
+      if (Object.prototype.hasOwnProperty.call(metadata, "created_at")) {
+        updatePayload["metadata.created_at"] = metadata.created_at;
+      }
+      if (Object.prototype.hasOwnProperty.call(metadata, "updated_at")) {
+        updatePayload["metadata.updated_at"] = metadata.updated_at;
+      }
+      if (Object.prototype.hasOwnProperty.call(metadata, "deleted_at")) {
+        updatePayload["metadata.deleted_at"] = metadata.deleted_at;
+      }
+    }
+
+    return await docRef.update(updatePayload);
   } catch (error) {
     devLog(error);
     return null;
@@ -393,15 +400,25 @@ export const updateSubcollectionDocument = async <T extends object>(
   try {
     const docRef = getSubcollectionRef(parentCollection, parentId, subcollection).doc(docId);
 
-    const withMetadata: WithMetadata<Partial<T>> = {
-      ...updateData,
-      metadata: {
-        updated_at: Timestamp.now(),
-        ...(updateData as any).metadata,
-      },
+    const {metadata, ...restUpdateData} = updateData as any;
+    const updatePayload: Record<string, unknown> = {
+      ...restUpdateData,
+      "metadata.updated_at": Timestamp.now(),
     };
 
-    return await docRef.update(withMetadata);
+    if (metadata && typeof metadata === "object") {
+      if (Object.prototype.hasOwnProperty.call(metadata, "created_at")) {
+        updatePayload["metadata.created_at"] = metadata.created_at;
+      }
+      if (Object.prototype.hasOwnProperty.call(metadata, "updated_at")) {
+        updatePayload["metadata.updated_at"] = metadata.updated_at;
+      }
+      if (Object.prototype.hasOwnProperty.call(metadata, "deleted_at")) {
+        updatePayload["metadata.deleted_at"] = metadata.deleted_at;
+      }
+    }
+
+    return await docRef.update(updatePayload);
   } catch (error) {
     devLog(error, "UPDATE_SUBCOLLECTION_DOCUMENT_ERROR");
     return null;
