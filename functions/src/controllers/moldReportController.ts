@@ -205,7 +205,7 @@ export const createMoldReport = async (req: Request, res: Response) => {
       devLog(`[createMoldReport] Starting async file upload in background for ${photos.length} photos`);
       const reportId = (moldReport as any)._id || (moldReport as any).id || Object.keys(moldReport)[0];
       const caseDetailIds = (moldReport as any)._caseDetailIds || [];
-      
+
       uploadFiles(photos, StorageFolder.MOLD_REPORTS)
         .then(async (uploaded) => {
           devLog(`[createMoldReport] ✅ Async upload completed: ${uploaded?.length || 0} files`);
