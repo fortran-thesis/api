@@ -15,6 +15,13 @@ export const envOptions = {
   isProd: process.env.NODE_ENV === "production",
   isTest: process.env.NODE_ENV === "test" || process.env.IS_TESTING === "true",
   isDev: process.env.NODE_ENV === "development",
+  // Cloud Run / Firebase Functions v2 runtime signals
+  isCloudRun: Boolean(
+    process.env.K_SERVICE ||
+      process.env.K_REVISION ||
+      process.env.FUNCTION_TARGET ||
+      process.env.FUNCTION_SIGNATURE_TYPE
+  ),
   firebaseAuthEmulatorHost: process.env.FIREBASE_AUTH_EMULATOR_HOST,
   firestoreEmulatorHost: process.env.FIRESTORE_EMULATOR_HOST,
   firebaseStorageEmulatorHost: process.env.FIREBASE_STORAGE_EMULATOR_HOST,

@@ -13,11 +13,14 @@ const gcpLevelToSeverity: Record<string, string> = {
   fatal: "CRITICAL",
 };
 
+const shouldUsePrettyTransport =
+  envOptions.isDev && !envOptions.isTest && !envOptions.isCloudRun && Boolean(process.stdout.isTTY);
+
 /**
  * Central pino logger instance.
  *
  * - test  → silent (no output during test runs)
- * - dev   → pino-pretty with colourised, human-readable output
+ * - local dev (TTY) → pino-pretty with colourised, human-readable output
  * - prod  → structured JSON to stdout; field names are aligned with the
  *           Cloud Logging JSON payload spec so Cloud Run picks up severity
  *           and message automatically without requiring a log agent.
@@ -31,17 +34,16 @@ export const logger = pino({
   messageKey: "message",
 
   // Cloud Logging expects "severity", pino defaults to numeric "level".
-  // Only apply the GCP formatter in non-dev environments so pino-pretty
-  // still receives standard labels in development.
-  ...(!envOptions.isDev && !envOptions.isTest ?
+  // Only apply the GCP formatter when not using pretty transport.
+  ...(shouldUsePrettyTransport || envOptions.isTest ?
+    {} :
     {
       formatters: {
         level(label) {
           return {severity: gcpLevelToSeverity[label] ?? "DEFAULT"};
         },
       },
-    } :
-    {}),
+    }),
 
   redact: {
     paths: [
@@ -52,7 +54,7 @@ export const logger = pino({
     ],
     censor: "[REDACTED]",
   },
-  ...(envOptions.isDev ?
+  ...(shouldUsePrettyTransport ?
     {
       transport: {
         target: "pino-pretty",
