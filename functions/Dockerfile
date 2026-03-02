@@ -2,11 +2,14 @@ FROM node:22
 
 WORKDIR /app
 
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends netcat-openbsd && \
+    rm -rf /var/lib/apt/lists/*
+
 COPY package*.json ./
 RUN npm ci
 
 COPY . .
-COPY .env.dev .env
 
 EXPOSE 5001
 

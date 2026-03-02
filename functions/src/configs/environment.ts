@@ -11,7 +11,7 @@ export const envOptions = {
       8080 :
       process.env.NODE_ENV === "test" ?
         4000 :
-        8080,
+        5001,
   isProd: process.env.NODE_ENV === "production",
   isTest: process.env.NODE_ENV === "test" || process.env.IS_TESTING === "true",
   isDev: process.env.NODE_ENV === "development",

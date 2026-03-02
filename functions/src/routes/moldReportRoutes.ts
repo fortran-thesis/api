@@ -81,6 +81,7 @@ router.post(
   verifyUser(),
   validateParams(ReportIdSchema),
   validateBody(CaseDetailCreateSchema),
+  cacheInvalidate("mold-reports", "update"),
   async (req: Request, res: Response) => {
     await postCaseDetail(req, res);
   }
@@ -118,6 +119,9 @@ router.patch(
   validateParams(ReportIdSchema),
   validateBody(AssignMoldReportSchema),
   auditLog(AuditAction.ASSIGN_MOLD_REPORT, (req) => `Assigned report ${req.params.id}`),
+  cacheInvalidate("mold-reports", "update"),
+  cacheInvalidate("mold-cases-all", "update"),
+  cacheInvalidate("mold-cases-assigned", "update"),
   async (req: Request, res: Response) => {
     await assignReport(req, res);
   }
@@ -128,6 +132,9 @@ router.patch(
   verifyUser(Role.ADMIN),
   validateParams(ReportIdSchema),
   auditLog(AuditAction.REJECT_MOLD_REPORT, (req) => `Rejected report ${req.params.id}`),
+  cacheInvalidate("mold-reports", "update"),
+  cacheInvalidate("mold-cases-all", "update"),
+  cacheInvalidate("mold-cases-assigned", "update"),
   async (req: Request, res: Response) => {
     await rejectReport(req, res);
   }

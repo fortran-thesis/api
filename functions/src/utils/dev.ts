@@ -27,9 +27,13 @@ export const devLog = (error: unknown, context?: string): void => {
     return;
   }
 
-  // Native Error instances
+  // Native Error instances — include the stack string explicitly so it
+  // appears in the log output even when pino-pretty is not active.
   if (error instanceof Error) {
-    logger.error({err: error, ctx: contextTag}, `EXCEPTION: ${error.message}`);
+    logger.error(
+      {err: error, stack: error.stack, ctx: contextTag},
+      `EXCEPTION: ${error.message}`
+    );
     return;
   }
 

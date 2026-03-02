@@ -177,6 +177,8 @@ router.post(
     next();
   },
   validateBody(CultivationLogSchema),
+  cacheInvalidate("mold-cases-all", "update"),
+  cacheInvalidate("mold-cases-assigned", "update"),
   async (req: Request, res: Response) => {
     // controller expects param name caseId, the route uses :id so controller will read req.params.id
     await addCultivationLog(req, res);
@@ -188,6 +190,8 @@ router.patch(
   verifyUser(),
   validateParams(MoldIdSchema),
   validateBody(CultivationDetailsSchema),
+  cacheInvalidate("mold-cases-all", "update"),
+  cacheInvalidate("mold-cases-assigned", "update"),
   async (req: Request, res: Response) => {
     await updateCultivationDetails(req, res);
   }

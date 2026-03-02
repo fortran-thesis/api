@@ -70,6 +70,7 @@ router.patch(
   sanitizeBody,
   validateBody(UserProfileUpdateSchema),
   auditLog(AuditAction.PROFILE_UPDATE, "Updated own profile"),
+  cacheInvalidate("users", "update"),
   async (req: Request, res: Response) => {
     await patchUserProfile(req, res);
   }

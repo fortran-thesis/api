@@ -10,6 +10,7 @@ const router = Router();
 // Fixed endpoints for each audit action
 const auditActions = [
   "profile_update",
+  "create_mycologist",
   "identify_mold",
   "add_monitoring_folder",
   "add_mold",

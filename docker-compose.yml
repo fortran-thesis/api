@@ -3,36 +3,80 @@ services:
     build: ./functions
     ports:
       - "5001:5001"
+    volumes:
+      - ./functions:/app
+      - /app/node_modules
+    env_file:
+      - ./functions/.env.dev
     environment:
+      - GOOGLE_CLOUD_PROJECT=thesis-dev-project
       - FIRESTORE_EMULATOR_HOST=firebase-emulator:8080
       - FIREBASE_AUTH_EMULATOR_HOST=firebase-emulator:9099
       - FIREBASE_STORAGE_EMULATOR_HOST=firebase-emulator:9199
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - ENCRYPTION_KEY=$(openssl rand -hex 32)
       - USE_MAILHOG=true
+      - PRETTY_LOGS=true
+      # Point signInWithPassword to the Auth emulator so tokens have aud=thesis-dev-project
+      - THESIS_FIREBASE_CLIENT_API=http://firebase-emulator:9099/identitytoolkit.googleapis.com/v1/accounts
+      - MAIN_PROJECT_API_KEY=fake-dev-key
+    depends_on:
+      - firebase-emulator
+      - redis
+      - mailhog
+
   redis:
     image: redis:7
     ports:
       - "6379:6379"
-  
+
   mailhog:
-        image: mailhog/mailhog:latest
-        ports:
-          - 1025:1025
-          - 8025:8025
+    image: mailhog/mailhog:latest
+    ports:
+      - "1025:1025"
+      - "8025:8025"
 
   firebase-emulator:
-    image: node:22
-    working_dir: /app
-    volumes:
-      - ./functions:/app
-    command: sh -c "apt-get update && apt-get install -y openjdk-17-jre-headless && npm install -g firebase-tools && firebase emulators:start --only firestore,auth,storage --project thesis-dev-project"
+    build:
+      context: .
+      dockerfile: Dockerfile.emulator
     ports:
+      - "4000:4000"   # Emulator UI
       - "8080:8080"   # Firestore
       - "9099:9099"   # Auth
       - "9199:9199"   # Storage
+
+  # Seed service: runs after emulators start to populate test data
+  seed:
+    build: ./functions
+    volumes:
+      - ./functions:/app
+      - /app/node_modules
+    env_file:
+      - ./functions/.env.dev
     environment:
-      - FIRESTORE_EMULATOR_HOST=localhost:8080
-      - FIREBASE_AUTH_EMULATOR_HOST=localhost:9099
-      - FIREBASE_STORAGE_EMULATOR_HOST=localhost:9199
+      - GOOGLE_CLOUD_PROJECT=thesis-dev-project
+      - FIRESTORE_EMULATOR_HOST=firebase-emulator:8080
+      - FIREBASE_AUTH_EMULATOR_HOST=firebase-emulator:9099
+      - FIREBASE_STORAGE_EMULATOR_HOST=firebase-emulator:9199
+      - PRETTY_LOGS=true
+    depends_on:
+      - firebase-emulator
+      - app
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        echo "⏳ Waiting for emulators to be ready..."
+        for i in {1..60}; do
+          if nc -z firebase-emulator 8080 2>/dev/null && nc -z firebase-emulator 9099 2>/dev/null; then
+            echo "✅ Emulators ready! Seeding database..."
+            sleep 2
+            npm run seed
+            exit $$?
+          fi
+          echo "Attempt $$i/60 - retrying in 2s..."
+          sleep 2
+        done
+        echo "❌ Emulators failed to start"
+        exit 1

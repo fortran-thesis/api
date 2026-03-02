@@ -53,42 +53,42 @@ export const createMoldipedia = async (req: Request, res: Response) => {
    *           application/json:
    *             schema:
    *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: object
- *                   properties:
- *                     id:
- *                       type: string
- *                     title:
- *                       type: string
- *                     body:
- *                       type: string
- *                     author_id:
- *                       type: string
- *                     cover_photo:
- *                       type: string
- *                     tags:
- *                       type: array
- *                       items:
- *                         type: string
- *                     created_at:
- *                       type: string
- *                       format: date-time
- *                     updated_at:
- *                       type: string
- *                       format: date-time
- *                     mycologist_id:
- *                       type: string
- *                       nullable: true
- *                       description: ID of the mycologist who reviewed/approved this article
- *                     approved_at:
- *                       type: string
- *                       format: date-time
- *                       nullable: true
- *                       description: Timestamp when the article was reviewed/approved
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     id:
+   *                       type: string
+   *                     title:
+   *                       type: string
+   *                     body:
+   *                       type: string
+   *                     author_id:
+   *                       type: string
+   *                     cover_photo:
+   *                       type: string
+   *                     tags:
+   *                       type: array
+   *                       items:
+   *                         type: string
+   *                     created_at:
+   *                       type: string
+   *                       format: date-time
+   *                     updated_at:
+   *                       type: string
+   *                       format: date-time
+   *                     mycologist_id:
+   *                       type: string
+   *                       nullable: true
+   *                       description: ID of the mycologist who reviewed/approved this article
+   *                     approved_at:
+   *                       type: string
+   *                       format: date-time
+   *                       nullable: true
+   *                       description: Timestamp when the article was reviewed/approved
    *       400:
    *         description: Validation error
    *         content:

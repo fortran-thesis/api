@@ -14,7 +14,9 @@ const gcpLevelToSeverity: Record<string, string> = {
 };
 
 const shouldUsePrettyTransport =
-  envOptions.isDev && !envOptions.isTest && !envOptions.isCloudRun && Boolean(process.stdout.isTTY);
+  (envOptions.isDev || process.env.PRETTY_LOGS === "true") &&
+  !envOptions.isTest &&
+  !envOptions.isCloudRun;
 
 /**
  * Central pino logger instance.
@@ -62,6 +64,13 @@ export const logger = pino({
           colorize: true,
           translateTime: "HH:MM:ss.l",
           ignore: "pid,hostname",
+          // Render `err` / `error` fields as proper stack-trace blocks
+          errorLikeObjectKeys: ["err", "error"],
+          errorProps: "message,stack",
+          // Surface the context tag inline with the message for quick scanning
+          messageFormat: "{ctx} | {message}",
+          // Print every extra field on its own line (not squashed into one)
+          singleLine: false,
         },
       },
     } :

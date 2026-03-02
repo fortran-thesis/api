@@ -35,7 +35,23 @@ export const transformToSignedUrl = async (
   const parsed = parseStorageReference(filePath, getDefaultBucket());
   if (!parsed.filePath) return filePath;
 
-  const cacheKey = `${parsed.bucketName || "default-bucket"}:${parsed.filePath}:${expiresInSeconds}`;
+  const bucket = parsed.bucketName || getDefaultBucket();
+  const encodedPath = encodeURIComponent(parsed.filePath);
+
+  // Helper: Firebase Storage REST download URL
+  const toDownloadUrl = (host: string, protocol: string) =>
+    `${protocol}://${host}/v0/b/${bucket}/o/${encodedPath}?alt=media`;
+
+  // When the Firebase Storage emulator is active, signed URLs are not supported.
+  // Build a public emulator download URL instead (port 9199 is exposed on the host).
+  const storageEmulatorHost = process.env.FIREBASE_STORAGE_EMULATOR_HOST;
+  if (storageEmulatorHost) {
+    const emulatorDownloadUrl = toDownloadUrl("localhost:9199", "http");
+    devLog(`transformToSignedUrl: Emulator mode — returning download URL: ${emulatorDownloadUrl}`);
+    return emulatorDownloadUrl;
+  }
+
+  const cacheKey = `${bucket}:${parsed.filePath}:${expiresInSeconds}`;
   const cachedSignedUrl = signedUrlCache.get(cacheKey);
   if (cachedSignedUrl) {
     return cachedSignedUrl;
@@ -51,11 +67,16 @@ export const transformToSignedUrl = async (
       signedUrlCache.set(cacheKey, signedUrl);
       return signedUrl;
     }
-    return filePath;
+    // Signed URL generation returned null (file not found)
   } catch (error) {
-    devLog(`Failed to generate signed URL for: ${filePath}`);
-    return filePath; // Return original path as fallback
+    devLog(`Failed to generate signed URL for: ${filePath}, falling back to download URL`);
   }
+
+  // Fallback: Firebase Storage public download URL.
+  // Always better than returning a raw gs:// URI that no browser can load.
+  const downloadUrl = toDownloadUrl("firebasestorage.googleapis.com", "https");
+  devLog(`transformToSignedUrl: Falling back to download URL: ${downloadUrl}`);
+  return downloadUrl;
 };
 
 /**

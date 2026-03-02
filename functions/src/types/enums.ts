@@ -17,6 +17,7 @@ export enum AuditAction {
   // ── User management ────────────────────────────────────────────────────────
   PROFILE_UPDATE = "profile_update",
   UPDATE_USER = "update_user",
+  CREATE_MYCOLOGIST = "create_mycologist",
   DISABLE_USER = "disable_user",
   ENABLE_USER = "enable_user",
   BAN_USER = "ban_user",

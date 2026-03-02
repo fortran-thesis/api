@@ -1,0 +1,25 @@
+FROM eclipse-temurin:21-jre
+
+# Install Node.js
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends curl && \
+    curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
+    apt-get install -y --no-install-recommends nodejs && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install Firebase CLI globally
+RUN npm install -g firebase-tools
+
+WORKDIR /app
+
+# Copy Firebase config files
+COPY firebase.json .firebaserc firestore.rules firestore.indexes.json storage.rules ./
+
+# Pre-download emulator JARs so they're cached in the image
+RUN firebase setup:emulators:firestore && \
+    firebase setup:emulators:storage && \
+    firebase setup:emulators:ui
+
+EXPOSE 4000 8080 9099 9199
+
+CMD ["firebase", "emulators:start", "--only", "firestore,auth,storage", "--project", "thesis-dev-project"]
