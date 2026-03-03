@@ -64,6 +64,7 @@ app.use(cloudRunMultipartFix);
 
 // Apply security headers early (but after multipart fix to avoid interfering with parsing)
 app.use(helmet());
+app.set("etag", false); // Disable Express auto-ETags — caching handled by Redis (server) and dio_cache_interceptor (mobile)
 app.use(cors(corsOptions));
 app.use(cookieParser());
 
