@@ -76,22 +76,24 @@ describe("storageTransform", () => {
       expect(mockedGetSignedUrl).toHaveBeenCalledWith(filePath, 7200, "thesis-2e701.firebasestorage.app");
     });
 
-    it("should return original path if signed URL generation fails", async () => {
+    it("should return download URL if signed URL generation fails", async () => {
       const filePath = "scanned-molds/123_photo.jpg";
+      const expectedUrl = "https://firebasestorage.googleapis.com/v0/b/thesis-2e701.firebasestorage.app/o/scanned-molds%2F123_photo.jpg?alt=media";
       mockedGetSignedUrl.mockResolvedValue(null);
 
       const result = await transformToSignedUrl(filePath);
 
-      expect(result).toBe(filePath);
+      expect(result).toBe(expectedUrl);
     });
 
-    it("should return original path on error", async () => {
+    it("should return download URL on error", async () => {
       const filePath = "scanned-molds/123_photo.jpg";
+      const expectedUrl = "https://firebasestorage.googleapis.com/v0/b/thesis-2e701.firebasestorage.app/o/scanned-molds%2F123_photo.jpg?alt=media";
       mockedGetSignedUrl.mockRejectedValue(new Error("Storage error"));
 
       const result = await transformToSignedUrl(filePath);
 
-      expect(result).toBe(filePath);
+      expect(result).toBe(expectedUrl);
     });
 
     it("should return existing public URL as-is", async () => {
