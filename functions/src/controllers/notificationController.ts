@@ -89,7 +89,7 @@ export const getNotifications = async (req: Request, res: Response) => {
     );
 
     if (!result) return defaultError(res);
-    return sendSuccess(res, result);
+    return sendSuccess(res, result.snapshot);
   } catch (error) {
     devLog(error, "getNotifications");
     return defaultError(res);
@@ -329,7 +329,7 @@ export const registerDeviceToken = async (req: Request, res: Response) => {
     const {token, platform} = req.body;
     const tokenId = await registerToken(req.user.id, token, platform);
     if (!tokenId) return sendError(res, "Failed to register device token", 400);
-    return sendSuccess(res, {id: tokenId});
+    return sendSuccess(res, {id: tokenId}, 201);
   } catch (error) {
     devLog(error, "registerDeviceToken");
     return defaultError(res);

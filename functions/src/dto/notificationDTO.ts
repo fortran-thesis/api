@@ -42,10 +42,9 @@ export const NotificationQuerySchema = z.object({
     .optional(),
   type: z.nativeEnum(NotificationType).optional(),
   limit: z
-    .string()
+    .string({required_error: "limit is required"})
     .regex(/^\d+$/, "limit must be a positive integer")
-    .transform(Number)
-    .optional(),
+    .transform(Number),
   pageToken: z.string().optional(),
 });
 

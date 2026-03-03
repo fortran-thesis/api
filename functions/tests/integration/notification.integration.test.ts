@@ -203,7 +203,7 @@ describe("Notification Integration Tests", () => {
     it("should return 404 for a non-existent notification", async () => {
       const agent = getTestAgent();
       const res = await agent
-        .get(apiPath("/v1/notification/nonexistentnotifid0000"))
+        .get(apiPath("/v1/notification/nonexistentnotifid00"))
         .set("Authorization", `Bearer ${farmerUser.token}`)
         .expect("Content-Type", /json/);
 
