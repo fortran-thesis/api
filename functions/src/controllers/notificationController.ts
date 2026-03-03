@@ -74,6 +74,7 @@ export const getNotifications = async (req: Request, res: Response) => {
   try {
     if (!req.user) return sendError(res, "Unauthorized", 401);
 
+    // eslint-disable-next-line camelcase
     const {is_read, type, limit, pageToken} = req.query as any;
 
     const result = await getNotificationsForUser(
@@ -81,6 +82,7 @@ export const getNotifications = async (req: Request, res: Response) => {
       limit ? Number(limit) : 20,
       pageToken as string | undefined,
       {
+        // eslint-disable-next-line camelcase
         is_read: is_read !== undefined ? is_read === "true" || is_read === true : undefined,
         type,
       }
