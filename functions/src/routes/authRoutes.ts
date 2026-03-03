@@ -28,8 +28,9 @@ import {
   verifyCodeLimiter,
 } from "../configs/limit";
 import {verifyDevice} from "../middlewares/deviceVerification";
-import rateLimit from "express-rate-limit";
+import {rateLimit} from "express-rate-limit";
 import {verifyUser} from "../middlewares/verification";
+import {cacheInvalidate} from "../middlewares/cacheMiddleware";
 
 const router = Router();
 
@@ -37,6 +38,7 @@ router.post(
   "/register",
   sanitizeBody,
   validateBody(RegisterSchema),
+  cacheInvalidate("users", "create"),
   async (req: Request, res: Response) => {
     await createUser(req, res);
   }

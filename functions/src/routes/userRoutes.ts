@@ -71,6 +71,7 @@ router.patch(
   validateBody(UserProfileUpdateSchema),
   auditLog(AuditAction.PROFILE_UPDATE, "Updated own profile"),
   cacheInvalidate("users", "update"),
+  cacheInvalidate("mycologists", "update"),
   async (req: Request, res: Response) => {
     await patchUserProfile(req, res);
   }
@@ -140,6 +141,7 @@ router.patch(
   validateBody(UserDetailsUpdateSchema),
   auditLog(AuditAction.UPDATE_USER, (req) => `Admin updated user ${req.params.id}`),
   cacheInvalidate("users", "update"),
+  cacheInvalidate("mycologists", "update"),
   async (req: Request, res: Response) => {
     await patchUser(req, res);
   }
@@ -151,6 +153,7 @@ router.delete(
   sanitizeParams,
   validateParams(UserIdSchema),
   cacheInvalidate("users", "delete"),
+  cacheInvalidate("mycologists", "delete"),
   async (req: Request, res: Response) => {
     await deleteUser(req, res);
   }
@@ -162,6 +165,7 @@ router.delete(
   sanitizeParams,
   validateParams(UserIdSchema),
   cacheInvalidate("users", "delete"),
+  cacheInvalidate("mycologists", "delete"),
   async (req: Request, res: Response) => {
     await softDeleteUser(req, res);
   }

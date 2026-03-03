@@ -23,6 +23,7 @@ router.post(
     referenceIdFn: (req) => req.body.id,
   }),
   cacheInvalidate("users", "update"),
+  cacheInvalidate("mycologists", "update"),
   async (req: Request, res: Response) => {
     await disableUser(req, res);
   }
@@ -40,6 +41,7 @@ router.post(
     referenceIdFn: (req) => req.body.id,
   }),
   cacheInvalidate("users", "update"),
+  cacheInvalidate("mycologists", "update"),
   async (req: Request, res: Response) => {
     await enableUser(req, res);
   }
@@ -57,6 +59,7 @@ router.post(
     referenceIdFn: (req) => req.body.id,
   }),
   cacheInvalidate("users", "update"),
+  cacheInvalidate("mycologists", "update"),
   async (req: Request, res: Response) => {
     await banUserController(req, res);
   }
