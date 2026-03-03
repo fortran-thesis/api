@@ -23,3 +23,5 @@ firebase-config.json
 # Test files (if you want to skip linting tests)
 **/*.test.ts
 **/*.spec.ts
+# Seed scripts
+src/scripts/seed.ts
