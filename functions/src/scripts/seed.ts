@@ -103,20 +103,20 @@ export const seedTestUsers = async () => {
     console.log("\n📋 Test Users Created:\n");
     console.log("┌─ ADMIN ─────────────────────────────────────────┐");
     console.log(`│ Username: ${SEED_USERS[0].username}                         │`);
-    console.log(`│ Password: Test[]1234                            │`);
-    console.log(`│ Role: admin                                     │`);
+    console.log("│ Password: Test[]1234                            │");
+    console.log("│ Role: admin                                     │");
     console.log("└─────────────────────────────────────────────────┘");
 
     console.log("\n┌─ MYCOLOGIST ────────────────────────────────────┐");
     console.log(`│ Username: ${SEED_USERS[1].username}                         │`);
-    console.log(`│ Password: Test[]1234                              │`);
-    console.log(`│ Role: mycologist (curator)                      │`);
+    console.log("│ Password: Test[]1234                              │");
+    console.log("│ Role: mycologist (curator)                      │");
     console.log("└─────────────────────────────────────────────────┘");
 
     console.log("\n┌─ FARMER ────────────────────────────────────────┐");
     console.log(`│ Username: ${SEED_USERS[2].username}                         │`);
-    console.log(`│ Password: Test[]1234                            │`);
-    console.log(`│ Role: farmer (user)                             │`);
+    console.log("│ Password: Test[]1234                            │");
+    console.log("│ Role: farmer (user)                             │");
     console.log("└─────────────────────────────────────────────────┘\n");
 
     console.log("✨ Seed completed successfully!\n");
@@ -175,80 +175,80 @@ const MOLD_REPORT_SEED: Array<{
 }> = [
   {
     case_name: "Mold Infestation on Rice in Davao City",
-    host: CROP_NAMES[0],      // Rice
-    location: PH_CITIES[0],   // Davao City
+    host: CROP_NAMES[0], // Rice
+    location: PH_CITIES[0], // Davao City
     date_observed: makeTimestamp(2026, 2, 16),
     status: "pending",
     descriptionIndices: [0, 1, 2, 3],
   },
   {
     case_name: "Mold Infestation on Corn in Cebu City",
-    host: CROP_NAMES[1],      // Corn
-    location: PH_CITIES[1],   // Cebu City
+    host: CROP_NAMES[1], // Corn
+    location: PH_CITIES[1], // Cebu City
     date_observed: makeTimestamp(2026, 2, 17),
     status: "pending",
     descriptionIndices: [1, 2, 3, 4],
   },
   {
     case_name: "Mold Infestation on Tomato in Manila",
-    host: CROP_NAMES[2],      // Tomato
-    location: PH_CITIES[2],   // Manila
+    host: CROP_NAMES[2], // Tomato
+    location: PH_CITIES[2], // Manila
     date_observed: makeTimestamp(2026, 2, 18),
     status: "in progress",
     descriptionIndices: [2, 3, 4, 5],
   },
   {
     case_name: "Mold Infestation on Potato in Quezon City",
-    host: CROP_NAMES[3],      // Potato
-    location: PH_CITIES[3],   // Quezon City
+    host: CROP_NAMES[3], // Potato
+    location: PH_CITIES[3], // Quezon City
     date_observed: makeTimestamp(2026, 2, 19),
     status: "pending",
     descriptionIndices: [3, 4, 5, 6],
   },
   {
     case_name: "Mold Infestation on Eggplant in Cagayan de Oro",
-    host: CROP_NAMES[4],      // Eggplant
-    location: PH_CITIES[4],   // Cagayan de Oro
+    host: CROP_NAMES[4], // Eggplant
+    location: PH_CITIES[4], // Cagayan de Oro
     date_observed: makeTimestamp(2026, 2, 20),
     status: "in progress",
     descriptionIndices: [0, 2, 4, 6],
   },
   {
     case_name: "Mold Infestation on Cabbage in Iloilo City",
-    host: CROP_NAMES[5],      // Cabbage
-    location: PH_CITIES[5],   // Iloilo City
+    host: CROP_NAMES[5], // Cabbage
+    location: PH_CITIES[5], // Iloilo City
     date_observed: makeTimestamp(2026, 2, 22),
     status: "pending",
     descriptionIndices: [1, 3, 5, 7],
   },
   {
     case_name: "Mold Infestation on Mango in Tacloban",
-    host: CROP_NAMES[8],      // Mango
-    location: PH_CITIES[6],   // Tacloban
+    host: CROP_NAMES[8], // Mango
+    location: PH_CITIES[6], // Tacloban
     date_observed: makeTimestamp(2026, 2, 24),
     status: "resolved",
     descriptionIndices: [0, 1, 4, 7],
   },
   {
     case_name: "Mold Infestation on Banana in Bacolod",
-    host: CROP_NAMES[9],      // Banana
-    location: PH_CITIES[7],   // Bacolod
+    host: CROP_NAMES[9], // Banana
+    location: PH_CITIES[7], // Bacolod
     date_observed: makeTimestamp(2026, 2, 25),
     status: "pending",
     descriptionIndices: [2, 4, 6, 7],
   },
   {
     case_name: "Mold Infestation on Sugarcane in General Santos",
-    host: CROP_NAMES[10],     // Sugarcane
-    location: PH_CITIES[9],   // General Santos
+    host: CROP_NAMES[10], // Sugarcane
+    location: PH_CITIES[9], // General Santos
     date_observed: makeTimestamp(2026, 2, 27),
     status: "in progress",
     descriptionIndices: [0, 3, 5, 7],
   },
   {
     case_name: "Mold Infestation on Pineapple in Dagupan",
-    host: CROP_NAMES[12],     // Pineapple
-    location: PH_CITIES[14],  // Dagupan
+    host: CROP_NAMES[12], // Pineapple
+    location: PH_CITIES[14], // Dagupan
     date_observed: makeTimestamp(2026, 3, 1),
     status: "pending",
     descriptionIndices: [1, 2, 6, 7],
@@ -312,70 +312,17 @@ export const seedMoldReports = async (farmerUid: string) => {
 const MOLDIPEDIA_SEED = [
   {
     title: "Understanding Fusarium Wilt in Philippine Crop Fields",
-    body: `Fusarium wilt is one of the most destructive soil-borne diseases affecting a wide range of crops in the Philippines, including banana, tomato, ampalaya, and eggplant. Caused primarily by Fusarium oxysporum and its host-specific formae speciales, the disease is notorious for its persistence in soil and its capacity to devastate entire plantations.
-
-**How Fusarium Spreads**
-The pathogen thrives in warm, moist soils and enters plants through the roots, colonizing the vascular system. Once inside, fungal mycelium and spores block water and nutrient transport, causing the hallmark one-sided yellowing and wilting. A cross-section of an infected stem typically reveals brown discoloration of the vascular tissue — a reliable diagnostic indicator.
-
-Fusarium spores (chlamydospores) can survive in the soil for decades, making infected fields essentially unusable for susceptible crops without intervention. The pathogen spreads through contaminated soil, irrigation water, infested plant debris, and tools and footwear moving between fields.
-
-**Impact on Philippine Agriculture**
-The TR4 (Tropical Race 4) strain of Fusarium oxysporum f. sp. cubense poses an existential threat to the Philippine banana export industry, which relies heavily on the Cavendish variety — a cultivar with no natural resistance to TR4. Beyond banana, Fusarium wilt on tomato and other vegetables results in significant yield losses, particularly during the rainy season when soil moisture is elevated.
-
-**Integrated Management Strategies**
-Effective control of Fusarium wilt requires an integrated approach:
-- **Cultural practices**: Avoid planting susceptible varieties in known infested fields. Use disease-free planting material. Improve soil drainage to reduce moisture stress.
-- **Biological control**: Soil application of Trichoderma harzianum and Bacillus subtilis-based products can suppress Fusarium populations and promote root health.
-- **Chemical management**: Soil drenches with propiconazole or thiophanate-methyl can reduce disease incidence in early-stage infections.
-- **Resistant varieties**: Adopting Fusarium-resistant or tolerant cultivars is the most sustainable long-term solution where available.
-
-Early detection and rapid response remain the most critical components of Fusarium wilt management in Philippine agroecosystems.`,
+    body: "<p>Fusarium wilt is one of the most destructive soil-borne diseases affecting a wide range of crops in the Philippines, including banana, tomato, ampalaya, and eggplant. Caused primarily by Fusarium oxysporum and its host-specific formae speciales, the disease is notorious for its persistence in soil and its capacity to devastate entire plantations.</p><h2>How Fusarium Spreads</h2><p>The pathogen thrives in warm, moist soils and enters plants through the roots, colonizing the vascular system. Once inside, fungal mycelium and spores block water and nutrient transport, causing the hallmark one-sided yellowing and wilting. A cross-section of an infected stem typically reveals brown discoloration of the vascular tissue — a reliable diagnostic indicator.</p><p>Fusarium spores (chlamydospores) can survive in the soil for decades, making infected fields essentially unusable for susceptible crops without intervention. The pathogen spreads through contaminated soil, irrigation water, infested plant debris, and tools and footwear moving between fields.</p><h2>Impact on Philippine Agriculture</h2><p>The TR4 (Tropical Race 4) strain of Fusarium oxysporum f. sp. cubense poses an existential threat to the Philippine banana export industry, which relies heavily on the Cavendish variety — a cultivar with no natural resistance to TR4. Beyond banana, Fusarium wilt on tomato and other vegetables results in significant yield losses, particularly during the rainy season when soil moisture is elevated.</p><h2>Integrated Management Strategies</h2><p>Effective control of Fusarium wilt requires an integrated approach:</p><ul><li><strong>Cultural practices</strong>: Avoid planting susceptible varieties in known infested fields. Use disease-free planting material. Improve soil drainage to reduce moisture stress.</li><li><strong>Biological control</strong>: Soil application of Trichoderma harzianum and Bacillus subtilis-based products can suppress Fusarium populations and promote root health.</li><li><strong>Chemical management</strong>: Soil drenches with propiconazole or thiophanate-methyl can reduce disease incidence in early-stage infections.</li><li><strong>Resistant varieties</strong>: Adopting Fusarium-resistant or tolerant cultivars is the most sustainable long-term solution where available.</li></ul><p>Early detection and rapid response remain the most critical components of Fusarium wilt management in Philippine agroecosystems.</p>",
     tags: ["fusarium", "wilt", "banana", "tomato", "soil-borne disease", "crop disease", "Philippines"],
   },
   {
     title: "Aspergillus and Aflatoxin Contamination in Stored Grains",
-    body: `Among the many post-harvest challenges facing Filipino farmers, contamination of stored grains and nuts by Aspergillus molds — and the aflatoxins they produce — stands out as both a food safety and an economic crisis. Aflatoxins are among the most potent naturally occurring carcinogens, and their presence in food commodities triggers trade restrictions, export rejections, and serious long-term health consequences for consumers.
-
-**What is Aspergillus?**
-Aspergillus is a large genus of molds found ubiquitously in soil and decaying plant material. In agricultural contexts, the most economically important species are Aspergillus flavus and A. parasiticus, both of which produce aflatoxins. These molds primarily attack crops before and during storage, particularly affecting corn, peanuts, and copra (dried coconut meat) — all major Philippine commodities.
-
-**How Aflatoxin Contamination Occurs**
-Contamination can begin in the field through insect damage and drought stress, which predisposes kernels to fungal invasion. However, the critical phase is post-harvest: inadequate drying of grains (moisture content above 14%), poor storage facilities with high humidity, and temperature fluctuations create ideal conditions for Aspergillus proliferation and aflatoxin synthesis.
-
-**Health and Economic Implications**
-Aflatoxin B1 is classified as a Group 1 human carcinogen by the International Agency for Research on Cancer (IARC). Chronic low-level exposure is linked to liver cancer, while acute high-level exposure causes aflatoxicosis — a severe, sometimes fatal condition. For Filipino farmers, rejected shipments and condemned stocks translate directly into income losses.
-
-**Prevention and Control**
-- **Harvest at correct maturity** and avoid delays that expose crops to prolonged field moisture.
-- **Dry thoroughly**: Reduce grain moisture to below 13% before placing into storage.
-- **Use hermetically sealed storage**: Limit oxygen to inhibit mold growth.
-- **Biological competition**: Atoxigenic A. flavus strains applied to fields outcompete toxigenic strains and significantly reduce aflatoxin levels.
-- **Regular monitoring**: Use rapid aflatoxin test kits at farmer cooperative level to screen grains before sale.
-
-Addressing aflatoxin contamination requires farm-level awareness, infrastructure investment, and policy support — all of which are essential for protecting both public health and Filipino farmers' livelihoods.`,
+    body: "<p>Among the many post-harvest challenges facing Filipino farmers, contamination of stored grains and nuts by Aspergillus molds — and the aflatoxins they produce — stands out as both a food safety and an economic crisis. Aflatoxins are among the most potent naturally occurring carcinogens, and their presence in food commodities triggers trade restrictions, export rejections, and serious long-term health consequences for consumers.</p><h2>What is Aspergillus?</h2><p>Aspergillus is a large genus of molds found ubiquitously in soil and decaying plant material. In agricultural contexts, the most economically important species are Aspergillus flavus and A. parasiticus, both of which produce aflatoxins. These molds primarily attack crops before and during storage, particularly affecting corn, peanuts, and copra (dried coconut meat) — all major Philippine commodities.</p><h2>How Aflatoxin Contamination Occurs</h2><p>Contamination can begin in the field through insect damage and drought stress, which predisposes kernels to fungal invasion. However, the critical phase is post-harvest: inadequate drying of grains (moisture content above 14%), poor storage facilities with high humidity, and temperature fluctuations create ideal conditions for Aspergillus proliferation and aflatoxin synthesis.</p><h2>Health and Economic Implications</h2><p>Aflatoxin B1 is classified as a Group 1 human carcinogen by the International Agency for Research on Cancer (IARC). Chronic low-level exposure is linked to liver cancer, while acute high-level exposure causes aflatoxicosis — a severe, sometimes fatal condition. For Filipino farmers, rejected shipments and condemned stocks translate directly into income losses.</p><h2>Prevention and Control</h2><ul><li><strong>Harvest at correct maturity</strong> and avoid delays that expose crops to prolonged field moisture.</li><li><strong>Dry thoroughly</strong>: Reduce grain moisture to below 13% before placing into storage.</li><li><strong>Use hermetically sealed storage</strong>: Limit oxygen to inhibit mold growth.</li><li><strong>Biological competition</strong>: Atoxigenic A. flavus strains applied to fields outcompete toxigenic strains and significantly reduce aflatoxin levels.</li><li><strong>Regular monitoring</strong>: Use rapid aflatoxin test kits at farmer cooperative level to screen grains before sale.</li></ul><p>Addressing aflatoxin contamination requires farm-level awareness, infrastructure investment, and policy support — all of which are essential for protecting both public health and Filipino farmers' livelihoods.</p>",
     tags: ["aspergillus", "aflatoxin", "stored grains", "food safety", "post-harvest", "corn", "peanuts"],
   },
   {
     title: "Managing Alternaria Blight During the Wet Season",
-    body: `Every wet season, vegetable farmers across the Philippines contend with the aggressive spread of Alternaria blight — a fungal disease that targets tomatoes, potatoes, cabbage, and many other vegetable crops. Caused by several species of Alternaria fungi, particularly A. solani and A. alternata, this disease can cause yield losses of up to 50% when left unmanaged during prolonged periods of rain and humidity.
-
-**Recognizing Alternaria Blight**
-The most distinctive symptom of Alternaria blight is the appearance of dark brown to black circular lesions with characteristic concentric rings — resembling a target or bullseye — on older leaves, stems, and fruit. As lesions enlarge and coalesce, heavily infected leaves turn yellow and drop prematurely, stripping the plant of its photosynthetic capacity. On tomato fruits, Alternaria causes dark sunken lesions at the stem end, making the produce unmarketable.
-
-**Why the Wet Season is High Risk**
-Alternaria spores are spread efficiently by wind and rain splash. Extended periods of leaf wetness — more than 9 hours at temperatures between 20–30°C — are ideal for infection. The rainy season in the Philippines, particularly from June to November, creates precisely these conditions over extended periods. Poor air circulation within dense planting arrangements further compounds the risk.
-
-**Integrated Management Approach**
-Managing Alternaria requires coordinated action before and during the growing season:
-
-1. **Use quality seeds and resistant varieties**: Begin with certified disease-free seeds. Where available, choose Alternaria-tolerant tomato and potato varieties.
-2. **Improve field sanitation**: Remove and properly dispose of infected plant debris after harvest. Plow under crop residues to accelerate decomposition and reduce inoculum.
-3. **Optimize plant spacing**: Adequate spacing promotes air movement, reduces canopy humidity, and shortens leaf wetness duration.
-4. **Stake and trellis plants**: Keeping foliage off the ground minimizes splash-dispersal of spores from soil.
-5. **Biological controls**: Foliar sprays of Bacillus amyloliquefaciens or Trichoderma-based biofungicides have demonstrated suppressive activity against Alternaria and can be integrated into spray programs.
-6. **Fungicide applications**: Initiate protective fungicide sprays at first sign of disease or at canopy closure. Effective active ingredients include chlorothalonil, mancozeb, azoxystrobin, and difenoconazole. Rotate between modes of action to prevent resistance.
-
-With vigilant scouting and early intervention, Alternaria blight can be kept below economically damaging thresholds even during the most challenging rainy seasons.`,
+    body: "<p>Every wet season, vegetable farmers across the Philippines contend with the aggressive spread of Alternaria blight — a fungal disease that targets tomatoes, potatoes, cabbage, and many other vegetable crops. Caused by several species of Alternaria fungi, particularly A. solani and A. alternata, this disease can cause yield losses of up to 50% when left unmanaged during prolonged periods of rain and humidity.</p><h2>Recognizing Alternaria Blight</h2><p>The most distinctive symptom of Alternaria blight is the appearance of dark brown to black circular lesions with characteristic concentric rings — resembling a target or bullseye — on older leaves, stems, and fruit. As lesions enlarge and coalesce, heavily infected leaves turn yellow and drop prematurely, stripping the plant of its photosynthetic capacity. On tomato fruits, Alternaria causes dark sunken lesions at the stem end, making the produce unmarketable.</p><h2>Why the Wet Season is High Risk</h2><p>Alternaria spores are spread efficiently by wind and rain splash. Extended periods of leaf wetness — more than 9 hours at temperatures between 20–30°C — are ideal for infection. The rainy season in the Philippines, particularly from June to November, creates precisely these conditions over extended periods. Poor air circulation within dense planting arrangements further compounds the risk.</p><h2>Integrated Management Approach</h2><p>Managing Alternaria requires coordinated action before and during the growing season:</p><ol><li><strong>Use quality seeds and resistant varieties</strong>: Begin with certified disease-free seeds. Where available, choose Alternaria-tolerant tomato and potato varieties.</li><li><strong>Improve field sanitation</strong>: Remove and properly dispose of infected plant debris after harvest. Plow under crop residues to accelerate decomposition and reduce inoculum.</li><li><strong>Optimize plant spacing</strong>: Adequate spacing promotes air movement, reduces canopy humidity, and shortens leaf wetness duration.</li><li><strong>Stake and trellis plants</strong>: Keeping foliage off the ground minimizes splash-dispersal of spores from soil.</li><li><strong>Biological controls</strong>: Foliar sprays of Bacillus amyloliquefaciens or Trichoderma-based biofungicides have demonstrated suppressive activity against Alternaria and can be integrated into spray programs.</li><li><strong>Fungicide applications</strong>: Initiate protective fungicide sprays at first sign of disease or at canopy closure. Effective active ingredients include chlorothalonil, mancozeb, azoxystrobin, and difenoconazole. Rotate between modes of action to prevent resistance.</li></ol><p>With vigilant scouting and early intervention, Alternaria blight can be kept below economically damaging thresholds even during the most challenging rainy seasons.</p>",
     tags: ["alternaria", "blight", "early blight", "tomato", "vegetable", "wet season", "fungal disease"],
   },
 ];
@@ -694,6 +641,7 @@ if (require.main === module) {
 
       if (admin) {
         await seedMoldipedia(admin.uid);
+        await seedFaqs(admin.uid);
       } else {
         console.warn("⚠️  No admin user found — skipping Moldipedia seed.");
       }
@@ -708,3 +656,62 @@ if (require.main === module) {
       process.exit(1);
     });
 }
+
+// ─── FAQ Seed (5) ─────────────────────────────────────────────────────────────
+
+const FAQ_SEED: Array<{ question: string; answer: string }> = [
+  {
+    question: "What are common signs of mold infection in crops?",
+    answer:
+      "Look for fuzzy or powdery growths on leaves or fruit, discolored or water-soaked lesions, wilting, and premature leaf drop. Some molds also produce distinctive spore colors (green, blue, black).",
+  },
+  {
+    question: "How can I prevent mold growth in stored grains?",
+    answer:
+      "Dry grain to below 13% moisture before storage, use hermetic or well-ventilated storage, maintain low humidity and cool temperatures, and regularly inspect and remove damaged kernels.",
+  },
+  {
+    question: "When should I call a mycologist or submit a sample?",
+    answer:
+      "Submit samples when you observe rapidly spreading lesions, unusual symptoms, or if initial management fails. Early diagnosis helps target control measures and avoid unnecessary treatments.",
+  },
+  {
+    question: "Are there safe biological controls for mold diseases?",
+    answer:
+      "Yes — biocontrol agents like Trichoderma spp., Bacillus subtilis, and other beneficial microbes can suppress many molds when used as part of an integrated program with good cultural practices.",
+  },
+  {
+    question: "Can mold-infected produce be made safe for consumption?",
+    answer:
+      "Some superficially moldy fruits or vegetables can be trimmed and used, but stored-grain mycotoxins (e.g., aflatoxin) cannot be removed by cleaning or cooking; contaminated lots should be tested and disposed of if above safe limits.",
+  },
+];
+
+export const seedFaqs = async (authorUid: string) => {
+  const db = getFirestore(firebase);
+  const faqCollection = getCollectionName(FirestoreCollection.FAQ);
+
+  console.log("\n❓ Seeding FAQ entries...\n");
+
+  for (const item of FAQ_SEED) {
+    try {
+      const data = {
+        question: item.question,
+        answer: item.answer,
+        user_id: authorUid,
+        metadata: {
+          created_at: Timestamp.now(),
+          updated_at: null,
+          deleted_at: null,
+        },
+      };
+
+      await db.collection(faqCollection).add(data);
+      console.log(`✅ Created FAQ: "${item.question.substring(0, 40)}..."`);
+    } catch (err) {
+      console.error(`❌ Failed to create FAQ "${item.question}":`, err);
+    }
+  }
+
+  console.log("\n✨ FAQs seeded successfully!\n");
+};
