@@ -188,6 +188,7 @@ export async function clearAllCollections(): Promise<void> {
     "flag_reports",
     "system_requests",
     "audit_logs",
+    "notifications",
   ];
 
   for (const col of collections) {
