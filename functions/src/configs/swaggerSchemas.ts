@@ -619,4 +619,133 @@ export const swaggerSchemas = {
       },
     },
   },
+
+  // ── Notification Schemas ─────────────────────────────────────────────────
+
+  Notification: {
+    type: "object",
+    properties: {
+      id: {
+        type: "string",
+        description: "Notification document ID",
+        example: "aBcDeFgHiJkLmNoPqRsT",
+      },
+      recipient_id: {
+        type: "string",
+        description: "Firebase Auth UID of the recipient",
+        example: "uSeRaUtHiDaBcDeFgHiJkLmNoPqR",
+      },
+      type: {
+        type: "string",
+        enum: [
+          "mold_report_created",
+          "mold_report_assigned",
+          "mold_report_rejected",
+          "mold_report_resolved",
+          "case_detail_added",
+          "flag_report_created",
+          "flag_report_resolved",
+          "curator_approved",
+          "curator_rejected",
+          "user_disabled",
+          "user_enabled",
+          "user_banned",
+        ],
+        description: "Notification event type",
+        example: "mold_report_assigned",
+      },
+      title: {
+        type: "string",
+        description: "Notification headline",
+        example: "Report Approved",
+      },
+      body: {
+        type: "string",
+        description: "Notification body text",
+        example: "Your mold report 'Kitchen Mold' has been approved.",
+      },
+      reference_id: {
+        type: "string",
+        nullable: true,
+        description: "ID of the related resource",
+        example: "rEpOrTiDaBcDeFgHiJkL",
+      },
+      reference_type: {
+        type: "string",
+        nullable: true,
+        enum: ["mold_report", "flag_report", "mold_case", "user"],
+        description: "Type of the related resource",
+        example: "mold_report",
+      },
+      is_read: {
+        type: "boolean",
+        description: "Whether the notification has been read",
+        example: false,
+      },
+      metadata: {
+        type: "object",
+        properties: {
+          created_at: {type: "object", description: "Firestore Timestamp"},
+          updated_at: {type: "object", nullable: true},
+          deleted_at: {type: "object", nullable: true},
+        },
+      },
+    },
+  },
+  NotificationResponse: {
+    type: "object",
+    properties: {
+      success: {type: "boolean", example: true},
+      data: {$ref: "#/components/schemas/Notification"},
+    },
+  },
+  NotificationListResponse: {
+    type: "object",
+    properties: {
+      success: {type: "boolean", example: true},
+      data: {
+        type: "object",
+        properties: {
+          snapshot: {
+            type: "array",
+            items: {$ref: "#/components/schemas/Notification"},
+          },
+          nextPageToken: {
+            type: "string",
+            nullable: true,
+            example: "eyJsYXN0SWQiOiIxMjMifQ==",
+          },
+        },
+      },
+    },
+  },
+  UnreadCountResponse: {
+    type: "object",
+    properties: {
+      success: {type: "boolean", example: true},
+      data: {
+        type: "object",
+        properties: {
+          count: {type: "integer", example: 5},
+        },
+      },
+    },
+  },
+  RegisterDeviceTokenRequest: {
+    type: "object",
+    required: ["token", "platform"],
+    properties: {
+      token: {
+        type: "string",
+        description: "FCM registration token",
+        example: "dGhpcyBpcyBhIHNhbXBsZSBGQ00gdG9rZW4...",
+      },
+      platform: {
+        type: "string",
+        enum: ["android", "ios", "web"],
+        description: "Platform that generated the token",
+        example: "android",
+      },
+    },
+  },
 };
