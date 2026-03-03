@@ -28,6 +28,35 @@
         {"fieldPath": "metadata.created_at", "order": "ASCENDING"},
         {"fieldPath": "__name__", "order": "ASCENDING"}
       ]
+    },
+    {
+      "collectionGroup": "notifications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "recipient_id", "order": "ASCENDING"},
+        {"fieldPath": "metadata.created_at", "order": "DESCENDING"},
+        {"fieldPath": "__name__", "order": "DESCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "notifications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "recipient_id", "order": "ASCENDING"},
+        {"fieldPath": "is_read", "order": "ASCENDING"},
+        {"fieldPath": "metadata.created_at", "order": "DESCENDING"},
+        {"fieldPath": "__name__", "order": "DESCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "notifications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "recipient_id", "order": "ASCENDING"},
+        {"fieldPath": "type", "order": "ASCENDING"},
+        {"fieldPath": "metadata.created_at", "order": "DESCENDING"},
+        {"fieldPath": "__name__", "order": "DESCENDING"}
+      ]
     }
   ],
   "fieldOverrides": []

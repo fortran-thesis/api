@@ -9,7 +9,9 @@ import {
 } from "../controllers/flagReportController";
 import {verifyUser} from "../middlewares/verification";
 import {Role, AuditAction} from "../types/enums";
+import {NotificationType} from "../types/models/notificationTypes";
 import {auditLog} from "../middlewares/auditLogger";
+import {notify} from "../middlewares/notificationMiddleware";
 import {
   validateBody,
   validateParams,
@@ -28,6 +30,16 @@ router.post(
   verifyUser(),
   validateBody(CreateFlagReportSchema),
   auditLog(AuditAction.CREATE_FLAG_REPORT, "Flagged content"),
+  notify({
+    type: NotificationType.FLAG_REPORT_CREATED,
+    recipientsFn: () => {
+      // TODO: resolve admin user IDs dynamically (query users where role == admin).
+      // For now, returns an empty array until an admin-resolver helper is added.
+      return [];
+    },
+    referenceType: "flag_report",
+    contextFn: (req) => ({content_type: req.body.content_type ?? "content"}),
+  }),
   cacheInvalidate("flag-reports", "create"),
   async (req, res) => {
     await createFlagReport(req, res);
@@ -61,6 +73,16 @@ router.patch(
   verifyUser(Role.CURATOR),
   validateParams(FlagReportIdSchema),
   validateBody(UpdateFlagReportSchema),
+  notify({
+    type: NotificationType.FLAG_REPORT_RESOLVED,
+    recipientsFn: (req, body) => {
+      // Only notify when the report is being resolved
+      if (req.body.status !== "resolved") return [];
+      const reporterId = body?.data?.reporter_id;
+      return reporterId ? [{recipientId: reporterId}] : [];
+    },
+    referenceType: "flag_report",
+  }),
   cacheInvalidate("flag-reports", "update"),
   async (req, res) => {
     await patchFlagReport(req, res);

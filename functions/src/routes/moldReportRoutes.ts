@@ -39,7 +39,9 @@ import {
   getResolvedMoldReportsCountController,
 } from "../controllers/moldReportController";
 import {Role, AuditAction} from "../types/enums";
+import {NotificationType} from "../types/models/notificationTypes";
 import {auditLog} from "../middlewares/auditLogger";
+import {notify} from "../middlewares/notificationMiddleware";
 import {cacheGet, cacheInvalidate} from "../middlewares/cacheMiddleware";
 
 const router = Router();
@@ -119,6 +121,15 @@ router.patch(
   validateParams(ReportIdSchema),
   validateBody(AssignMoldReportSchema),
   auditLog(AuditAction.ASSIGN_MOLD_REPORT, (req) => `Assigned report ${req.params.id}`),
+  notify({
+    type: NotificationType.MOLD_REPORT_ASSIGNED,
+    recipientsFn: (req, body) => [
+      {recipientId: body?.data?.user_id, extraContext: {role: "farmer"}},
+      {recipientId: req.body.assigned_mycologist_id, extraContext: {role: "mycologist"}},
+    ],
+    referenceType: "mold_report",
+    contextFn: (_req, body) => ({case_name: body?.data?.case_name ?? ""}),
+  }),
   cacheInvalidate("mold-reports", "update"),
   cacheInvalidate("mold-cases-all", "update"),
   cacheInvalidate("mold-cases-assigned", "update"),
@@ -132,6 +143,14 @@ router.patch(
   verifyUser(Role.ADMIN),
   validateParams(ReportIdSchema),
   auditLog(AuditAction.REJECT_MOLD_REPORT, (req) => `Rejected report ${req.params.id}`),
+  notify({
+    type: NotificationType.MOLD_REPORT_REJECTED,
+    recipientsFn: (_req, body) => [
+      {recipientId: body?.data?.user_id},
+    ],
+    referenceType: "mold_report",
+    contextFn: (_req, body) => ({case_name: body?.data?.case_name ?? ""}),
+  }),
   cacheInvalidate("mold-reports", "update"),
   cacheInvalidate("mold-cases-all", "update"),
   cacheInvalidate("mold-cases-assigned", "update"),
