@@ -35,4 +35,7 @@ export const envOptions = {
   clientApi: process.env.THESIS_FIREBASE_CLIENT_API,
   projectApiKey: process.env.MAIN_PROJECT_API_KEY,
   maxSessionAge: 60 * 60 * 24 * 5 * 1000, // 5 days
+  // Model proxy (Lambda inference API)
+  lambdaUrl: process.env.MODEL_LAMBDA_URL || "",
+  modelInternalKey: process.env.MODEL_INTERNAL_KEY || "",
 };

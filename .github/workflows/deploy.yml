@@ -63,6 +63,8 @@ jobs:
           MOLDIFY_PASSWORD=${{ secrets.MOLDIFY_PASSWORD }}
           THESIS_FIREBASE_CLIENT_API=${{ secrets.THESIS_FIREBASE_CLIENT_API }}
           MAIN_PROJECT_API_KEY=${{ secrets.MAIN_PROJECT_API_KEY }}
+          MODEL_LAMBDA_URL=${{ secrets.MODEL_LAMBDA_URL }}
+          MODEL_INTERNAL_KEY=${{ secrets.MODEL_INTERNAL_KEY }}
           EOF
 
       - name: Install Firebase CLI
