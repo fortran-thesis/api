@@ -213,7 +213,8 @@ export const getRoleCounts = async (): Promise<Record<
 
     const result: Record<string, number> = {};
     keys.forEach((key, idx) => {
-      result[key] = typeof counts[idx] === "number" ? counts[idx]! : 0;
+      const count = counts[idx];
+      result[key] = typeof count === "number" ? count : 0;
     });
 
     await cacheItem(RESOURCE, "role-counts", result, {ttl: TTL});

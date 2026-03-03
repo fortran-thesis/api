@@ -127,7 +127,7 @@ export const approveCurator = async (
 
 export const rejectCurator = async (
   id: string,
-  isApproved: boolean
+  _isApproved: boolean
 ): Promise<ApiResponse<string>> => {
   try {
     const userSnap = await findFirestoreUserById(id);

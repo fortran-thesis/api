@@ -89,7 +89,7 @@ export const retrieveAllMoldipedia = async (
         }
 
         // eslint-disable-next-line camelcase
-        const {author_id, ...rest} = item;
+        const {author_id: _, ...rest} = item;
 
         return {
           ...rest,
@@ -132,7 +132,7 @@ export const retrieveMoldipediaById = async (
     }
 
     // eslint-disable-next-line camelcase
-    const {author_id, ...rest} = moldipedia;
+    const {author_id: _, ...rest} = moldipedia;
 
     return {
       ...rest,
@@ -220,7 +220,7 @@ export const retrieveArchivedMoldipedia = async (
           }
         }
         // eslint-disable-next-line camelcase
-        const {author_id, ...rest} = item;
+        const {author_id: _, ...rest} = item;
         return {
           ...rest,
           cover_photo:
