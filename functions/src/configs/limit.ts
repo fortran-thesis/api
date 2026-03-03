@@ -1,12 +1,27 @@
 
 import {Options, ipKeyGenerator} from "express-rate-limit";
 
-// Generic keyGenerator to handle undefined request.ip
-const genericKeyGenerator = (req: any) => req.ip || ipKeyGenerator(req)|| "127.0.0.1";
+/**
+ * Key generator that prefers X-Forwarded-For (Cloud Run sets this),
+ * then falls back to req.ip, then the express-rate-limit default.
+ * Never falls back to the static "127.0.0.1" string — that would
+ * make every request share a single bucket in dev.
+ */
+const genericKeyGenerator = (req: any): string => {
+  // Cloud Run / reverse-proxy header
+  const forwarded = req.headers?.["x-forwarded-for"];
+  if (typeof forwarded === "string" && forwarded) {
+    return forwarded.split(",")[0].trim();
+  }
+  // Express request.ip (may be undefined in some test environments)
+  if (req.ip) return req.ip;
+  // express-rate-limit built-in (returns socket.remoteAddress)
+  return ipKeyGenerator(req) || `anon-${Date.now()}`;
+};
 
 export const limitingOptions: Partial<Options> = {
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: 300,
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: genericKeyGenerator,
