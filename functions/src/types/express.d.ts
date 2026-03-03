@@ -17,6 +17,11 @@ declare global {
        *   return sendSuccess(res, newDoc);
        */
       auditTargetId?: string;
+      /**
+       * Stashed by the `notify` middleware so the `recipientsFn` callback
+       * can inspect the JSON response body after `res.json()` was called.
+       */
+      _notificationResBody?: unknown;
     }
   }
 }

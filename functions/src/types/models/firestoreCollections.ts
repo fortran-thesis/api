@@ -11,7 +11,8 @@ export enum FirestoreCollection {
   REPORTS = "reports",
   SCANNED_MOLDS = "scanned_molds",
   SYSTEM_REQUESTS = "system_requests",
-  FAQ = "faq"
+  FAQ = "faq",
+  NOTIFICATIONS = "notifications"
 }
 
 /**
@@ -23,6 +24,7 @@ export enum FirestoreCollection {
 export enum FirestoreSubcollection {
   CULTIVATION_LOGS = "cultivation_logs",
   CASE_DETAILS = "case_details",
+  DEVICE_TOKENS = "device_tokens",
 }
 
 export function getCollectionName(collection: FirestoreCollection): string {

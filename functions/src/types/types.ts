@@ -9,3 +9,4 @@ export * from "./models/flagReportTypes";
 export * from "./models/paginationTypes";
 export * from "./models/investigationTypes";
 export * from "./models/faqTypes";
+export * from "./models/notificationTypes";
