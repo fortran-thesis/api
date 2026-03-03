@@ -29,109 +29,141 @@ This will:
 | Service | Host | Port |
 |---|---|---|
 | API | `localhost` | `5001` |
+| Firestore Emulator | `localhost` | `8080` |
+| Auth Emulator | `localhost` | `9099` |
+| Storage Emulator | `localhost` | `9199` |
 | Emulator UI | `localhost` | `4000` |
 | MailHog UI | `localhost` | `8025` |
+| Redis | `localhost` | `6379` |
 
----
+### 4. Test User Credentials
 
-## Manual Setup Instructions
+The seed service automatically creates 3 test accounts after startup:
 
-### 1. Clone the Repository
+**Admin User**
+- Email: `admin@test.local`
+- Password: `Test[]1234`
+- Username: `Admin`
+- Role: `admin`
 
-```sh
-git clone https://github.com/fortran-thesis/api.git
-cd api/functions
+**Mycologist (Curator) User**
+- Email: `mycologist@test.local`
+- Password: `Test[]1234`
+- Username: `Myco`
+- Role: `mycologist`
+
+**Farmer User**
+- Email: `farmer@test.local`
+- Password: `Test[]1234`
+- Username: `Farmer`
+- Role: `farmer`
+
+### 5. Running Seed Manually
+
+To reseed the database after clearing data:
+
+```bash
+docker compose run --rm seed npm run seed
+```
+
+The seed script is idempotent — existing users are detected and skipped, and Firestore documents are created or updated.
+
+### 6. View Logs
+
+Watch the seed service run:
+
+```bash
+docker compose logs -f seed
 ```
 
 ---
 
-### 2. Environment Configuration
+## Local Development Setup (Without Docker)
 
-- Copy `.env.dev` to `.env` for local development:
+If you prefer to run locally without Docker:
 
- ```sh
- cp .env.dev .env
- ```
+### 1. Prerequisites
 
-- Copy `.env.test` to `.env` for testing:
+- Node.js 22 or higher
+- npm or yarn
+- Firebase CLI (for emulators)
 
- ```sh
- cp .env.test .env
- ```
-
-- Notes: do **NOT** edit the `.env.dev` or the `.env.test` files.
-
----
-
-### 3. Install Dependencies (Local)
+### 2. Install Dependencies
 
 ```sh
+cd api/functions
 npm install
 ```
 
----
+### 3. Environment Configuration
 
-### 4. Run Locally (local-dev method)
-
-**Note:** Firebase Emulators setup is now deprecated.
-
-- Build and start the development server:
-
-  ```sh
-  cd functions
-  npm run build:watch
-  ```
-
-- In a separate terminal, start the local server:
-
-  ```sh
-  npm run dev
-  ```
-
-- Once both are running, you can now access endpoints at the API Documentation: [`http://localhost:5001/api-docs`](http://localhost:5001/api-docs)
-  
----
-
-### 5. Run with Docker (NOT WORKING AS OF NOW)
-
-#### Build and Start Containers
+Copy `.env.dev` to `.env` for local development:
 
 ```sh
-cd ../../  # Go to the api folder where docker-compose.yml is located
-docker-compose up --build
+cp .env.dev .env
 ```
 
-#### Stop Containers
+**Note:** Do NOT edit the `.env.dev` file directly. Create a local `.env` from it instead.
+
+### 4. Run Locally
+
+Start the development server with hot module reload:
 
 ```sh
-docker-compose down
+npm run local-dev
 ```
+
+**Note:** This requires Firebase Emulators to be running separately. You can either:
+- Run emulators locally: `firebase emulators:start`
+- Or use Docker Compose for emulators only: `docker compose up firebase-emulator redis mailhog`
+
+Once running, access the API docs at: [`http://localhost:5001/api-docs`](http://localhost:5001/api-docs)
 
 ---
 
-### 6. Running Tests
+### 5. Running Tests
 
 - To run all tests:
 
- ```sh
- npm test
- ```
+  ```sh
+  npm test
+  ```
 
 - To run tests with coverage:
 
- ```sh
- npm run test:coverage
- ```
+  ```sh
+  npm run test:coverage
+  ```
 
 - To run specific test files:
 
- ```sh
- npm test -- path/to/test/file.test.ts
- ```
+  ```sh
+  npm test -- path/to/test/file.test.ts
+  ```
 
 ---
 
-### Notes
+## Troubleshooting
 
-- Firebase Emulators setup is deprecated. Use local-dev method for development.
-- Due to time constraints, Docker setup is NOT fixed. Will fix as soon as there is time.
+### Firebase Emulator Won't Start
+- Java 21+ is required. The Docker image (`eclipse-temurin:21-jre`) handles this automatically.
+- Check port conflicts:
+  ```bash
+  netstat -ano | findstr :8080
+  ```
+- View logs: `docker compose logs firebase-emulator`
+
+### Seed Service Fails
+- Check seed logs: `docker compose logs seed`
+- Verify emulators are running: `docker compose logs firebase-emulator`
+- Manually trigger seed: `docker compose run --rm seed npm run seed`
+
+### API HMR Not Working
+- Verify volume mount: `docker compose logs app | grep -i volume`
+- Look for container restarts: `docker compose logs app`
+- Restart container: `docker compose restart app`
+
+### MailHog Not Receiving Emails
+- Check MailHog UI at `http://localhost:8025`
+- Verify `.env.dev` has `USE_MAILHOG=true`
+- Check API logs for email errors: `docker compose logs app | grep email`
