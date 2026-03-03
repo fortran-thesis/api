@@ -14,8 +14,8 @@ import {
   softDeleteDocument,
   getDb,
 } from "../lib/firestore";
-import {Notification} from "../types/types";
-import {WithMetadata} from "../types/types";
+import {Notification, WithMetadata} from "../types/types";
+
 import {OrderField} from "../utils/pagination";
 import {
   getCollectionName,
@@ -131,7 +131,7 @@ export const markAllAsReadForRecipient = async (
     const batch = db.batch();
     for (const doc of snap.docs) {
       batch.update(doc.ref, {
-        is_read: true,
+        "is_read": true,
         "metadata.updated_at": Timestamp.now(),
       });
     }

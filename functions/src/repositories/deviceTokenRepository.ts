@@ -7,8 +7,8 @@
  */
 import {Timestamp} from "firebase-admin/firestore";
 import {getDb} from "../lib/firestore";
-import {DeviceToken} from "../types/types";
-import {WithMetadata} from "../types/types";
+import {DeviceToken, WithMetadata} from "../types/types";
+
 import {
   FirestoreSubcollection,
   FirestoreCollection,
@@ -41,7 +41,7 @@ export const addDeviceToken = async (
   if (!existing.empty) {
     const docId = existing.docs[0].id;
     await col.doc(docId).update({
-      platform: data.platform,
+      "platform": data.platform,
       "metadata.updated_at": Timestamp.now(),
     });
     return docId;
