@@ -1,4 +1,4 @@
-import z from "zod";
+import {z} from "zod";
 import {FirestoreIdSchema, zTimestamp} from "./shared";
 
 export const MoldIdSchema = z.object({
