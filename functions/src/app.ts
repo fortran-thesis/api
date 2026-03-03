@@ -2,7 +2,7 @@ import auditLogRoutes from "./routes/auditLogRoutes";
 import express, {Router, Request, Response, NextFunction} from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import rateLimit from "express-rate-limit";
+import {rateLimit} from "express-rate-limit";
 import {corsOptions} from "./configs/cors";
 import {setupSwagger} from "./configs/swagger";
 import authRoutes from "./routes/authRoutes";
@@ -24,11 +24,8 @@ import systemRequestRoutes from "./routes/systemRequestRoutes";
 import testRoute from "./routes/testRoute";
 import faqRoutes from "./routes/faqRoutes";
 import flagReportRoutes from "./routes/flagReportRoutes";
-<<<<<<< HEAD
 import notificationRoutes from "./routes/notificationRoutes";
-=======
 import modelRoutes from "./routes/modelRoutes";
->>>>>>> 8a306fa294490b61ea7edcf7d01c68f78e0937d4
 import {cloudRunMultipartFix} from "./middlewares/cloudRunMultipartFix";
 import {globalErrorHandler} from "./middlewares/errorHandler";
 import {httpLogger} from "./middlewares/httpLogger";
