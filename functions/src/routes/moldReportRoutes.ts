@@ -30,6 +30,7 @@ import {
   getAssignedReportsCountController,
   getMoldReportCountsController,
   getAllMoldReportsByUser,
+  getClosedMoldReportsByUser,
   assignReport,
   rejectReport,
   searchMoldReports,
@@ -216,6 +217,15 @@ router.get(
   validateQuery(PaginationQuerySchema),
   async (req: Request, res: Response) => {
     await getAllMoldReportsByUser(req, res);
+  }
+);
+
+router.get(
+  "/user/closed",
+  verifyUser(),
+  validateQuery(PaginationQuerySchema),
+  async (req: Request, res: Response) => {
+    await getClosedMoldReportsByUser(req, res);
   }
 );
 

@@ -23,7 +23,8 @@ import {
 } from "../services/moldReportService";
 import {createLog} from "../utils/logging";
 import {AuditAction, Role} from "../types/enums";
-import {getCombinedTotalCounts, getMoldCasePriorityBreakdown} from "../services/moldCaseService";
+import {getCombinedTotalCounts, getMoldCasePriorityBreakdown, addMoldCaseToFirestore, retrieveMoldCaseByReportId} from "../services/moldCaseService";
+import {Timestamp} from "firebase-admin/firestore";
 
 export const createMoldReport = async (req: Request, res: Response) => {
   /**
@@ -145,7 +146,14 @@ export const createMoldReport = async (req: Request, res: Response) => {
       | Express.Multer.File[]
       | undefined;
 
+    // ✅ FIX: Extract user_id from authenticated user, not from request body
+    const userId = req.user?.id;
+    if (!userId) {
+      return sendError(res, "Unauthorized - no user ID found", 401);
+    }
+
     devLog("[createMoldReport] After destructure - details.location:", details.location);
+    devLog("[createMoldReport] Extracted user_id from auth:", userId);
     devLog(`[createMoldReport] Received ${photos?.length || 0} photos, case_name=${details.case_name}`);
 
     // Validate required fields
@@ -154,6 +162,9 @@ export const createMoldReport = async (req: Request, res: Response) => {
     }
     if (!details.host || !details.host.trim()) {
       return sendError(res, "host (crop name) is required", 400);
+    }
+    if (!details.location || !details.location.trim()) {
+      return sendError(res, "location is required", 400);
     }
     if (!details.date_observed) {
       return sendError(res, "date_observed is required", 400);
@@ -188,6 +199,7 @@ export const createMoldReport = async (req: Request, res: Response) => {
     devLog(`[createMoldReport] Creating firestore report with ${caseDetails.length} case details`);
     const moldReport: MoldReport | null = await addMoldReportToFirestore({
       ...details,
+      user_id: userId,
       assigned_mycologist_id: null,
       case_details: caseDetails,
       is_archived: false,
@@ -523,6 +535,96 @@ export const getAllMoldReportsByUser = async (req: Request, res: Response) => {
     res.setHeader("Vary", "Authorization");
     const result: PaginatedResult<Omit<MoldReport, "user_id">[]> | null =
       await retrieveAllMoldReportsByUser(uid, limit, false, pageToken);
+    if (!result) return sendError(res, "Failed to retrieve mold reports", 404);
+    return sendSuccess(res, result);
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
+/**
+ * @swagger
+ * /api/v1/mold-reports/user/closed:
+ *   get:
+ *     summary: Get authenticated user's closed mold reports
+ *     tags: [MoldReport]
+ *     security:
+ *       - bearerAuth: []
+ *       - cookieAuth: []
+ *     description: Retrieve closed (archived/rejected) mold reports for the authenticated user with pagination. Requires authentication.
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         description: Number of items per page (default 10)
+ *       - in: query
+ *         name: pageToken
+ *         schema:
+ *           type: string
+ *         description: Cursor token for pagination
+ *     responses:
+ *       200:
+ *         description: List of user's closed mold reports
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     snapshot:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           case_name:
+ *                             type: string
+ *                           date_observed:
+ *                             type: string
+ *                             format: date-time
+ *                           assigned_mycologist_id:
+ *                             type: string
+ *                             nullable: true
+ *                           host:
+ *                             type: string
+ *                           location:
+ *                             type: string
+ *                           status:
+ *                             type: string
+ *                             enum: [closed, rejected]
+ *                     nextPageToken:
+ *                       type: string
+ *                       nullable: true
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Failed to retrieve mold reports
+ *       500:
+ *         description: Server error
+ */
+export const getClosedMoldReportsByUser = async (req: Request, res: Response) => {
+  const limit: number = parseInt(req.query.limit as string) || 10;
+  const pageToken: string | undefined = req.query.pageToken as
+    | string
+    | undefined;
+  const uid: string | undefined = req.user?.id;
+  try {
+    if (!uid) return sendError(res, "Unauthorized", 401);
+    // Prevent caching by Authorization header - critical for user-specific data
+    res.setHeader(
+      "Cache-Control",
+      "no-store, no-cache, must-revalidate, max-age=0, private"
+    );
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+    res.setHeader("Vary", "Authorization");
+    const result: PaginatedResult<Omit<MoldReport, "user_id">[]> | null =
+      await retrieveAllMoldReportsByUser(uid, limit, true, pageToken);
     if (!result) return sendError(res, "Failed to retrieve mold reports", 404);
     return sendSuccess(res, result);
   } catch (error) {
@@ -896,6 +998,24 @@ export const assignReport = async (req: Request, res: Response) => {
       status: (details.status as any) || "in progress",
     });
     if (!updated) return sendError(res, "Failed to assign mycologist", 400);
+
+    // Auto-create a MoldCase linked to this report if one doesn't exist yet.
+    // This ensures GET /mold-case/by-report/:id works as soon as a mycologist is assigned.
+    const existingCase = await retrieveMoldCaseByReportId(id);
+    if (!existingCase) {
+      await addMoldCaseToFirestore({
+        mold_report_id: id,
+        mycologist_id: details.assigned_mycologist_id,
+        name: updated.case_name,
+        user_id: updated.user_id,
+        priority: "low",
+        start_date: Timestamp.now() as any,
+        end_date: null as any,
+        is_archived: false,
+      });
+      devLog(`[assignReport] Auto-created MoldCase for report=${id}`);
+    }
+
     return sendSuccess(res, updated);
   } catch (error) {
     devLog(error);
