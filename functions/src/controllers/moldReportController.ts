@@ -1141,7 +1141,7 @@ export const assignReport = async (req: Request, res: Response) => {
     // This ensures GET /mold-case/by-report/:id works as soon as a mycologist is assigned.
     const existingCase = await retrieveMoldCaseByReportId(id);
     if (!existingCase) {
-      const createdCase = await addMoldCaseToFirestore({
+      await addMoldCaseToFirestore({
         mold_report_id: id,
         mycologist_id: details.assigned_mycologist_id,
         name: updated.case_name,

@@ -259,7 +259,6 @@ const MOLD_REPORT_SEED: Array<{
 export const seedMoldReports = async (farmerUid: string, mycologistUid?: string) => {
   const db = getFirestore(firebase);
   const reportsCollection = getCollectionName(FirestoreCollection.MOLD_REPORTS);
-  const casesCollection = getCollectionName(FirestoreCollection.MOLD_CASES);
 
   console.log("\n🌾 Seeding mold reports...\n");
 
@@ -275,7 +274,6 @@ export const seedMoldReports = async (farmerUid: string, mycologistUid?: string)
 
       // Determine whether this status should have an assigned mycologist
       const statusesRequiringAssignment = ["in progress", "resolved", "closed"];
-      const statusesWithoutAssignment = ["pending", "rejected"];
 
       const shouldAssign = statusesRequiringAssignment.includes(report.status);
       const assignedMycologistId = shouldAssign ? (mycologistUid ?? null) : null;
