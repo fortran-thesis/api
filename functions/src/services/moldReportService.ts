@@ -430,8 +430,46 @@ export const retrieveAssignedMoldReports = async (
     if (!docs) throw new Error("No mold reports found.");
     const raw = queryToJson<MoldReport>(docs.snapshot);
 
+    // Batch-fetch all Auth users + mold cases upfront instead of N+1 per report
+    const uniqueUserIds = [...new Set(raw.map((r) => r.user_id).filter(Boolean))];
+    const reportIds = raw.map((r: any) => r.id).filter(Boolean);
+
+    const [authUsersMap, moldCasesMap] = await Promise.all([
+      getAuthUsersByIds(uniqueUserIds),
+      batchRetrieveMoldCasesByReportIds(reportIds),
+    ]);
+
+    // Enrich each report using pre-fetched data (no additional DB calls)
+    const enriched = raw.map((r) => {
+      const nr = normalizeDateObserved(r) as unknown as MoldReport & any;
+
+      // Use pre-fetched auth user
+      const authUser = authUsersMap.get(nr.user_id);
+      if (authUser) {
+        nr.reporter = {
+          id: authUser.id,
+          name:
+            authUser.details.displayName ||
+            authUser.user.first_name + " " + authUser.user.last_name,
+        };
+      }
+
+      // Use pre-fetched mold case
+      const moldCase = moldCasesMap.get(nr.id);
+      if (moldCase) {
+        nr.mold_case = {
+          priority: moldCase.priority,
+        };
+      }
+
+      // case_details now live in subcollection — omit from list responses
+      delete nr.case_details;
+
+      return nr as MoldReport;
+    });
+
     const response = {
-      snapshot: raw,
+      snapshot: enriched,
       nextPageToken: docs.nextPageToken,
     };
 
