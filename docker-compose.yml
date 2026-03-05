@@ -17,6 +17,7 @@ services:
       - REDIS_PORT=6379
       - USE_MAILHOG=true
       - PRETTY_LOGS=true
+      - CHOKIDAR_USEPOLLING=true
       # Point signInWithPassword to the Auth emulator so tokens have aud=thesis-dev-project
       - THESIS_FIREBASE_CLIENT_API=http://firebase-emulator:9099/identitytoolkit.googleapis.com/v1/accounts
       - MAIN_PROJECT_API_KEY=fake-dev-key

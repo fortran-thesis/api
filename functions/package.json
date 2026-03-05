@@ -6,7 +6,7 @@
     "type-check": "tsc --noEmit",
     "build": "tsc && xcopy /E /I /Y src\\configs\\*.json lib\\configs\\",
     "build:linux": "tsc && cp src/configs/firebase-config.json lib/configs/",
-    "local-dev": "ts-node-dev --respawn --transpile-only src/local.ts",
+    "local-dev": "ts-node-dev --respawn --transpile-only --poll src/local.ts",
     "emulator-dev": "npm run build && firebase emulators:start",
     "build:watch": "tsc --watch",
     "serve": "npm run build && firebase emulators:start --only functions",
@@ -17,7 +17,7 @@
     "test:integration": "dotenv -e .env.test -- jest --config jest.integration.config.js --runInBand",
     "test:integration:emulator": "firebase emulators:exec --only auth,firestore,storage --project thesis-dev-project \"npm run test:integration\"",
     "test-dev": "npm run local-dev && jest",
-    "seed": "ts-node-dev --transpile-only src/scripts/seed.ts",
+    "seed": "ts-node-dev --transpile-only --poll src/scripts/seed.ts",
     "seed:build": "npm run build && node lib/scripts/seed.js",
     "deploy": "firebase deploy --only functions",
     "logs": "firebase functions:log"
