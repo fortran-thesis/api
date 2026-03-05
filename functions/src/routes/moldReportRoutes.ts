@@ -20,6 +20,8 @@ import {
   createMoldReport,
   getAllMoldReports,
   getAllClosedMoldReports,
+  getAggregatedClosedMoldReports,
+  getAggregatedRejectedMoldReports,
   getUnassignedMoldReports,
   getMoldReportById,
   patchMoldReport,
@@ -208,6 +210,25 @@ router.get(
   verifyUser(),
   async (req: Request, res: Response) => {
     await getMoldCasePriorityBreakdownController(req, res);
+  }
+);
+
+// Aggregate endpoints for dashboards and analytics
+router.get(
+  "/aggregate/closed",
+  verifyUser(Role.ADMIN),
+  validateQuery(PaginationQuerySchema),
+  async (req: Request, res: Response) => {
+    await getAggregatedClosedMoldReports(req, res);
+  }
+);
+
+router.get(
+  "/aggregate/rejected",
+  verifyUser(Role.ADMIN),
+  validateQuery(PaginationQuerySchema),
+  async (req: Request, res: Response) => {
+    await getAggregatedRejectedMoldReports(req, res);
   }
 );
 

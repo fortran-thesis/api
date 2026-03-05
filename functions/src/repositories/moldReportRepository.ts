@@ -24,23 +24,30 @@ export const findMoldReportById = async (id: string) =>
 export const findAllMoldReports = async (
   limit: number,
   token?: string,
-  isArchived = false
+  statusFilter: "all" | "open" | "closed" | "rejected" = "open"
 ): Promise<{
   snapshot: FirebaseFirestore.QuerySnapshot;
   nextPageToken: string | null;
 } | null> => {
   try {
-    // Backward-compatible param name: isArchived=true means closed/rejected reports
-    const queryModifier = (q: FirebaseFirestore.Query) =>
-      isArchived ?
-        q.where("status", "in", CLOSED_STATUSES) :
-        q.where("status", "not-in", CLOSED_STATUSES);
+    const queryModifier = (q: FirebaseFirestore.Query) => {
+      switch (statusFilter) {
+        case "closed":
+          return q.where("status", "==", "closed");
+        case "rejected":
+          return q.where("status", "==", "rejected");
+        case "all":
+          return q; // No status filter
+        case "open":
+        default:
+          return q.where("status", "not-in", CLOSED_STATUSES);
+      }
+    };
 
     const paged = await getPaginatedDocuments(
       collection,
       limit,
       token,
-      // "status" must be first because not-in is an inequality filter
       ["status", "metadata.created_at", FieldPath.documentId()],
       {queryModifier}
     );
@@ -50,6 +57,26 @@ export const findAllMoldReports = async (
     devLog(err);
     return null;
   }
+};
+
+export const findAllClosedMoldReports = async (
+  limit: number,
+  token?: string
+): Promise<{
+  snapshot: FirebaseFirestore.QuerySnapshot;
+  nextPageToken: string | null;
+} | null> => {
+  return findAllMoldReports(limit, token, "closed");
+};
+
+export const findAllRejectedMoldReports = async (
+  limit: number,
+  token?: string
+): Promise<{
+  snapshot: FirebaseFirestore.QuerySnapshot;
+  nextPageToken: string | null;
+} | null> => {
+  return findAllMoldReports(limit, token, "rejected");
 };
 export const findAllMoldReportsByUser = async (
   uid: string,
@@ -151,9 +178,6 @@ export const deleteMoldReport = async (id: string) =>
 export const softDeleteMoldReport = async (id: string) =>
   updateDocument(collection, id, {
     status: "closed",
-    metadata: {
-      deleted_at: Timestamp.now(),
-    },
   } as any);
 
 export const findMoldReportsBySearch = async (

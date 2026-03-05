@@ -443,8 +443,9 @@ export const getAllMoldReports = async (req: Request, res: Response) => {
     | string
     | undefined;
   try {
+    // Include all reports (open, closed, and rejected)
     const result: PaginatedResult<MoldReport[]> | null =
-      await retrieveAllMoldReports(limit, false, pageToken);
+      await retrieveAllMoldReports(limit, false, pageToken); // false = include all (backward compat)
     if (!result) return sendError(res, "Failed to retrieve mold reports", 404);
     return sendSuccess(res, result);
   } catch (error) {
@@ -714,7 +715,144 @@ export const getAllArchivedMoldReports = getAllClosedMoldReports;
 
 /**
  * @swagger
- * /api/v1/mold-report/unassigned:
+ * /api/v1/mold-reports/aggregate/closed:
+ *   get:
+ *     summary: Get aggregated closed mold reports (future implementation)
+ *     tags: [MoldReport]
+ *     security:
+ *       - bearerAuth: []
+ *       - cookieAuth: []
+ *     description: Retrieve all closed mold reports with aggregated statistics. Requires admin role. Used for dashboard boxes and analytics.
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         description: Number of items per page (default 10)
+ *       - in: query
+ *         name: pageToken
+ *         schema:
+ *           type: string
+ *         description: Cursor token for pagination
+ *     responses:
+ *       200:
+ *         description: List of closed mold reports with aggregate data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     snapshot:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     nextPageToken:
+ *                       type: string
+ *                       nullable: true
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Failed to retrieve mold reports
+ *       500:
+ *         description: Server error
+ */
+export const getAggregatedClosedMoldReports = async (
+  req: Request,
+  res: Response
+) => {
+  const limit: number = parseInt(req.query.limit as string) || 10;
+  const pageToken: string | undefined = req.query.pageToken as
+    | string
+    | undefined;
+  try {
+    const result: PaginatedResult<MoldReport[]> | null =
+      await retrieveAllMoldReports(limit, true, pageToken); // true = closed reports
+    if (!result) return sendError(res, "Failed to retrieve mold reports", 404);
+    return sendSuccess(res, result);
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
+/**
+ * @swagger
+ * /api/v1/mold-reports/aggregate/rejected:
+ *   get:
+ *     summary: Get aggregated rejected mold reports (future implementation)
+ *     tags: [MoldReport]
+ *     security:
+ *       - bearerAuth: []
+ *       - cookieAuth: []
+ *     description: Retrieve all rejected mold reports with aggregated statistics. Requires admin role. Used for dashboard boxes and analytics.
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         description: Number of items per page (default 10)
+ *       - in: query
+ *         name: pageToken
+ *         schema:
+ *           type: string
+ *         description: Cursor token for pagination
+ *     responses:
+ *       200:
+ *         description: List of rejected mold reports with aggregate data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     snapshot:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     nextPageToken:
+ *                       type: string
+ *                       nullable: true
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Failed to retrieve mold reports
+ *       500:
+ *         description: Server error
+ */
+export const getAggregatedRejectedMoldReports = async (
+  req: Request,
+  res: Response
+) => {
+  const limit: number = parseInt(req.query.limit as string) || 10;
+  const pageToken: string | undefined = req.query.pageToken as
+    | string
+    | undefined;
+  try {
+    // TODO: Implement aggregated rejected reports logic with statistics
+    // For now, using the standard rejected report retrieval
+    // Future: Add aggregation logic for dashboard boxes
+    const result: PaginatedResult<MoldReport[]> | null =
+      await retrieveAllMoldReports(limit, true, pageToken); // true = closed/rejected reports
+    if (!result) return sendError(res, "Failed to retrieve mold reports", 404);
+    
+    // TODO: Apply filtering for rejected status only
+    // TODO: Add aggregated metrics (count by date, location, host, etc.)
+    
+    return sendSuccess(res, result);
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
+/**
+ * @swagger
+ * /api/v1/mold-reports/unassigned:
  *   get:
  *     summary: Get unassigned mold reports
  *     tags: [MoldReport]
@@ -990,7 +1128,7 @@ export const postCaseDetail = async (req: Request, res: Response) => {
 export const assignReport = async (req: Request, res: Response) => {
   try {
     const id: string = req.params.id;
-    const details: { assigned_mycologist_id: string; status?: string } =
+    const details: { assigned_mycologist_id: string; status?: string; priority?: string } =
       req.body;
     const updated = await updateMoldReportInFirestore(id, {
       assigned_mycologist_id: details.assigned_mycologist_id,
@@ -1003,12 +1141,12 @@ export const assignReport = async (req: Request, res: Response) => {
     // This ensures GET /mold-case/by-report/:id works as soon as a mycologist is assigned.
     const existingCase = await retrieveMoldCaseByReportId(id);
     if (!existingCase) {
-      await addMoldCaseToFirestore({
+      const createdCase = await addMoldCaseToFirestore({
         mold_report_id: id,
         mycologist_id: details.assigned_mycologist_id,
         name: updated.case_name,
         user_id: updated.user_id,
-        priority: "low",
+        priority: (details.priority as "low" | "medium" | "high") ?? "low",
         start_date: Timestamp.now() as any,
         end_date: null as any,
         is_archived: false,
