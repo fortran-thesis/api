@@ -4,6 +4,7 @@ import {firebase} from "../configs/firebase";
 import {Role} from "../types/enums";
 import {devLog} from "../utils/dev";
 import {FirestoreCollection, FirestoreSubcollection, getCollectionName} from "../types/models/firestoreCollections";
+import { addMoldCaseToFirestore } from "../services/moldCaseService";
 
 const SEED_USERS = [
   {
@@ -255,13 +256,15 @@ const MOLD_REPORT_SEED: Array<{
   },
 ];
 
-export const seedMoldReports = async (farmerUid: string) => {
+export const seedMoldReports = async (farmerUid: string, mycologistUid?: string) => {
   const db = getFirestore(firebase);
   const reportsCollection = getCollectionName(FirestoreCollection.MOLD_REPORTS);
+  const casesCollection = getCollectionName(FirestoreCollection.MOLD_CASES);
 
   console.log("\n🌾 Seeding mold reports...\n");
 
-  for (const report of MOLD_REPORT_SEED) {
+  for (let i = 0; i < MOLD_REPORT_SEED.length; i++) {
+    const report = MOLD_REPORT_SEED[i];
     try {
       const docRef = db.collection(reportsCollection).doc();
 
@@ -269,11 +272,20 @@ export const seedMoldReports = async (farmerUid: string) => {
       // that moldReportService.addMoldReportToFirestore writes to Firestore.
       // case_details is intentionally excluded from the parent document and
       // written to the mold_reports/{id}/case_details subcollection instead.
-      const reportData = {
+
+      // Determine whether this status should have an assigned mycologist
+      const statusesRequiringAssignment = ["in progress", "resolved", "closed"];
+      const statusesWithoutAssignment = ["pending", "rejected"];
+
+      const shouldAssign = statusesRequiringAssignment.includes(report.status);
+      const assignedMycologistId = shouldAssign ? (mycologistUid ?? null) : null;
+
+      // Do NOT write priority on the report document (priority belongs to MoldCase)
+      const reportData: any = {
         case_name: report.case_name,
         date_observed: report.date_observed,
         user_id: farmerUid,
-        assigned_mycologist_id: null,
+        assigned_mycologist_id: assignedMycologistId,
         host: report.host,
         location: report.location,
         status: report.status,
@@ -298,6 +310,30 @@ export const seedMoldReports = async (farmerUid: string) => {
         .collection(FirestoreSubcollection.CASE_DETAILS)
         .add(caseDetailData);
 
+      // If this report should have an assigned mycologist, create a MoldCase.
+      // Priority is only stored on the MoldCase. Use a deterministic default
+      // (no randomness) — set to "medium" unless a different rule is desired.
+      if (assignedMycologistId) {
+        try {
+          const createdCase = await addMoldCaseToFirestore({
+            mold_report_id: docRef.id,
+            mycologist_id: assignedMycologistId,
+            name: report.case_name,
+            user_id: farmerUid,
+            priority: "medium",
+            start_date: Timestamp.now() as any,
+            end_date: null as any,
+            is_archived: false,
+          });
+          if (createdCase) {
+            console.log(`  📋 Created MoldCase for report: ${report.case_name}`);
+          } else {
+            console.warn(`  ⚠️  MoldCase returned null for report: ${report.case_name}`);
+          }
+        } catch (e) {
+          console.error(`  ❌ Failed to create MoldCase for report ${report.case_name}:`, e);
+        }
+      }
       console.log(`✅ Created mold report: ${report.case_name}`);
     } catch (err) {
       console.error(`❌ Failed to create mold report "${report.case_name}":`, err);
@@ -632,9 +668,10 @@ if (require.main === module) {
     .then(async (users) => {
       const farmer = users.find((u) => u.role === Role.USER);
       const admin = users.find((u) => u.role === Role.ADMIN);
+      const mycologist = users.find((u) => u.role === Role.CURATOR);
 
       if (farmer) {
-        await seedMoldReports(farmer.uid);
+        await seedMoldReports(farmer.uid, mycologist?.uid);
       } else {
         console.warn("⚠️  No farmer user found — skipping mold reports seed.");
       }

@@ -19,6 +19,7 @@ export const MoldReportSchema = z.object({
   case_name: z.string({required_error: "Case name is required."}).min(1, {message: "Case name is required."}),
   date_observed: zTimestamp,
   user_id: z.string().optional(), // ✅ Optional - set from authenticated user in controller
+  priority: z.enum(["low", "medium", "high"]).optional(),
   host: z.string({required_error: "Host is required."}).min(1, {message: "Host is required."}),
   location: z.string({required_error: "Location is required."}).min(1, {message: "Location is required."}),
   description: z.string({required_error: "Description is required."}).min(1, {message: "Description is required."}),

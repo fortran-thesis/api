@@ -64,7 +64,9 @@ export const transformToSignedUrl = async (
       parsed.bucketName
     );
     if (signedUrl) {
-      signedUrlCache.set(cacheKey, signedUrl);
+      // Cache this signed URL with a TTL that matches the signed URL expiry
+      // so cache entries don't outlive the URL or linger much longer.
+      signedUrlCache.set(cacheKey, signedUrl, { ttl: expiresInSeconds * 1000 });
       return signedUrl;
     }
     // Signed URL generation returned null (file not found)
