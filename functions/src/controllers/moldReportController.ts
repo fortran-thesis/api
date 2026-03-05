@@ -839,10 +839,10 @@ export const getAggregatedRejectedMoldReports = async (
     const result: PaginatedResult<MoldReport[]> | null =
       await retrieveAllMoldReports(limit, true, pageToken); // true = closed/rejected reports
     if (!result) return sendError(res, "Failed to retrieve mold reports", 404);
-    
+
     // TODO: Apply filtering for rejected status only
     // TODO: Add aggregated metrics (count by date, location, host, etc.)
-    
+
     return sendSuccess(res, result);
   } catch (error) {
     devLog(error);

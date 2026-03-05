@@ -5,9 +5,9 @@ export const corsOptions = {
   // without an `Origin` header (e.g. Postman desktop/CLI). This keeps
   // browser restrictions intact while permitting Postman testing.
   origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-    const allowed = envOptions.isProd
-      ? ["https://moldify1987-4159580.postman.co", "https://moldify.vercel.app"]
-      : ["http://localhost:3000", "https://moldify1987-4159580.postman.co", "https://moldify.vercel.app"];
+    const allowed = envOptions.isProd ?
+      ["https://moldify1987-4159580.postman.co", "https://moldify.vercel.app"] :
+      ["http://localhost:3000", "https://moldify1987-4159580.postman.co", "https://moldify.vercel.app"];
 
     // No Origin header (Postman desktop, curl, server-to-server) — allow
     if (!origin) return callback(null, true);

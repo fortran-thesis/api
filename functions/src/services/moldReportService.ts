@@ -676,7 +676,7 @@ export const getAssignedReportsCount = async (
   }
 };
 
-/// @deprecated
+// @deprecated
 export const searchAndFilterMoldReports = async (
   searchQuery: string | undefined,
   status: string | undefined,

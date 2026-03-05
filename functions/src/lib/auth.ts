@@ -185,8 +185,8 @@ export const getAuthUserNamesByIds = async (
   for (const uid of uids) {
     const cached = authUserCache.get(uid);
     if (cached) {
-      const display = cached.details?.displayName || `${cached.user?.first_name || ''} ${cached.user?.last_name || ''}`.trim();
-      names.set(uid, display || '');
+      const display = cached.details?.displayName || `${cached.user?.first_name || ""} ${cached.user?.last_name || ""}`.trim();
+      names.set(uid, display || "");
     } else {
       missing.push(uid);
     }
@@ -199,8 +199,8 @@ export const getAuthUserNamesByIds = async (
   for (const uid of missing) {
     const user = fetched.get(uid);
     if (user) {
-      const display = user.details?.displayName || `${user.user?.first_name || ''} ${user.user?.last_name || ''}`.trim();
-      names.set(uid, display || '');
+      const display = user.details?.displayName || `${user.user?.first_name || ""} ${user.user?.last_name || ""}`.trim();
+      names.set(uid, display || "");
       continue;
     }
 
@@ -208,8 +208,8 @@ export const getAuthUserNamesByIds = async (
     try {
       const single = await getAuthUserById(uid);
       if (single) {
-        const display = single.details?.displayName || `${single.user?.first_name || ''} ${single.user?.last_name || ''}`.trim();
-        names.set(uid, display || '');
+        const display = single.details?.displayName || `${single.user?.first_name || ""} ${single.user?.last_name || ""}`.trim();
+        names.set(uid, display || "");
         continue;
       }
     } catch (e) {
@@ -217,7 +217,7 @@ export const getAuthUserNamesByIds = async (
     }
 
     // Final fallback: empty string (caller may treat as unknown)
-    names.set(uid, '');
+    names.set(uid, "");
   }
 
   return names;

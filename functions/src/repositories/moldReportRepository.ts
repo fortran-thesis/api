@@ -32,15 +32,15 @@ export const findAllMoldReports = async (
   try {
     const queryModifier = (q: FirebaseFirestore.Query) => {
       switch (statusFilter) {
-        case "closed":
-          return q.where("status", "==", "closed");
-        case "rejected":
-          return q.where("status", "==", "rejected");
-        case "all":
-          return q; // No status filter
-        case "open":
-        default:
-          return q.where("status", "not-in", CLOSED_STATUSES);
+      case "closed":
+        return q.where("status", "==", "closed");
+      case "rejected":
+        return q.where("status", "==", "rejected");
+      case "all":
+        return q; // No status filter
+      case "open":
+      default:
+        return q.where("status", "not-in", CLOSED_STATUSES);
       }
     };
 
