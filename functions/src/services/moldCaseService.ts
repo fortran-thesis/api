@@ -30,6 +30,10 @@ import {
 import {CultivationLog, MoldCase, PaginatedResult, WithId, WithMetadata} from "../types/types";
 import {transformToSignedUrl} from "../utils/storageTransform";
 import {cacheItem, getCachedItem, cacheList, getCachedList} from "../utils/cacheManager";
+// Cache TTL for this service (in seconds) — keep signed URLs consistent with cached responses
+const MOLD_CASE_SERVICE_TTL_SECONDS = 300;
+import {getDb} from "../lib/firestore";
+import {getCollectionName, FirestoreCollection} from "../types/models/firestoreCollections";
 import {getRoleCounts, getDisabledCounts} from "./userService";
 import {getMoldReportStatusCounts} from "./moldReportService";
 import {getAuthUserById} from "../lib/auth";
@@ -40,7 +44,7 @@ const transformMoldCaseImages = async (moldCase: MoldCase): Promise<MoldCase> =>
 
   // Transform photo_url if present
   if (transformed.photo_url) {
-    transformed.photo_url = await transformToSignedUrl(transformed.photo_url);
+    transformed.photo_url = await transformToSignedUrl(transformed.photo_url, MOLD_CASE_SERVICE_TTL_SECONDS);
   }
 
   return transformed;
@@ -49,7 +53,7 @@ const transformMoldCaseImages = async (moldCase: MoldCase): Promise<MoldCase> =>
 // Helper: transform a single cultivation log's image_url to a signed URL
 const transformLogImageUrl = async (log: WithId<CultivationLog>): Promise<WithId<CultivationLog>> => {
   if (log.image_url) {
-    log.image_url = await transformToSignedUrl(log.image_url) || log.image_url;
+    log.image_url = await transformToSignedUrl(log.image_url, MOLD_CASE_SERVICE_TTL_SECONDS) || log.image_url;
   }
   return log;
 };
@@ -175,7 +179,7 @@ export const retrieveAllMoldCasesByUser = async (
     };
 
     // Cache the results
-    await cacheList("mold-cases-all", response, cacheQuery, {ttl: 300});
+    await cacheList("mold-cases-all", response, cacheQuery, {ttl: MOLD_CASE_SERVICE_TTL_SECONDS});
 
     return response;
   } catch (error) {
@@ -246,7 +250,7 @@ export const retrieveAssignedMoldCases = async (
     };
 
     // Cache the results
-    await cacheList("mold-cases-assigned", response, cacheQuery, {ttl: 300});
+    await cacheList("mold-cases-assigned", response, cacheQuery, {ttl: MOLD_CASE_SERVICE_TTL_SECONDS});
 
     return response;
   } catch (error) {
@@ -413,10 +417,7 @@ export const batchRetrieveMoldCasesByReportIds = async (
       chunks.push(reportIds.slice(i, i + 30));
     }
 
-    const {getFirestore} = await import("firebase-admin/firestore");
-    const {firebase} = await import("../configs/firebase.js");
-    const db = getFirestore(firebase);
-    const {getCollectionName, FirestoreCollection} = await import("../types/models/firestoreCollections.js");
+    const db = getDb();
     const col = getCollectionName(FirestoreCollection.MOLD_CASES);
 
     const snapshots = await Promise.all(
@@ -722,7 +723,7 @@ export const getMoldCasesCountWithMetadata = async (): Promise<{
     if (!metadata) return null;
 
     // Cache the result for 5 minutes
-    await cacheItem("dashboard", cacheKey, metadata, {ttl: 300});
+    await cacheItem("dashboard", cacheKey, metadata, {ttl: MOLD_CASE_SERVICE_TTL_SECONDS});
 
     return metadata;
   } catch (error) {

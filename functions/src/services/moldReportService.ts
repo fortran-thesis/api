@@ -37,9 +37,12 @@ import {
   WithId,
   WithMetadata,
 } from "../types/types";
-import {getAuthUserById, getAuthUsersByIds} from "../lib/auth";
+import {getAuthUserById, getAuthUsersByIds, getAuthUserNamesByIds} from "../lib/auth";
 import {batchRetrieveMoldCasesByReportIds} from "./moldCaseService";
 import {transformToSignedUrl} from "../utils/storageTransform";
+
+// Cache TTL for this service (in seconds) — signed URLs should match cached responses
+const MOLD_REPORT_SERVICE_TTL_SECONDS = 300;
 
 // Helper: transform cover_photo arrays to signed URLs
 const transformCoverPhotos = async (
@@ -69,7 +72,7 @@ const transformCoverPhotos = async (
       const transformedPhotos = await Promise.all(
         detail.cover_photo.map(async (photoPath: string, photoIdx: number) => {
           devLog(`transformCoverPhotos[${idx}][${photoIdx}]: Transforming: ${photoPath}`);
-          const signedUrl = await transformToSignedUrl(photoPath);
+          const signedUrl = await transformToSignedUrl(photoPath, MOLD_REPORT_SERVICE_TTL_SECONDS);
           devLog(`transformCoverPhotos[${idx}][${photoIdx}]: Result: ${signedUrl ? "SUCCESS" : "FAILED"} - ${signedUrl}`);
           return signedUrl;
         })
@@ -179,10 +182,21 @@ export const retrieveAllMoldReports = async (
   isArchived: boolean,
   token?: string
 ): Promise<PaginatedResult<MoldReport[]> | null> => {
+  // Convert old boolean parameter to new statusFilter parameter
+  // isArchived=true means closed/archived, isArchived=false means open
+  const statusFilter: "all" | "open" | "closed" | "rejected" = isArchived ? "closed" : "all";
+  return retrieveAllMoldReportsByStatusFilter(limit, statusFilter, token);
+};
+
+export const retrieveAllMoldReportsByStatusFilter = async (
+  limit: number,
+  statusFilter: "all" | "open" | "closed" | "rejected" = "all",
+  token?: string
+): Promise<PaginatedResult<MoldReport[]> | null> => {
   try {
     // Build cache key (INCLUDE token for pagination)
     const cacheQuery = {
-      isArchived,
+      statusFilter,
       limit,
       token: token || null,
     };
@@ -190,22 +204,16 @@ export const retrieveAllMoldReports = async (
     // Try to get from cache
     const cached = await getCachedList<PaginatedResult<MoldReport[]>>("mold-reports-all", cacheQuery, {useCache: true});
     if (cached) {
-      devLog(`[CACHE] Hit all reports for isArchived=${isArchived}, limit=${limit}`);
+      devLog(`[CACHE] Hit all reports for statusFilter=${statusFilter}, limit=${limit}`);
       return cached;
     }
 
     const docs: PaginatedResult<QuerySnapshot> | null =
-      await findAllMoldReports(limit, token, isArchived);
+      await findAllMoldReports(limit, token, statusFilter);
     if (!docs) throw new Error("No mold reports found.");
-    devLog(`[DEBUG] retrieveAllMoldReports - raw snapshot size: ${docs.snapshot.size}`);
     const raw = queryToJson<MoldReport>(docs.snapshot);
-    devLog(`[DEBUG] retrieveAllMoldReports - parsed count: ${raw.length}`);
-    devLog(
-      "[DEBUG] retrieveAllMoldReports - report IDs:",
-      raw.map((r) => (r as any).id).join(", ")
-    );
 
-    // Batch-fetch all Auth users + mold cases upfront instead of N+1 per report
+    // Batch-fetch all Auth users and mold cases upfront
     const uniqueUserIds = [...new Set(raw.map((r) => r.user_id).filter(Boolean))];
     const reportIds = raw.map((r: any) => r.id).filter(Boolean);
 
@@ -230,12 +238,10 @@ export const retrieveAllMoldReports = async (
           };
         }
 
-        // Use pre-fetched mold case
+        // Embed mold_case priority at top level
         const moldCase = moldCasesMap.get(nr.id);
         if (moldCase) {
-          nr.mold_case = {
-            priority: moldCase.priority,
-          };
+          nr.priority = moldCase.priority;
         }
 
         // case_details now live in subcollection — omit from list responses
@@ -252,7 +258,7 @@ export const retrieveAllMoldReports = async (
     };
 
     // Cache the results
-    await cacheList("mold-reports-all", response, cacheQuery, {ttl: 300});
+    await cacheList("mold-reports-all", response, cacheQuery, {ttl: MOLD_REPORT_SERVICE_TTL_SECONDS});
 
     return response;
   } catch (error) {
@@ -300,7 +306,7 @@ export const retrieveAllMoldReportsByUser = async (
     };
 
     // Cache the results
-    await cacheList("mold-reports-user", response, cacheQuery, {ttl: 300});
+    await cacheList("mold-reports-user", response, cacheQuery, {ttl: MOLD_REPORT_SERVICE_TTL_SECONDS});
 
     return response;
   } catch (error) {
@@ -390,13 +396,36 @@ export const retrieveUnassignedMoldReports = async (
     if (!docs) throw new Error("No mold reports found.");
     const raw = queryToJson<MoldReport>(docs.snapshot);
 
+    // Batch-fetch only reporter names + mold cases to enrich list response (no N+1)
+    const uniqueUserIds = [...new Set(raw.map((r) => r.user_id).filter(Boolean))];
+    const nameMap = await getAuthUserNamesByIds(uniqueUserIds);
+
+    const enriched = raw.map((r) => {
+      const nr = normalizeDateObserved(r) as unknown as MoldReport & any;
+
+      const name = nameMap.get(nr.user_id);
+      if (name) {
+        nr.reporter = {
+          name,
+        };
+      }
+
+      // case_details now live in subcollection — omit from list responses
+      delete nr.case_details;
+
+      // Remove user identifier from unassigned list responses (only expose name)
+      delete nr.user_id;
+
+      return nr as MoldReport;
+    });
+
     const response = {
-      snapshot: raw,
+      snapshot: enriched,
       nextPageToken: docs.nextPageToken,
     };
 
     // Cache the results
-    await cacheList("mold-reports-unassigned", response, cacheQuery, {ttl: 300});
+    await cacheList("mold-reports-unassigned", response, cacheQuery, {ttl: MOLD_REPORT_SERVICE_TTL_SECONDS});
 
     return response;
   } catch (error) {
@@ -430,7 +459,7 @@ export const retrieveAssignedMoldReports = async (
     if (!docs) throw new Error("No mold reports found.");
     const raw = queryToJson<MoldReport>(docs.snapshot);
 
-    // Batch-fetch all Auth users + mold cases upfront instead of N+1 per report
+    // Batch-fetch all Auth users and mold cases upfront
     const uniqueUserIds = [...new Set(raw.map((r) => r.user_id).filter(Boolean))];
     const reportIds = raw.map((r: any) => r.id).filter(Boolean);
 
@@ -454,12 +483,10 @@ export const retrieveAssignedMoldReports = async (
         };
       }
 
-      // Use pre-fetched mold case
+      // Embed mold_case priority at top level
       const moldCase = moldCasesMap.get(nr.id);
       if (moldCase) {
-        nr.mold_case = {
-          priority: moldCase.priority,
-        };
+        nr.priority = moldCase.priority;
       }
 
       // case_details now live in subcollection — omit from list responses
@@ -474,7 +501,7 @@ export const retrieveAssignedMoldReports = async (
     };
 
     // Cache the results
-    await cacheList("mold-reports-assigned", response, cacheQuery, {ttl: 300});
+    await cacheList("mold-reports-assigned", response, cacheQuery, {ttl: MOLD_REPORT_SERVICE_TTL_SECONDS});
 
     return response;
   } catch (error) {
@@ -649,6 +676,7 @@ export const getAssignedReportsCount = async (
   }
 };
 
+/// @deprecated
 export const searchAndFilterMoldReports = async (
   searchQuery: string | undefined,
   status: string | undefined,
@@ -738,7 +766,7 @@ export const searchAndFilterMoldReports = async (
     // Then trim to limit to further reduce enrichment calls
     const toEnrich = filteredRaw.slice(0, limit);
 
-    // Batch-fetch all Auth users + mold cases upfront instead of N+1 per report
+    // Batch-fetch all Auth users and mold cases upfront
     const uniqueUserIds = [...new Set(toEnrich.map((r) => r.user_id).filter(Boolean))];
     const enrichReportIds = toEnrich.map((r: any) => r.id).filter(Boolean);
 
@@ -763,14 +791,10 @@ export const searchAndFilterMoldReports = async (
           };
         }
 
-        // Use pre-fetched mold case
+        // Embed mold_case priority at top level
         const moldCase = moldCasesMap.get(nr.id);
         if (moldCase) {
-          nr.mold_case = {
-            priority: moldCase.priority,
-          };
-        } else {
-          nr.mold_case = null;
+          nr.priority = moldCase.priority;
         }
 
         // case_details now live in subcollection — omit from list responses
@@ -792,7 +816,7 @@ export const searchAndFilterMoldReports = async (
     };
 
     // Cache the search results for 5 minutes
-    await cacheList("mold-reports-search", response, cacheQuery, {ttl: 300});
+    await cacheList("mold-reports-search", response, cacheQuery, {ttl: MOLD_REPORT_SERVICE_TTL_SECONDS});
 
     return response;
   } catch (error) {

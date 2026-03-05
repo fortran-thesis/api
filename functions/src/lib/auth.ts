@@ -13,9 +13,10 @@ const auth = getAuth(firebase);
 
 // In-memory LRU cache for auth user objects — avoids 5+ external calls per request
 // TTL of 5 minutes balances freshness with performance. Max 500 entries fits in memory.
+const AUTH_USER_CACHE_TTL_SECONDS = 5 * 60; // 5 minutes
 const authUserCache = new LRUCache<string, WithId<APIUser>>({
   max: 500,
-  ttl: 5 * 60 * 1000, // 5 minutes
+  ttl: AUTH_USER_CACHE_TTL_SECONDS * 1000,
 });
 
 /**
@@ -41,7 +42,7 @@ export const getAuthUserById = async (uid: string): Promise<WithId<APIUser> | nu
     }
     let finalPhotoUrl = "";
     if (user.photoURL) {
-      const signed = await transformToSignedUrl(user.photoURL);
+      const signed = await transformToSignedUrl(user.photoURL, AUTH_USER_CACHE_TTL_SECONDS);
       finalPhotoUrl = signed || user.photoURL;
     }
 
@@ -117,7 +118,7 @@ export const getAuthUsersByIds = async (
     const photoPromises = uncachedUids.map(async (uid) => {
       const authUser = authUsersMap.get(uid);
       if (authUser?.photoURL) {
-        return transformToSignedUrl(authUser.photoURL);
+        return transformToSignedUrl(authUser.photoURL, AUTH_USER_CACHE_TTL_SECONDS);
       }
       return null;
     });
@@ -168,6 +169,60 @@ export const getAuthUsersByIds = async (
   return result;
 };
 
+/**
+ * Batch-fetches only the display names for a list of UIDs.
+ * Returns a Map<uid, displayName> and falls back to concatenated first/last name.
+ * This helper uses the existing cached user objects when available and
+ * falls back to `getAuthUsersByIds` for missing entries, but returns only
+ * the minimal name string to callers.
+ */
+export const getAuthUserNamesByIds = async (
+  uids: string[],
+): Promise<Map<string, string>> => {
+  const names = new Map<string, string>();
+  const missing: string[] = [];
+
+  for (const uid of uids) {
+    const cached = authUserCache.get(uid);
+    if (cached) {
+      const display = cached.details?.displayName || `${cached.user?.first_name || ''} ${cached.user?.last_name || ''}`.trim();
+      names.set(uid, display || '');
+    } else {
+      missing.push(uid);
+    }
+  }
+
+  if (missing.length === 0) return names;
+
+  // Reuse the heavier batch fetch to populate cache and extract names.
+  const fetched = await getAuthUsersByIds(missing);
+  for (const uid of missing) {
+    const user = fetched.get(uid);
+    if (user) {
+      const display = user.details?.displayName || `${user.user?.first_name || ''} ${user.user?.last_name || ''}`.trim();
+      names.set(uid, display || '');
+      continue;
+    }
+
+    // Fallback: try single-user fetch to recover name if batch missed it
+    try {
+      const single = await getAuthUserById(uid);
+      if (single) {
+        const display = single.details?.displayName || `${single.user?.first_name || ''} ${single.user?.last_name || ''}`.trim();
+        names.set(uid, display || '');
+        continue;
+      }
+    } catch (e) {
+      devLog(e, `AUTH_NAME_FALLBACK_ERROR uid=${uid}`);
+    }
+
+    // Final fallback: empty string (caller may treat as unknown)
+    names.set(uid, '');
+  }
+
+  return names;
+};
+
 export const getAuthUserByEmail = async (email: string): Promise<WithId<APIUser> | null> => {
   try {
     const user = await auth.getUserByEmail(email);
@@ -184,7 +239,7 @@ export const getAuthUserByEmail = async (email: string): Promise<WithId<APIUser>
     const firestoreUser = firestoreUserDocs.data() as User;
     let finalPhotoUrl = "";
     if (user.photoURL) {
-      const signed = await transformToSignedUrl(user.photoURL);
+      const signed = await transformToSignedUrl(user.photoURL, AUTH_USER_CACHE_TTL_SECONDS);
       finalPhotoUrl = signed || user.photoURL;
     }
 
