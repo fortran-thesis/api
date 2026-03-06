@@ -16,6 +16,7 @@ import {
 } from "../repositories/flagReportRepository";
 import {FlagReportBase, PaginatedResult, WithMetadata} from "../types/types";
 import {getAuthUserById, getAuthUserNamesByIds} from "../lib/auth";
+import { retrieveMoldipediaById } from "./moldipediaService";
 
 export const addFlagReportToFirestore = async (
   details: FlagReportBase
@@ -64,9 +65,27 @@ export const retrieveAllFlagReports = async (
         r.reporter = {id: reporterId, name: namesMap.get(reporterId) || ""};
       }
 
+      // Populate a convenient top-level created_at from metadata.created_at for frontend
+      const metaCreated = r.metadata?.created_at;
+      if (!r.created_at && metaCreated) {
+        try {
+          if (typeof metaCreated === "object" && ("_seconds" in metaCreated || "seconds" in metaCreated)) {
+            const secs = (metaCreated._seconds ?? (metaCreated as any).seconds) as number;
+            r.created_at = new Date(secs * 1000).toISOString();
+          } else if (metaCreated && typeof (metaCreated as any).toDate === "function") {
+            r.created_at = (metaCreated as any).toDate().toISOString();
+          } else if (typeof metaCreated === "string") {
+            r.created_at = metaCreated;
+          }
+        } catch (e) {
+          devLog(e);
+        }
+      }
+
       // Resolve reported content display name when possible
       const contentId = r.content_id || r.contentId || r.reported_user_id;
-      const contentType = r.content_type || r.contentType || r.type;
+      const contentTypeRaw = r.content_type || r.contentType || r.type || "";
+      const contentType = contentTypeRaw.toString().toLowerCase();
       if (contentType === "user" && contentId) {
         try {
           const reportedUser = await getAuthUserById(contentId);
@@ -114,10 +133,27 @@ export const retrieveFlagReportById = async (id: string) => {
       }
     }
 
+    // Populate top-level created_at from metadata.created_at for frontend
+    const metaCreated = obj.metadata?.created_at;
+    if (!obj.created_at && metaCreated) {
+      try {
+        if (typeof metaCreated === "object" && ("_seconds" in metaCreated || "seconds" in metaCreated)) {
+          const secs = (metaCreated._seconds ?? (metaCreated as any).seconds) as number;
+          obj.created_at = new Date(secs * 1000).toISOString();
+        } else if (metaCreated && typeof (metaCreated as any).toDate === "function") {
+          obj.created_at = (metaCreated as any).toDate().toISOString();
+        } else if (typeof metaCreated === "string") {
+          obj.created_at = metaCreated;
+        }
+      } catch (e) {
+        devLog(e);
+      }
+    }
+
     // Resolve reported content name when content_type indicates a user
     const contentId = obj.content_id || obj.contentId || obj.reported_user_id;
-    const contentType = obj.content_type || obj.contentType || obj.type;
-    if (contentType === "user" && contentId) {
+    const contentType = (obj.content_type || obj.contentType || obj.type || "").toString();
+    if (contentType.toLowerCase() === "user" && contentId) {
       try {
         const reportedUser = await getAuthUserById(contentId);
         if (reportedUser) {
@@ -129,6 +165,19 @@ export const retrieveFlagReportById = async (id: string) => {
     }
 
     if (!obj.reported && contentId) obj.reported = {id: contentId, name: ""};
+
+    // If the flagged content is a moldipedia/wiki article, fetch its content (body, cover_photo, etc.)
+    const lcType = contentType.toLowerCase();
+    if (contentId && (lcType === "moldipedia" || lcType === "wiki-article" || lcType.includes("wiki"))) {
+      try {
+        const article = await retrieveMoldipediaById(contentId);
+        if (article) {
+          obj.content = article;
+        }
+      } catch (e) {
+        devLog(e);
+      }
+    }
 
     return obj;
   } catch (error) {
