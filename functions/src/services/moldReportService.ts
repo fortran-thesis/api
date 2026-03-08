@@ -38,7 +38,7 @@ import {
   WithMetadata,
 } from "../types/types";
 import {getAuthUserById, getAuthUsersByIds, getAuthUserNamesByIds} from "../lib/auth";
-import {batchRetrieveMoldCasesByReportIds} from "./moldCaseService";
+import {batchRetrieveMoldCasesByReportIds, retrieveMoldCaseByReportId} from "./moldCaseService";
 import {transformToSignedUrl} from "../utils/storageTransform";
 
 // Cache TTL for this service (in seconds) — signed URLs should match cached responses
@@ -293,15 +293,44 @@ export const retrieveAllMoldReportsByUser = async (
       await findAllMoldReportsByUser(uid, limit, isArchived, token);
     if (!docs) throw new Error("No mold reports found.");
     const raw = queryToJson<MoldReport>(docs.snapshot);
-    // Remove user_id from each report
-    // eslint-disable-next-line
-    const sanitized = raw.map(({user_id, ...rest}) => rest) as Omit<
-      MoldReport,
-      "user_id"
-    >[];
+
+    // Batch-fetch reporter info and mold cases to enrich list response
+    const uniqueUserIds = [...new Set(raw.map((r) => r.user_id).filter(Boolean))];
+    const reportIds = raw.map((r: any) => r.id).filter(Boolean);
+
+    const [authUsersMap, moldCasesMap] = await Promise.all([
+      getAuthUsersByIds(uniqueUserIds),
+      batchRetrieveMoldCasesByReportIds(reportIds),
+    ]);
+
+    const enriched = raw.map((r) => {
+      const nr = normalizeDateObserved(r) as unknown as MoldReport & any;
+
+      // Use pre-fetched auth user
+      const authUser = authUsersMap.get(nr.user_id);
+      if (authUser) {
+        nr.reporter = {
+          id: authUser.id,
+          name:
+            authUser.details.displayName ||
+            authUser.user.first_name + " " + authUser.user.last_name,
+        };
+      }
+
+      // Embed mold_case priority at top level if available
+      const moldCase = moldCasesMap.get(nr.id);
+      if (moldCase) {
+        nr.priority = moldCase.priority;
+      }
+
+      // case_details now live in subcollection — omit from list responses
+      delete nr.case_details;
+
+      return nr as Omit<MoldReport, "user_id">;
+    });
 
     const response = {
-      snapshot: sanitized,
+      snapshot: enriched,
       nextPageToken: docs.nextPageToken,
     };
 
@@ -362,6 +391,16 @@ export const retrieveMoldReportById = async (
       devLog(`retrieveMoldReportById: After transform case_details: ${JSON.stringify(nr.case_details)}`);
     } else {
       nr.case_details = [];
+    }
+
+    // Embed mold_case priority so clients have it on the detail view too
+    try {
+      const moldCase = await retrieveMoldCaseByReportId(id);
+      if (moldCase?.priority) {
+        nr.priority = moldCase.priority;
+      }
+    } catch (e) {
+      devLog(e, "ENRICH_REPORT_PRIORITY");
     }
 
     devLog("retrieveMoldReportById: ✅ Report retrieved successfully");

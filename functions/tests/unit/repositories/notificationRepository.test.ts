@@ -255,13 +255,19 @@ describe("notificationRepository (unit)", () => {
   // ══════════════════════════════════════════════════════════════════════════
 
   describe("countUnreadNotifications", () => {
-    it("should return the count from a Firestore aggregation query", async () => {
+    it("should return the count of non-deleted unread notifications", async () => {
+      const fakeDocs = [
+        {data: () => ({metadata: {deleted_at: null}})},        // counted
+        {data: () => ({metadata: {deleted_at: null}})},        // counted
+        {data: () => ({metadata: {}})},                        // counted (deleted_at undefined)
+        {data: () => ({metadata: {deleted_at: {seconds: 1}}})}, // excluded (soft-deleted)
+      ];
       const fakeWhere = jest.fn().mockReturnThis();
-      const fakeCount = {get: jest.fn().mockResolvedValue({data: () => ({count: 3})})};
+      const fakeGet = jest.fn().mockResolvedValue({docs: fakeDocs});
 
       mockCollection.mockReturnValue({
         where: fakeWhere,
-        count: jest.fn().mockReturnValue(fakeCount),
+        get: fakeGet,
       });
 
       const count = await notificationRepository.countUnreadNotifications("user1");
@@ -269,15 +275,16 @@ describe("notificationRepository (unit)", () => {
       expect(count).toBe(3);
       expect(fakeWhere).toHaveBeenCalledWith("recipient_id", "==", "user1");
       expect(fakeWhere).toHaveBeenCalledWith("is_read", "==", false);
+      expect(fakeGet).toHaveBeenCalled();
     });
 
     it("should return 0 if there are no unread notifications", async () => {
       const fakeWhere = jest.fn().mockReturnThis();
-      const fakeCount = {get: jest.fn().mockResolvedValue({data: () => ({count: 0})})};
+      const fakeGet = jest.fn().mockResolvedValue({docs: []});
 
       mockCollection.mockReturnValue({
         where: fakeWhere,
-        count: jest.fn().mockReturnValue(fakeCount),
+        get: fakeGet,
       });
 
       const count = await notificationRepository.countUnreadNotifications("user2");

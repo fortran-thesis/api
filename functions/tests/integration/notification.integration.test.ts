@@ -90,9 +90,9 @@ describe("Notification Integration Tests", () => {
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
-      expect(Array.isArray(res.body.data)).toBe(true);
+      expect(Array.isArray(res.body.data.snapshot)).toBe(true);
       // Should contain at least the 2 seeded notifications
-      expect(res.body.data.length).toBeGreaterThanOrEqual(2);
+      expect(res.body.data.snapshot.length).toBeGreaterThanOrEqual(2);
     });
 
     it("should filter by is_read=false", async () => {
@@ -105,7 +105,7 @@ describe("Notification Integration Tests", () => {
 
       expect(res.status).toBe(200);
       // All returned notifications should be unread
-      res.body.data.forEach((n: any) => {
+      res.body.data.snapshot.forEach((n: any) => {
         expect(n.is_read).toBe(false);
       });
     });
@@ -119,7 +119,7 @@ describe("Notification Integration Tests", () => {
         .expect("Content-Type", /json/);
 
       expect(res.status).toBe(200);
-      res.body.data.forEach((n: any) => {
+      res.body.data.snapshot.forEach((n: any) => {
         expect(n.type).toBe("mold_report_assigned");
       });
     });
@@ -134,7 +134,7 @@ describe("Notification Integration Tests", () => {
 
       expect(res.status).toBe(200);
       // otherFarmerUser has no seeded notifications
-      res.body.data.forEach((n: any) => {
+      res.body.data.snapshot.forEach((n: any) => {
         expect(n.recipient_id).toBe(otherFarmerUser.uid);
       });
     });

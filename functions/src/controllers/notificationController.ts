@@ -89,7 +89,7 @@ export const getNotifications = async (req: Request, res: Response) => {
     );
 
     if (!result) return defaultError(res);
-    return sendSuccess(res, result.snapshot);
+    return sendSuccess(res, result);
   } catch (error) {
     devLog(error, "getNotifications");
     return defaultError(res);

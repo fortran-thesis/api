@@ -21,10 +21,13 @@ services:
       # Point signInWithPassword to the Auth emulator so tokens have aud=thesis-dev-project
       - THESIS_FIREBASE_CLIENT_API=http://firebase-emulator:9099/identitytoolkit.googleapis.com/v1/accounts
       - MAIN_PROJECT_API_KEY=fake-dev-key
+      # Override .env.dev value — inside Docker, reach the model-api service by its name
+      - MODEL_LAMBDA_URL=http://model-api:8080
     depends_on:
       - firebase-emulator
       - redis
       - mailhog
+      - model-api
 
   redis:
     image: redis:7
@@ -46,6 +49,22 @@ services:
       - "8080:8080"   # Firestore
       - "9099:9099"   # Auth
       - "9199:9199"   # Storage
+
+  model-api:
+    build:
+      context: ../model/src/flask-api-app
+      dockerfile: Dockerfile.dev
+    ports:
+      - "8081:8080"   # Exposed as 8081 on host to avoid conflict with Firestore emulator on 8080
+    volumes:
+      - ../model/src/flask-api-app:/app
+      - ../model/src/flask-api-app/models:/app/models
+    env_file:
+      - ../model/src/flask-api-app/.env.dev
+    environment:
+      - FLASK_HOST=0.0.0.0
+      # Allow the Firebase Functions container (app) as the trusted browser origin for CORS
+      - FIREBASE_FUNCTION_ORIGIN=http://app:5001
 
   # Seed service: runs after emulators start to populate test data
   seed:

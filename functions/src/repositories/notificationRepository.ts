@@ -80,6 +80,8 @@ export const addBatchNotifications = async (
       ...notif,
       metadata: {
         created_at: Timestamp.now(),
+        updated_at: null,
+        deleted_at: null,
       },
     });
   }
@@ -97,14 +99,24 @@ export const countUnreadNotifications = async (
   recipientId: string
 ): Promise<number> => {
   const db = getDb();
+  // Use a full query + client-side filter because some historical documents
+  // may not include `metadata.deleted_at` (field missing). Firestore's
+  // `== null` comparison does not match missing fields, so aggregation
+  // via `.count()` would incorrectly omit those documents.
   const snap = await db
     .collection(collection)
     .where("recipient_id", "==", recipientId)
     .where("is_read", "==", false)
-    .where("metadata.deleted_at", "==", null)
-    .count()
     .get();
-  return snap.data().count;
+
+  // Count documents where `metadata.deleted_at` is either null or absent.
+  let count = 0;
+  for (const doc of snap.docs) {
+    const data: any = doc.data();
+    const deletedAt = data?.metadata?.deleted_at;
+    if (deletedAt === null || deletedAt === undefined) count += 1;
+  }
+  return count;
 };
 
 /**

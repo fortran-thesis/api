@@ -322,7 +322,7 @@ export const getUnreadCount = async (userId: string): Promise<number> => {
     return await countUnreadNotifications(userId);
   } catch (error) {
     devLog(error, "getUnreadCount");
-    return 0;
+    throw error;
   }
 };
 

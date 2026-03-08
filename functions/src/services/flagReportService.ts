@@ -100,20 +100,11 @@ export const retrieveAllFlagReports = async (
         try {
           const article = await retrieveMoldipediaById(contentId);
           if (article) {
-            // prefer article.title or name fields
-            const title = (article.title || article.name || article.content_title || "").toString();
-            r.reported = { id: contentId, name: title };
-            // attach content for frontend convenience
             r.content = article;
           }
         } catch (e) {
           devLog(e);
         }
-      }
-
-      // Fallback: ensure reported contains at least id when no name resolved
-      if (!r.reported && contentId) {
-        r.reported = {id: contentId, name: ""};
       }
 
       return r;
