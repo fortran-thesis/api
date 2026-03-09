@@ -23,6 +23,8 @@ export interface MoldReport {
   date_observed: Timestamp
   user_id: string;
   assigned_mycologist_id: string | null
+  reviewed_mycologist_id?: string | null
+  reviewed_at?: Timestamp | null
   /** @deprecated Moved to subcollection mold_reports/{id}/case_details — only present in API responses, not in Firestore parent doc */
   case_details?: Array<MoldReportDetails>
   host: string

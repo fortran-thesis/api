@@ -26,6 +26,8 @@ export const MoldSchema = z.object({
           description: z.string(),
         })
       ).optional(),
+      predicted_class_id: z.number().optional(),
+      predicted_class_name: z.string().optional(),
     }),
     prevention: z.object({
       physicalControl: z.string().optional(),

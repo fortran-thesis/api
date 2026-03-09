@@ -35,6 +35,7 @@ import {
   getClosedMoldReportsByUser,
   assignReport,
   rejectReport,
+  reviewReport,
   searchMoldReports,
   getMoldReportMonthlyTotalsController,
   getCombinedTotalCountsController,
@@ -159,6 +160,19 @@ router.patch(
   cacheInvalidate("mold-cases-assigned", "update"),
   async (req: Request, res: Response) => {
     await rejectReport(req, res);
+  }
+);
+
+router.patch(
+  "/:id/review",
+  verifyUser(Role.CURATOR),
+  validateParams(ReportIdSchema),
+  auditLog(AuditAction.UPDATE_MOLD_REPORT, (req) => `Reviewed report ${req.params.id}`),
+  cacheInvalidate("mold-reports", "update"),
+  cacheInvalidate("mold-cases-all", "update"),
+  cacheInvalidate("mold-cases-assigned", "update"),
+  async (req: Request, res: Response) => {
+    await reviewReport(req, res);
   }
 );
 

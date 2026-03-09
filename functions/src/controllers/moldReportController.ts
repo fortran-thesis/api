@@ -1245,6 +1245,39 @@ export const rejectReport = async (req: Request, res: Response) => {
 
 /**
  * @swagger
+ * /api/v1/mold-report/:id/review:
+ *   patch:
+ *     summary: Mark a mold report as reviewed by the authenticated mycologist
+ *     tags: [MoldReport]
+ *     security:
+ *       - bearerAuth: []
+ *       - cookieAuth: []
+ *     description: Records the mycologist who reviewed the report and the review timestamp.
+ */
+export const reviewReport = async (req: Request, res: Response) => {
+  try {
+    const id: string = req.params.id;
+    const actor = req.user;
+    if (!actor) return sendError(res, "Unauthorized", 401);
+
+    const reviewerId = actor.id;
+
+    const updated = await updateMoldReportInFirestore(id, {
+      reviewed_mycologist_id: reviewerId,
+      reviewed_at: Timestamp.now(),
+    });
+
+    if (!updated) return sendError(res, "Failed to mark report as reviewed", 400);
+
+    return sendSuccess(res, updated);
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
+/**
+ * @swagger
  * /api/v1/mold-report/assigned:
  *   get:
  *     summary: Get mold reports assigned to authenticated mycologist

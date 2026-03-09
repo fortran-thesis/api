@@ -12,6 +12,7 @@ import {
   findAllMolds,
   findMoldById,
   findMoldByName,
+  findMoldByPredictedClassName,
   softDeleteMold,
   updateMold,
 } from "../repositories/moldRepository";
@@ -115,6 +116,28 @@ export const retrieveMoldByName = async (
 
     // Cache using custom key
     if (result) await cacheItem(RESOURCE, `name:${name}`, result, {ttl: TTL});
+    return result;
+  } catch (error) {
+    devLog(error);
+    return null;
+  }
+};
+
+export const retrieveMoldByPredictedClassName = async (
+  predictedClassName: string
+): Promise<Mold | null> => {
+  try {
+    // Check cache using custom key (predicted class lookup)
+    const cached = await getCachedItem<Mold>(RESOURCE, `predicted_class:${predictedClassName}`);
+    if (cached) return cached;
+
+    const mold: QuerySnapshot | null = await findMoldByPredictedClassName(predictedClassName);
+    if (!mold) throw new Error("No mold found for predicted class.");
+    const molds = queryToJson<Mold>(mold);
+    const result = molds.length > 0 ? molds[0] : null;
+
+    // Cache using custom key
+    if (result) await cacheItem(RESOURCE, `predicted_class:${predictedClassName}`, result, {ttl: TTL});
     return result;
   } catch (error) {
     devLog(error);

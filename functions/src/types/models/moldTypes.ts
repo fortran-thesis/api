@@ -24,6 +24,8 @@ export interface MoldInfo {
     title: string;
     description: string;
   }>;
+  predicted_class_id?: number;
+  predicted_class_name?: string;
 }
 
 export interface MoldPrevention {

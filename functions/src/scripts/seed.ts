@@ -401,7 +401,7 @@ export const seedMoldipedia = async (authorUid: string) => {
 
 const MOLDS_SEED = [
   {
-    name: "Aspergillus",
+    name: "Aspergillus Flavi",
     mold_details: {
       info: {
         description:
@@ -431,6 +431,8 @@ const MOLDS_SEED = [
               "Aflatoxins produced by Aspergillus flavus and A. parasiticus pose serious food safety risks and can lead to trade rejections and significant economic losses for Filipino farmers, particularly in corn and peanut production.",
           },
         ],
+        predicted_class_id: 1,
+        predicted_class_name: "Aspergillus_section_Flavi",
       },
       prevention: {
         physicalControl:
@@ -443,6 +445,54 @@ const MOLDS_SEED = [
           "Apply biocontrol agents such as Bacillus subtilis or atoxigenic strains of Aspergillus flavus, which competitively exclude toxigenic strains in the field and during storage, significantly reducing aflatoxin levels.",
         chemicalControl:
           "Use registered fungicides such as tebuconazole or propiconazole as pre-harvest sprays. Treat stored grains with recommended fumigants under proper safety protocols and in compliance with local regulations.",
+      },
+    },
+  },
+  {
+    name: "Aspergillus Nigri",
+    mold_details: {
+      info: {
+        description:
+          "Aspergillus is a genus of molds commonly found in soil, decaying organic matter, and various agricultural settings. Several species are pathogenic to crops and post-harvest produce; the Nigri group (black aspergilli) includes species that affect fruits and stored products.",
+        taxonomy: {
+          kingdom: "Fungi",
+          phylum: "Ascomycota",
+          class: "Eurotiomycetes",
+          order: "Eurotiales",
+          family: "Aspergillaceae",
+          genus: "Aspergillus",
+        },
+        additional_info: [
+          {
+            title: "Symptoms",
+            description:
+              "Infected produce may show dark, powdery spore masses and rapid surface spoilage; black aspergilli often colonize damaged fruit and contribute to post-harvest losses.",
+          },
+          {
+            title: "Favorable Conditions",
+            description:
+              "Warm temperatures and high humidity with injury or bruising to produce favor infection by black aspergilli. Poor post-harvest handling increases risk.",
+          },
+          {
+            title: "Economic Impact",
+            description:
+              "Black aspergilli can cause significant post-harvest quality loss in fruits and vegetables, affecting marketability and shelf life.",
+          },
+        ],
+        predicted_class_id: 2,
+        predicted_class_name: "Aspergillus_section_Nigri",
+      },
+      prevention: {
+        physicalControl:
+          "Improve post-harvest handling and cooling to reduce surface colonization and spore germination.",
+        mechanicalControl:
+          "Sanitize containers and handling equipment; remove damaged fruit before storage to limit spread.",
+        culturalControl:
+          "Reduce harvest injuries and avoid long field exposure of produce; sort and pack carefully.",
+        biologicalControl:
+          "Research on biocontrol options for black aspergilli is ongoing; consider integrated post-harvest hygiene measures.",
+        chemicalControl:
+          "Use approved post-harvest treatments where applicable and in compliance with local regulations.",
       },
     },
   },
@@ -477,6 +527,8 @@ const MOLDS_SEED = [
               "Rhizopus soft rot is a major cause of post-harvest losses in sweet potato, strawberry, mango, and other crops in the Philippines, often leading to complete spoilage within days of harvest if not properly managed.",
           },
         ],
+        predicted_class_id: 5,
+        predicted_class_name: "Rhizopus_spp",
       },
       prevention: {
         physicalControl:
@@ -523,6 +575,8 @@ const MOLDS_SEED = [
               "Penicillium molds are among the most economically damaging post-harvest pathogens of citrus, apples, and stone fruits, causing significant financial losses in transport and retail chains across the Philippines and Southeast Asia.",
           },
         ],
+        predicted_class_id: 4,
+        predicted_class_name: "Penicillium_spp",
       },
       prevention: {
         physicalControl:
@@ -569,6 +623,8 @@ const MOLDS_SEED = [
               "Alternaria early blight is one of the most destructive foliar diseases of tomato and potato in the Philippines, causing yield losses of up to 50% in severe cases during the wet season without adequate management.",
           },
         ],
+        predicted_class_id: 0,
+        predicted_class_name: "Alternaria_spp",
       },
       prevention: {
         physicalControl:
@@ -615,6 +671,8 @@ const MOLDS_SEED = [
               "Fusarium wilt of banana caused by the TR4 strain poses a catastrophic risk to the Philippine banana export industry. Fusarium diseases across other crops collectively account for significant annual yield and income losses among smallholder farmers nationwide.",
           },
         ],
+        predicted_class_id: 3,
+        predicted_class_name: "Fusarium_spp",
       },
       prevention: {
         physicalControl:

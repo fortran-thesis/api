@@ -54,7 +54,7 @@ router.get(
 // ─── Archived list (before /:id to avoid param capture) ────────────────────────
 router.get(
   "/archive",
-  verifyUser(Role.CURATOR),
+  verifyUser(),
   validateQuery(SearchMoldipediaQuerySchema),
   async (req: Request, res: Response) => {
     await getAllArchivedMoldipedia(req, res);

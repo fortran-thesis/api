@@ -591,8 +591,19 @@ export const getMoldByName = async (req: Request, res: Response) => {
 export const patchMold = async (req: Request, res: Response) => {
   try {
     const id: string = req.params.id;
-    const details: Mold = req.body.details;
-    const mold = await updateMoldInFirestore(id, details);
+    const moldName: string | undefined = req.body.moldName;
+    const details: MoldDetails = req.body.details;
+
+    // Transform request shape { moldName, details } into Mold shape { name, mold_details }
+    const moldPayload: Partial<Mold> = {};
+    if (moldName) {
+      moldPayload.name = moldName;
+    }
+    if (details) {
+      moldPayload.mold_details = details;
+    }
+
+    const mold = await updateMoldInFirestore(id, moldPayload);
     if (!mold) return sendError(res, "Failed to update mold", 404);
     return sendSuccess(res, "Successfully updated mold.");
   } catch (error) {

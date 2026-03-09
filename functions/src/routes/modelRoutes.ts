@@ -8,7 +8,7 @@
 import {Request, Response, Router} from "express";
 import {verifyUser} from "../middlewares/verification";
 import {upload} from "../middlewares/upload";
-import {predictJson, predictMultipart} from "../controllers/modelController";
+import {predictJson, predictMultipart, predictWithDetails} from "../controllers/modelController";
 
 const router = Router();
 
@@ -38,5 +38,17 @@ router.post(
     await predictMultipart(req, res);
   }
 );
-
+/**
+ * Combined prediction with mold details – POST /api/v1/model/predict-with-details
+ * Body: { image_b64: string, characteristics?: Record<string, number> }
+ * Query: ?explain=true (optional)
+ * Returns: { fusion: {...}, mold_detail: {...} }
+ */
+router.post(
+  "/predict-with-details",
+  verifyUser(),
+  async (req: Request, res: Response): Promise<void> => {
+    await predictWithDetails(req, res);
+  }
+);
 export default router;

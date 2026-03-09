@@ -436,7 +436,7 @@ describe("Notification Integration Tests", () => {
         .expect("Content-Type", /json/);
 
       expect(res.status).toBe(200);
-      expect(res.body.data.length).toBeLessThanOrEqual(1);
+      expect(res.body.data.snapshot.length).toBeLessThanOrEqual(1);
     });
 
     it("should return 400 when limit is missing", async () => {
