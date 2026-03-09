@@ -16,7 +16,7 @@ import {
 } from "../repositories/flagReportRepository";
 import {FlagReportBase, PaginatedResult, WithMetadata} from "../types/types";
 import {getAuthUserById, getAuthUserNamesByIds} from "../lib/auth";
-import { retrieveMoldipediaById } from "./moldipediaService";
+import {retrieveMoldipediaById} from "./moldipediaService";
 
 export const addFlagReportToFirestore = async (
   details: FlagReportBase
