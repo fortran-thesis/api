@@ -306,7 +306,7 @@ describe("moldController (unit)", () => {
       };
 
       mockReq.params = {id: moldId};
-      mockReq.body = {details: updateData};
+      mockReq.body = {moldName: updateData.name};
       mockMoldService.updateMoldInFirestore.mockResolvedValue(
         updatedMold as any
       );
@@ -328,7 +328,7 @@ describe("moldController (unit)", () => {
       const updateData = {name: "Updated Mold Name"};
 
       mockReq.params = {id: moldId};
-      mockReq.body = {details: updateData};
+      mockReq.body = {moldName: updateData.name};
       mockMoldService.updateMoldInFirestore.mockResolvedValue(null);
 
       await moldController.patchMold(mockReq as Request, mockRes as Response);
