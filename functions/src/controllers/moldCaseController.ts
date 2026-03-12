@@ -21,6 +21,9 @@ import {
 import {analyzeCultivationImage} from "../services/cultivationAnalysisService";
 import {uploadFile} from "../lib/storage";
 import {StorageFolder, generateStoragePath} from "../configs/storage";
+import {Timestamp} from "firebase-admin/firestore";
+import {retrieveMoldReportById, updateMoldReportInFirestore} from "../services/moldReportService";
+import {performMoldLookup} from "../services/lookupService";
 
 export const createMoldCase = async (req: Request, res: Response) => {
   /**
@@ -1092,6 +1095,49 @@ export const updateCultivationDetails = async (req: Request, res: Response) => {
     const details = req.body;
     const updated = await updateCultivationDetailsInCase(caseId, details);
     if (!updated) return sendError(res, "Failed to update cultivation details", 400);
+
+    // Re-run lookup in background if report has reported_* fields
+    const moldCase = await retrieveMoldCaseById(caseId);
+    if (moldCase && moldCase.mold_report_id) {
+      const moldReport = await retrieveMoldReportById(moldCase.mold_report_id);
+      if (moldReport) {
+        devLog(`[updateCultivationDetails] Re-running lookup for report ${moldCase.mold_report_id}`);
+        const reportedSymptoms = (moldReport as any).reported_symptoms || [];
+        const reportedSigns = (moldReport as any).reported_signs || [];
+        const reportedCharacteristics = (moldReport as any).reported_characteristics || [];
+
+        // Extract characteristics from cultivation details if available
+        let additionalCharacteristics: string[] = [];
+        if (details.in_vivo_details?.lesion_color) {
+          additionalCharacteristics.push(details.in_vivo_details.lesion_color);
+        }
+        if (details.in_vitro_details?.colony_color) {
+          additionalCharacteristics.push(details.in_vitro_details.colony_color);
+        }
+
+        const allCharacteristics = [...reportedCharacteristics, ...additionalCharacteristics];
+
+        // Run lookup in background
+        performMoldLookup(reportedSymptoms, reportedSigns, allCharacteristics)
+          .then(async (lookupResults) => {
+            try {
+              await updateMoldReportInFirestore(moldCase.mold_report_id, {
+                lookup_results: lookupResults.map((r) => ({
+                  ...r,
+                  timestamp: Timestamp.now(),
+                })),
+              });
+              devLog(`[updateCultivationDetails] ✅ Updated lookup results: ${lookupResults.length} matches`);
+            } catch (err) {
+              devLog(`[updateCultivationDetails] ⚠️ Failed to update lookup results: ${err}`);
+            }
+          })
+          .catch((err) => {
+            devLog(`[updateCultivationDetails] ❌ Lookup failed: ${err}`);
+          });
+      }
+    }
+
     return sendSuccess(res, updated);
   } catch (error) {
     devLog(error);
@@ -1788,6 +1834,127 @@ export const removeCultivationLog = async (req: Request, res: Response) => {
     return sendSuccess(res, {deleted: true});
   } catch (error) {
     devLog(error);
+    return defaultError(res);
+  }
+};
+
+/**
+ * @swagger
+ * /api/v1/mold-cases/{id}/verdict:
+ *   patch:
+ *     summary: Finalize mold verdict for a case
+ *     tags: [MoldCases]
+ *     security:
+ *       - bearerAuth: []
+ *       - cookieAuth: []
+ *     description: Record the final mycologist verdict for a mold case based on lookup results
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Mold case ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               moldId:
+ *                 type: string
+ *                 description: ID of the identified mold
+ *               moldName:
+ *                 type: string
+ *                 description: Name of the identified mold
+ *               confidence:
+ *                 type: number
+ *                 description: Confidence score (0-100)
+ *               mycologist_notes:
+ *                 type: string
+ *                 description: Optional notes from the mycologist
+ *             required:
+ *               - moldId
+ *               - moldName
+ *               - confidence
+ *     responses:
+ *       200:
+ *         description: Verdict finalized successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     moldCaseId:
+ *                       type: string
+ *                     final_verdict:
+ *                       type: object
+ *       400:
+ *         description: Validation error
+ *       500:
+ *         description: Server error
+ */
+export const finalizeVerdict = async (req: Request, res: Response) => {
+  try {
+    const caseId = req.params.id;
+    const {moldId, moldName, confidence, mycologist_notes} = req.body;
+
+    // Validate required fields
+    if (!moldId || !moldId.trim()) {
+      return sendError(res, "moldId is required", 400);
+    }
+    if (!moldName || !moldName.trim()) {
+      return sendError(res, "moldName is required", 400);
+    }
+    if (typeof confidence !== "number" || confidence < 0 || confidence > 100) {
+      return sendError(res, "confidence must be a number between 0 and 100", 400);
+    }
+
+    // Retrieve the case to get the report ID
+    const moldCase = await retrieveMoldCaseById(caseId);
+    if (!moldCase) {
+      return sendError(res, "Mold case not found", 404);
+    }
+
+    // Update the mold case with final verdict
+    const verdict = {
+      moldId,
+      moldName,
+      confidence,
+      mycologist_notes,
+      verdict_timestamp: Timestamp.now(),
+    };
+
+    const updatedCase = await updateMoldCaseInFirestore(caseId, {
+      final_verdict: verdict,
+    });
+
+    if (!updatedCase) {
+      return sendError(res, "Failed to update mold case with verdict", 400);
+    }
+
+    // Update the associated report status to resolved (in background)
+    if (moldCase.mold_report_id) {
+      updateMoldReportInFirestore(moldCase.mold_report_id, {
+        status: "resolved",
+      }).catch((err) => {
+        devLog(`[finalizeVerdict] Warning: Failed to update report status: ${err}`);
+      });
+    }
+
+    devLog(`[finalizeVerdict] ✅ Verdict finalized for case ${caseId}: ${moldName} (${confidence}%)`);
+    return sendSuccess(res, {
+      moldCaseId: caseId,
+      final_verdict: verdict,
+    });
+  } catch (error) {
+    devLog("[finalizeVerdict] Error:", String(error));
     return defaultError(res);
   }
 };

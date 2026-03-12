@@ -30,6 +30,15 @@ export interface MoldReport {
   host: string
   location: string
   status: "pending" | "in progress" | "resolved" | "rejected"
+  reported_symptoms?: string[];
+  reported_signs?: string[];
+  reported_characteristics?: string[];
+  lookup_results?: Array<{
+    moldId: string;
+    moldName: string;
+    confidence: number;
+    timestamp?: Timestamp;
+  }>;
 }
 
 export interface MoldReportDetails {
