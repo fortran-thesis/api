@@ -1107,7 +1107,7 @@ export const updateCultivationDetails = async (req: Request, res: Response) => {
         const reportedCharacteristics = (moldReport as any).reported_characteristics || [];
 
         // Extract characteristics from cultivation details if available
-        let additionalCharacteristics: string[] = [];
+        const additionalCharacteristics: string[] = [];
         if (details.in_vivo_details?.lesion_color) {
           additionalCharacteristics.push(details.in_vivo_details.lesion_color);
         }
@@ -1903,7 +1903,7 @@ export const removeCultivationLog = async (req: Request, res: Response) => {
 export const finalizeVerdict = async (req: Request, res: Response) => {
   try {
     const caseId = req.params.id;
-    const {moldId, moldName, confidence, mycologist_notes} = req.body;
+    const {moldId, moldName, confidence, mycologist_notes: mycologistNotes} = req.body;
 
     // Validate required fields
     if (!moldId || !moldId.trim()) {
@@ -1927,7 +1927,7 @@ export const finalizeVerdict = async (req: Request, res: Response) => {
       moldId,
       moldName,
       confidence,
-      mycologist_notes,
+      mycologist_notes: mycologistNotes,
       verdict_timestamp: Timestamp.now(),
     };
 

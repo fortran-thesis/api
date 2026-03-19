@@ -12,7 +12,7 @@ export interface LookupResult {
 /**
  * Performs mold lookup based on reported symptoms, signs, and characteristics
  * Uses Set-based matching for O(1) lookups per reported item
- * 
+ *
  * @param reportedSymptoms - Array of reported symptoms (case-insensitive)
  * @param reportedSigns - Array of reported signs (case-insensitive)
  * @param reportedCharacteristics - Array of reported characteristics (case-insensitive)
@@ -29,7 +29,7 @@ export async function performMoldLookup(
     const moldsCollection = getCollectionName(FirestoreCollection.MOLDS);
     console.log(`[performMoldLookup] Fetching molds from collection: ${moldsCollection}`);
     devLog(`[performMoldLookup] Fetching molds from collection: ${moldsCollection}`);
-    
+
     const moldsSnapshot = await db.collection(moldsCollection).get();
     console.log(`[performMoldLookup] Found ${moldsSnapshot.docs.length} molds in database`);
     devLog(`[performMoldLookup] Found ${moldsSnapshot.docs.length} molds in database`);
@@ -60,8 +60,9 @@ export async function performMoldLookup(
       normalizedSigns.length +
       normalizedCharacteristics.length;
 
-    console.log(`[performMoldLookup] Input: ${normalizedSymptoms.length} symptoms, ${normalizedSigns.length} signs, ${normalizedCharacteristics.length} characteristics (total: ${totalReported})`);
-    devLog(`[performMoldLookup] Input: ${normalizedSymptoms.length} symptoms, ${normalizedSigns.length} signs, ${normalizedCharacteristics.length} characteristics (total: ${totalReported})`);
+    const inputStats = `symptoms: ${normalizedSymptoms.length}, signs: ${normalizedSigns.length}, characteristics: ${normalizedCharacteristics.length}`;
+    console.log(`[performMoldLookup] Input: ${inputStats} (total: ${totalReported})`);
+    devLog(`[performMoldLookup] Input: ${inputStats} (total: ${totalReported})`);
 
     if (totalReported === 0) {
       console.log("[performMoldLookup] ⚠️ No reported items provided");

@@ -2,17 +2,107 @@ rules_version='2'
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.role == 'admin';
+    }
+    
+    function isMycologist() {
+      return isAuthenticated() && request.auth.token.role == 'mycologist';
+    }
+    
+    // Molds collection - public read
+    match /molds/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if request.auth.uid == userId || isAdmin();
+      
+      // Subcollections
+      match /{document=**} {
+        allow read: if isAuthenticated();
+        allow write: if request.auth.uid == userId || isAdmin();
+      }
+    }
+    
+    // Mold Reports - owner and admin can read/write
+    match /mold-reports/{reportId} {
+      allow read: if isAuthenticated() && (resource.data.user_id == request.auth.uid || isAdmin() || isMycologist());
+      allow create: if isAuthenticated() && request.resource.data.user_id == request.auth.uid;
+      allow update, delete: if isAuthenticated() && (resource.data.user_id == request.auth.uid || isAdmin());
+      
+      // Case details subcollection
+      match /case_details/{document=**} {
+        allow read: if isAuthenticated() && (get(/databases/$(database)/documents/mold-reports/$(reportId)).data.user_id == request.auth.uid || isAdmin() || isMycologist());
+        allow write: if isAdmin() || isMycologist();
+      }
+    }
+    
+    // Mold Cases - mycologist and admin read/write
+    match /mold-cases/{caseId} {
+      allow read: if isAuthenticated() && (resource.data.mycologist_id == request.auth.uid || isAdmin());
+      allow write: if isAdmin() || (isMycologist() && resource.data.mycologist_id == request.auth.uid);
+      
+      // Cultivation logs subcollection
+      match /cultivation_logs/{document=**} {
+        allow read: if isAuthenticated() && (get(/databases/$(database)/documents/mold-cases/$(caseId)).data.mycologist_id == request.auth.uid || isAdmin());
+        allow write: if isAdmin() || (isMycologist() && get(/databases/$(database)/documents/mold-cases/$(caseId)).data.mycologist_id == request.auth.uid);
+      }
+    }
+    
+    // Moldipedia - public read, curator/admin write
+    match /moldipedia/{document=**} {
+      allow read: if true;
+      allow write: if isAuthenticated() && (request.auth.token.role == 'curator' || isAdmin());
+    }
+    
+    // Scanned Molds - public read
+    match /scanned-molds/{document=**} {
+      allow read: if true;
+      allow write: if false; // Server only
+    }
+    
+    // Monitored Molds - authenticated read
+    match /monitored-molds/{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Server only
+    }
+    
+    // Flag Reports - admin read/write
+    match /flag-reports/{document=**} {
+      allow read: if isAdmin();
+      allow write: if false; // Server only
+    }
+    
+    // Notifications - owner can read, server writes
+    match /notifications/{userId}/messages/{document=**} {
+      allow read: if request.auth.uid == userId;
+      allow write: if false; // Server only
+    }
+    
+    // Device tokens - owner can write, server manages
+    match /device-tokens/{document=**} {
+      allow read: if false;
+      allow write: if false; // Server only
+    }
+    
+    // Audit logs - admin read only
+    match /audit-logs/{document=**} {
+      allow read: if isAdmin();
+      allow write: if false; // Server only
+    }
+    
+    // Deny everything else by default
     match /{document=**} {
-      // This rule allows anyone with your database reference to view, edit,
-      // and delete all data in your database. It is useful for getting
-      // started, but it is configured to expire after 30 days because it
-      // leaves your app open to attackers. At that time, all client
-      // requests to your database will be denied.
-      //
-      // Make sure to write security rules for your app before that time, or
-      // else all client requests to your database will be denied until you
-      // update your rules.
-      allow read, write: if request.time < timestamp.date(2025, 10, 1);
+      allow read, write: if false;
     }
   }
 }

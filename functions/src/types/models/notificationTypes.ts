@@ -13,6 +13,9 @@ export enum NotificationType {
   MOLD_REPORT_RESOLVED = "mold_report_resolved",
   CASE_DETAIL_ADDED = "case_detail_added",
 
+  // Samples lifecycle
+  SAMPLES_RECEIVED = "samples_received",
+
   // Flag report lifecycle
   FLAG_REPORT_CREATED = "flag_report_created",
   FLAG_REPORT_RESOLVED = "flag_report_resolved",
