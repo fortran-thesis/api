@@ -21,6 +21,7 @@ import {
   searchAndFilterMoldReports,
   getMoldReportMonthlyTotals,
 } from "../services/moldReportService";
+import {performMoldLookup} from "../services/lookupService";
 import {createLog} from "../utils/logging";
 import {AuditAction, Role} from "../types/enums";
 import {getCombinedTotalCounts, getMoldCasePriorityBreakdown, addMoldCaseToFirestore, retrieveMoldCaseByReportId} from "../services/moldCaseService";
@@ -211,6 +212,48 @@ export const createMoldReport = async (req: Request, res: Response) => {
       return sendError(res, "Failed to create mold report", 400);
     }
     devLog(`[createMoldReport] ✅ Report created successfully: ${moldReport.case_name}`);
+
+   // Run lookup in background if reported symptoms/signs/characteristics are provided
+    const reportedSymptoms = req.body.reported_symptoms || [];
+    const reportedSigns = req.body.reported_signs || [];
+    const reportedCharacteristics = req.body.reported_characteristics || [];
+
+    devLog(`[createMoldReport] Extracted reported fields - symptoms: ${reportedSymptoms.length}, signs: ${reportedSigns.length}, characteristics: ${reportedCharacteristics.length}`);
+
+    // IMPORTANT: Synchronously save reported fields to document
+    // This allows the fields to be persisted immediately
+    if (reportedSymptoms.length > 0 || reportedSigns.length > 0 || reportedCharacteristics.length > 0) {
+      const reportId = (moldReport as any).id;
+      if (reportId) {
+        // Synchronously save reported fields first
+        await updateMoldReportInFirestore(reportId, {
+          reported_symptoms: reportedSymptoms,
+          reported_signs: reportedSigns,
+          reported_characteristics: reportedCharacteristics,
+        });
+        devLog(`[createMoldReport] ✅ Synchronously saved reported fields`);
+
+        // NOW run the async lookup task (don't await)
+        (async () => {
+          try {
+            const lookupResults = await performMoldLookup(reportedSymptoms, reportedSigns, reportedCharacteristics);
+            devLog(`[createMoldReport] Lookup completed with ${lookupResults.length} results`);
+            
+            await updateMoldReportInFirestore(reportId, {
+              lookup_results: lookupResults.map((r) => ({
+                ...r,
+                timestamp: Timestamp.now(),
+              })),
+            });
+            devLog(`[createMoldReport] ✅ Updated report with ${lookupResults.length} lookup results`);
+          } catch (err) {
+            devLog(`[createMoldReport] ❌ Background lookup task failed: ${err}`, "LOOKUP_BG_ERROR");
+          }
+        })().catch((err) => {
+          devLog(`[createMoldReport] Unhandled exception in async task: ${err}`, "ASYNC_TASK_ERROR");
+        });
+      }
+    }
 
     // Upload photos in background (don't wait for it)
     if (photos && photos.length > 0 && moldReport) {

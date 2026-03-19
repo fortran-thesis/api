@@ -29,6 +29,7 @@ import {
   unarchiveMoldCase,
   getCultivationLogs,
   removeCultivationLog,
+  finalizeVerdict,
 } from "../controllers/moldCaseController";
 const router = Router();
 
@@ -204,6 +205,17 @@ router.post(
   upload.single("image"),
   async (req: Request, res: Response) => {
     await analyzeCultivationLogImage(req, res);
+  }
+);
+
+router.patch(
+  "/:id/verdict",
+  verifyUser(),
+  validateParams(MoldIdSchema),
+  cacheInvalidate("mold-cases-all", "update"),
+  cacheInvalidate("mold-cases-assigned", "update"),
+  async (req: Request, res: Response) => {
+    await finalizeVerdict(req, res);
   }
 );
 

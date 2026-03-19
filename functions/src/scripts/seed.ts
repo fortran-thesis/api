@@ -402,6 +402,9 @@ export const seedMoldipedia = async (authorUid: string) => {
 const MOLDS_SEED = [
   {
     name: "Aspergillus Flavi",
+    symptoms: ["yellowing", "wilting", "spotting"],
+    signs: ["white to green spores", "powdery surface", "off-odors"],
+    characteristics: ["aflatoxin production", "thrives in warm dry storage", "rapid colonization"],
     mold_details: {
       info: {
         description:
@@ -450,6 +453,9 @@ const MOLDS_SEED = [
   },
   {
     name: "Aspergillus Nigri",
+    symptoms: ["surface discoloration", "softening"],
+    signs: ["black spore masses", "powdery colonies"],
+    characteristics: ["post-harvest rot", "tolerant to moderate humidity"],
     mold_details: {
       info: {
         description:
@@ -498,6 +504,9 @@ const MOLDS_SEED = [
   },
   {
     name: "Rhizopus",
+    symptoms: ["soft rot", "water-soaked lesions"],
+    signs: ["dense white mycelium", "black sporangiophores"],
+    characteristics: ["rapid spread in moist conditions", "favors injured tissue"],
     mold_details: {
       info: {
         description:
@@ -546,6 +555,9 @@ const MOLDS_SEED = [
   },
   {
     name: "Penicillium",
+    symptoms: ["softening", "water-soaked tissue"],
+    signs: ["blue-green powdery colonies", "musty odor"],
+    characteristics: ["psychrotolerant growth", "post-harvest spoilage"],
     mold_details: {
       info: {
         description:
@@ -594,6 +606,9 @@ const MOLDS_SEED = [
   },
   {
     name: "Alternaria",
+    symptoms: ["leaf spots", "defoliation"],
+    signs: ["concentric ring lesions", "dark necrotic spots"],
+    characteristics: ["thrives with prolonged leaf wetness", "wind/rain dispersed spores"],
     mold_details: {
       info: {
         description:
@@ -642,6 +657,9 @@ const MOLDS_SEED = [
   },
   {
     name: "Fusarium",
+    symptoms: ["one-sided yellowing", "wilting"],
+    signs: ["brown vascular discoloration", "root rot"],
+    characteristics: ["soil-borne persistence", "race-specific pathogenicity"],
     mold_details: {
       info: {
         description:

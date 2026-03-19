@@ -3,6 +3,9 @@ import {Timestamp} from "firebase-admin/firestore";
 export interface Mold {
   name: string;
   mold_details: MoldDetails;
+  symptoms?: string[];
+  signs?: string[];
+  characteristics?: string[];
 }
 
 export interface MoldDetails {
@@ -48,6 +51,13 @@ export interface MoldCase {
   end_date: Timestamp;
   cultivation_details?: CultivationDetails;
   is_archived: boolean;
+  final_verdict?: {
+    moldId: string;
+    moldName: string;
+    confidence: number;
+    mycologist_notes?: string;
+    verdict_timestamp?: Timestamp;
+  };
 }
 
 export interface CultivationDetails {
