@@ -6,16 +6,16 @@ import {performMoldLookup} from "../services/lookupService";
 /**
  * POST /api/v1/lookup
  * Performs keyword-based mold lookup
- * 
+ *
  * Request body:
  * {
  *   "symptoms": ["yellowing", "spotting"],
  *   "signs": ["white coating"],
  *   "characteristics": ["rapid spread"]
  * }
- * 
+ *
  * All three fields are optional, but at least one non-empty array is expected
- * 
+ *
  * Response:
  * {
  *   "success": true,

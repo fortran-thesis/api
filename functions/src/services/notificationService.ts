@@ -78,7 +78,7 @@ const NOTIFICATION_TEMPLATES: Record<NotificationType, TemplateResolver> = {
     // Default: farmer / report owner
     return {
       title: "Report Approved",
-      body: `Your mold report "${ctx.case_name ?? "Untitled"}" has been approved and assigned to a mycologist.`,
+      body: `Your mold report "${ctx.case_name ?? "Untitled"}" has been approved and assigned to a mycologist. You may now send samples for further analysis.`,
     };
   },
 
@@ -100,6 +100,13 @@ const NOTIFICATION_TEMPLATES: Record<NotificationType, TemplateResolver> = {
   [NotificationType.CASE_DETAIL_ADDED]: (ctx) => ({
     title: "New Case Detail",
     body: `A new detail has been added to the mold report "${ctx.case_name ?? "Untitled"}".`,
+  }),
+
+  [NotificationType.SAMPLES_RECEIVED]: (ctx) => ({
+    title: "Samples Received",
+    body: ctx.brought_by ?
+      `${ctx.brought_by} has brought samples for "${ctx.case_name ?? "Untitled"}".` :
+      `Samples for "${ctx.case_name ?? "Untitled"}" have been received.`,
   }),
 
   [NotificationType.FLAG_REPORT_CREATED]: (ctx) => ({

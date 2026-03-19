@@ -213,12 +213,14 @@ export const createMoldReport = async (req: Request, res: Response) => {
     }
     devLog(`[createMoldReport] ✅ Report created successfully: ${moldReport.case_name}`);
 
-   // Run lookup in background if reported symptoms/signs/characteristics are provided
+    // Run lookup in background if reported symptoms/signs/characteristics are provided
     const reportedSymptoms = req.body.reported_symptoms || [];
     const reportedSigns = req.body.reported_signs || [];
     const reportedCharacteristics = req.body.reported_characteristics || [];
 
-    devLog(`[createMoldReport] Extracted reported fields - symptoms: ${reportedSymptoms.length}, signs: ${reportedSigns.length}, characteristics: ${reportedCharacteristics.length}`);
+    devLog(
+      `[createMoldReport] Extracted reported fields - symptoms: ${reportedSymptoms.length}, signs: ${reportedSigns.length}, characteristics: ${reportedCharacteristics.length}`
+    );
 
     // IMPORTANT: Synchronously save reported fields to document
     // This allows the fields to be persisted immediately
@@ -231,14 +233,13 @@ export const createMoldReport = async (req: Request, res: Response) => {
           reported_signs: reportedSigns,
           reported_characteristics: reportedCharacteristics,
         });
-        devLog(`[createMoldReport] ✅ Synchronously saved reported fields`);
+        devLog("[createMoldReport] Synchronously saved reported fields");
 
-        // NOW run the async lookup task (don't await)
+        // NOW run the async lookup task (do not await)
         (async () => {
           try {
             const lookupResults = await performMoldLookup(reportedSymptoms, reportedSigns, reportedCharacteristics);
             devLog(`[createMoldReport] Lookup completed with ${lookupResults.length} results`);
-            
             await updateMoldReportInFirestore(reportId, {
               lookup_results: lookupResults.map((r) => ({
                 ...r,

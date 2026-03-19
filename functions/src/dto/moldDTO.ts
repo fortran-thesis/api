@@ -57,6 +57,15 @@ export const CultivationDetailsSchema = z.object({
     growth_medium: z.string().optional(),
     in_vivo_details: z.record(z.any()).optional(),
     in_vitro_details: z.record(z.any()).optional(),
+    // ── Specimen & Evidence Fields ────────────────────────────────────────
+    // Reserved for monitoring setup data captured by mobile client.
+    // These fields are persisted but not currently merged into MoldReport.reported_*
+    // fields. Future versions may wire these into lookup logic.
+    specimen_types: z.array(z.string()).optional(),
+    specimen_quantities: z.array(z.string()).optional(),
+    initial_symptoms: z.array(z.string()).optional(),
+    initial_characteristics: z.array(z.string()).optional(),
+    location_gathered: z.string().optional(),
   }).optional(),
   start_date: zTimestamp.optional(),
   end_date: zTimestamp.optional(),
@@ -76,3 +85,11 @@ export type MoldUpdateRequest = z.infer<typeof MoldUpdateSchema>;
 export type CultivationLogRequest = z.infer<typeof CultivationLogSchema>;
 export type CultivationDetailsRequest = z.infer<typeof CultivationDetailsSchema>;
 export type SearchMoldCasesQuery = z.infer<typeof SearchMoldCasesQuerySchema>;
+
+/**
+ * Shape of cultivation_details object persisted in mold case.
+ * Includes specimen info + initial observations for monitoring setup.
+ */
+export type CultivationDetailsPayload = z.infer<
+  typeof CultivationDetailsSchema
+>["cultivation_details"];
