@@ -16,6 +16,7 @@ import {
 
 const collection = getCollectionName(FirestoreCollection.MOLD_REPORTS);
 const CLOSED_STATUSES = ["closed", "rejected"];
+const OPEN_STATUSES = ["pending", "in progress", "resolved"];
 
 export const addMoldReport = async (data: MoldReport) =>
   addDocument(collection, data);
@@ -92,7 +93,7 @@ export const findAllMoldReportsByUser = async (
       let query = q.where("user_id", "==", uid);
       query = isArchived ?
         query.where("status", "in", CLOSED_STATUSES) :
-        query.where("status", "not-in", CLOSED_STATUSES);
+        query.where("status", "in", OPEN_STATUSES);
       return query;
     };
 
@@ -100,7 +101,6 @@ export const findAllMoldReportsByUser = async (
       collection,
       limit,
       token,
-      // "status" must be first because not-in is an inequality filter
       ["status", "metadata.created_at", FieldPath.documentId()],
       {queryModifier}
     );

@@ -7,7 +7,7 @@ import {
   deleteDocument,
   softDeleteDocument,
 } from "../lib/firestore";
-import {ScannedMold} from "../types/types";
+import {ScannedMold, ScannedMoldQueryFilters} from "../types/types";
 import {OrderField} from "../utils/pagination";
 import {
   getCollectionName,
@@ -23,12 +23,25 @@ export const findScannedMoldById = async (id: string) =>
 export const findAllScannedMolds = async (
   limit: number,
   token?: string,
+  filters?: ScannedMoldQueryFilters,
   orderFields: OrderField[] = [
     "metadata.created_at",
     "user_id",
     FieldPath.documentId(),
   ]
-) => getPaginatedDocuments(collection, limit, token, orderFields);
+) =>
+  getPaginatedDocuments(collection, limit, token, orderFields, {
+    queryModifier: (query) => {
+      let next = query;
+      if (filters?.mold_case_id) {
+        next = next.where("mold_case_id", "==", filters.mold_case_id);
+      }
+      if (filters?.scan_modality) {
+        next = next.where("scan_modality", "==", filters.scan_modality);
+      }
+      return next;
+    },
+  });
 export const updateScannedMold = async (
   id: string,
   updatedData: Partial<ScannedMold>

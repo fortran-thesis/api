@@ -42,9 +42,14 @@ import {getAuthUserById} from "../lib/auth";
 const transformMoldCaseImages = async (moldCase: MoldCase): Promise<MoldCase> => {
   const transformed = {...moldCase};
 
-  // Transform photo_url if present
+  // Ensure photo_url is a string before attempting to transform
   if (transformed.photo_url) {
-    transformed.photo_url = await transformToSignedUrl(transformed.photo_url, MOLD_CASE_SERVICE_TTL_SECONDS);
+    if (typeof transformed.photo_url !== "string") {
+      devLog(`transformMoldCaseImages: photo_url is not a string, setting to null. type=${typeof transformed.photo_url}`);
+      transformed.photo_url = null;
+    } else {
+      transformed.photo_url = await transformToSignedUrl(transformed.photo_url, MOLD_CASE_SERVICE_TTL_SECONDS);
+    }
   }
 
   return transformed;
@@ -356,7 +361,8 @@ export const retrieveMoldCaseByName = async (
 };
 
 export const retrieveMoldCaseByReportId = async (
-  reportId: string
+  reportId: string,
+  preferredUserId?: string
 ): Promise<MoldCase | null> => {
   try {
     const moldCaseSnap: QuerySnapshot | null =
@@ -364,9 +370,49 @@ export const retrieveMoldCaseByReportId = async (
     if (!moldCaseSnap) throw new Error("No case found for this report.");
     const cases = queryToJson<MoldCase>(moldCaseSnap);
     if (cases.length === 0) return null;
-    // normalize dates
-    const raw = cases[0];
+    if (cases.length > 1) {
+      devLog(`[retrieveMoldCaseByReportId] Duplicate cases found for report=${reportId}; count=${cases.length}`);
+    }
+
+    // If multiple cases exist for this report, prefer active + owner-matching records,
+    // then fall back to the most recent one.
+    const toMillis = (value: any): number => {
+      if (!value) return 0;
+      if (value instanceof Timestamp) return value.toDate().getTime();
+      if (typeof value === "object" && typeof value.toDate === "function") {
+        return value.toDate().getTime();
+      }
+      if (typeof value === "string" || typeof value === "number") {
+        const d = new Date(value);
+        return isNaN(d.getTime()) ? 0 : d.getTime();
+      }
+      return 0;
+    };
+
+    const activeCases = cases.filter((c: any) => !c?.is_archived);
+    const ownerMatched = preferredUserId ?
+      activeCases.filter((c: any) => c?.user_id === preferredUserId) :
+      [];
+
+    const candidatePool = ownerMatched.length > 0 ?
+      ownerMatched :
+      (activeCases.length > 0 ? activeCases : cases);
+
+    const mostRecent = candidatePool.reduce((prev, current) => {
+      const prevCreatedAt = (prev as any)?.metadata?.created_at;
+      const currCreatedAt = (current as any)?.metadata?.created_at;
+      return toMillis(currCreatedAt) > toMillis(prevCreatedAt) ? current : prev;
+    }, candidatePool[0]);
+
+    // normalize dates and ensure photo_url is a string
+    const raw = mostRecent;
     const normalized: any = {...raw};
+    
+    // Ensure photo_url is a string or null (not a Firestore object)
+    if (normalized.photo_url && typeof normalized.photo_url !== "string") {
+      normalized.photo_url = null;
+    }
+    
     if (
       raw.start_date &&
       typeof (raw.start_date as any).toDate === "function"
@@ -605,10 +651,15 @@ export const addCultivationLogToCase = async (
 
 export const updateCultivationDetailsInCase = async (
   caseId: string,
-  details: { in_vivo_details?: any; in_vitro_details?: any }
+  details: {
+    cultivation_details?: Record<string, unknown>;
+    in_vivo_details?: Record<string, unknown>;
+    in_vitro_details?: Record<string, unknown>;
+    [key: string]: unknown;
+  }
 ): Promise<MoldCase | null> => {
   try {
-    const result = await updateCultivationDetails(caseId, details);
+    const result = await updateCultivationDetails(caseId, details as any);
     if (!result) throw new Error("Failed to update cultivation details");
 
     const updated = await retrieveMoldCaseById(caseId);

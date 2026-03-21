@@ -6,6 +6,7 @@ import {
 } from "firebase-admin/firestore";
 import {documentToJson, queryToJson} from "../lib/firestore";
 import {devLog} from "../utils/dev";
+import {findMoldByPredictedClassName} from "../repositories/moldRepository";
 import {
   addScannedMold,
   deleteScannedMold,
@@ -17,6 +18,7 @@ import {
 
 import {
   ScannedMold,
+  ScannedMoldQueryFilters,
   WithMetadata,
   WithId,
   PaginatedResult,
@@ -28,9 +30,20 @@ export const addScannedMoldToFirestore = async (
   imageUrl: string
 ): Promise<WithId<ScannedMold> | null> => {
   try {
+    let resolvedMoldId: string | null | undefined = details.mold_id;
+    if (!resolvedMoldId && details.predicted_class_name) {
+      const molds = await findMoldByPredictedClassName(details.predicted_class_name);
+      if (molds && !molds.empty) {
+        resolvedMoldId = molds.docs[0].id;
+      } else {
+        resolvedMoldId = null;
+      }
+    }
+
     const detailsWithMeta: WithMetadata<ScannedMold> = {
       ...details,
       image_url: imageUrl,
+      mold_id: resolvedMoldId ?? null,
       metadata: {
         created_at: Timestamp.now(),
         updated_at: null,
@@ -48,11 +61,12 @@ export const addScannedMoldToFirestore = async (
 
 export const retrieveAllScannedMolds = async (
   limit: number,
-  token?: string
+  token?: string,
+  filters?: ScannedMoldQueryFilters
 ): Promise<PaginatedResult<WithMetadata<ScannedMold>[]> | null> => {
   try {
     const docs: PaginatedResult<QuerySnapshot> | null =
-      await findAllScannedMolds(limit, token);
+      await findAllScannedMolds(limit, token, filters);
     if (!docs) throw new Error("No scanned molds found.");
     const items = queryToJson<WithMetadata<ScannedMold>>(docs.snapshot);
 

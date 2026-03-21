@@ -127,9 +127,34 @@ export const updateCultivationDetails = async (
   try {
     const updates: Record<string, unknown> = {};
 
-    // If the entire cultivation_details object is provided, use it directly
+    // If the entire cultivation_details object is provided, merge it with
+    // existing cultivation details to avoid dropping unspecified fields.
     if (details.cultivation_details !== undefined) {
-      updates["cultivation_details"] = details.cultivation_details;
+      const existingCase = await findMoldCaseById(caseId);
+      const existingRaw = existingCase?.data()?.cultivation_details;
+      const existingDetails =
+        (existingRaw && typeof existingRaw === "object") ?
+          (existingRaw as Record<string, unknown>) :
+          {};
+      const incomingDetails = details.cultivation_details as Record<string, unknown>;
+      const mergedDetails: Record<string, unknown> = {
+        ...existingDetails,
+        ...incomingDetails,
+      };
+
+      const microIds = (mergedDetails.scanned_microscopic_ids as unknown[] | undefined);
+      if (Array.isArray(microIds)) {
+        mergedDetails.scanned_microscopic_ids =
+          Array.from(new Set(microIds.map((id) => String(id).trim()).filter((id) => id.length > 0)));
+      }
+
+      const macroIds = (mergedDetails.scanned_macroscopic_ids as unknown[] | undefined);
+      if (Array.isArray(macroIds)) {
+        mergedDetails.scanned_macroscopic_ids =
+          Array.from(new Set(macroIds.map((id) => String(id).trim()).filter((id) => id.length > 0)));
+      }
+
+      updates["cultivation_details"] = mergedDetails;
     } else {
       // Otherwise, build the nested path updates for individual fields
       if (details.growth_medium !== undefined) {
