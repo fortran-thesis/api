@@ -1,8 +1,14 @@
 import {z} from "zod";
-import {FirestoreIdSchema, zTimestamp} from "./shared";
+import {zTimestamp} from "./shared";
 
+const ID_REGEX = /^[A-Za-z0-9_-]+$/;
+
+// Accept both short test IDs (like "2") and production IDs (20-28 chars)
 export const MoldIdSchema = z.object({
-  id: FirestoreIdSchema(20, "Mold ID"),
+  id: z
+    .string({required_error: "Mold ID is required"})
+    .nonempty({message: "Mold ID is required"})
+    .regex(ID_REGEX, {message: "Mold ID format is invalid"}),
 });
 
 export const MoldSchema = z.object({
@@ -63,13 +69,50 @@ export const CultivationDetailsSchema = z.object({
     // fields. Future versions may wire these into lookup logic.
     specimen_types: z.array(z.string()).optional(),
     specimen_quantities: z.array(z.string()).optional(),
+    specimen_types_csv: z.string().optional(),
+    specimen_quantities_csv: z.string().optional(),
     initial_symptoms: z.array(z.string()).optional(),
+    initial_symptoms_csv: z.string().optional(),
     initial_characteristics: z.array(z.string()).optional(),
+    initial_characteristics_csv: z.string().optional(),
     location_gathered: z.string().optional(),
+    initial_microscopic: z.string().optional(),
+    initial_macroscopic: z.string().optional(),
+    initial_microscopic_color: z.string().optional(),
+    initial_microscopic_texture: z.string().optional(),
+    initial_macroscopic_color: z.string().optional(),
+    initial_macroscopic_texture: z.string().optional(),
+    initial_macroscopic_symptoms: z.string().optional(),
+    initial_macroscopic_characteristics: z.string().optional(),
+    initial_microscopic_image_url: z.string().optional(),
+    initial_macroscopic_image_url: z.string().optional(),
+    date_observation: z.string().optional(),
+    microscopic_ai_snapshot: z.record(z.any()).optional(),
+    scanned_microscopic_ids: z.array(z.string()).optional(),
+    scanned_macroscopic_ids: z.array(z.string()).optional(),
   }).optional(),
   start_date: zTimestamp.optional(),
   end_date: zTimestamp.optional(),
 });
+
+export const FinalizeVerdictSchema = z.object({
+  // Accept both formats to keep older clients working while standardizing on camelCase.
+  moldId: z.string().trim().min(1).optional(),
+  moldName: z.string().trim().min(1).optional(),
+  mold_id: z.string().trim().min(1).optional(),
+  mold_name: z.string().trim().min(1).optional(),
+  confidence: z.number().min(0).max(100),
+  mycologist_notes: z.string().optional(),
+}).refine((payload) => !!(payload.moldId || payload.mold_id), {
+  message: "moldId is required",
+}).refine((payload) => !!(payload.moldName || payload.mold_name), {
+  message: "moldName is required",
+}).transform((payload) => ({
+  moldId: payload.moldId ?? payload.mold_id ?? "",
+  moldName: payload.moldName ?? payload.mold_name ?? "",
+  confidence: payload.confidence,
+  mycologist_notes: payload.mycologist_notes,
+}));
 
 export const SearchMoldCasesQuerySchema = z.object({
   search: z.string().optional(),
@@ -84,6 +127,7 @@ export type MoldRequest = z.infer<typeof MoldSchema>;
 export type MoldUpdateRequest = z.infer<typeof MoldUpdateSchema>;
 export type CultivationLogRequest = z.infer<typeof CultivationLogSchema>;
 export type CultivationDetailsRequest = z.infer<typeof CultivationDetailsSchema>;
+export type FinalizeVerdictRequest = z.infer<typeof FinalizeVerdictSchema>;
 export type SearchMoldCasesQuery = z.infer<typeof SearchMoldCasesQuerySchema>;
 
 /**

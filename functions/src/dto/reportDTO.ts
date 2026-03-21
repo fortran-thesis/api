@@ -1,6 +1,8 @@
 import {z} from "zod";
 import {ReportReason} from "../types/enums";
-import {FlexibleIdSchema, zTimestamp} from "./shared";
+import {zTimestamp} from "./shared";
+
+const ID_REGEX = /^[A-Za-z0-9_-]+$/;
 
 export const ReportCreateSchema = z.object({
   reporter_id: z.string({required_error: "Reporter ID is required."}).min(1),
@@ -11,8 +13,12 @@ export const ReportCreateSchema = z.object({
   details: z.string().optional(),
 });
 
+// Accept both short test IDs (like "2") and production IDs (20-28 chars)
 export const ReportIdSchema = z.object({
-  id: FlexibleIdSchema("Report ID"),
+  id: z
+    .string({required_error: "Report ID is required"})
+    .nonempty({message: "Report ID is required"})
+    .regex(ID_REGEX, {message: "Report ID format is invalid"}),
 });
 
 export const MoldReportSchema = z.object({
@@ -28,7 +34,9 @@ export const MoldReportSchema = z.object({
   reported_characteristics: z.array(z.string()).optional(),
 });
 
-export const MoldReportUpdateSchema = MoldReportSchema.partial();
+export const MoldReportUpdateSchema = MoldReportSchema.partial().extend({
+  status: z.enum(["pending", "in progress", "in_progress", "resolved", "rejected", "closed"]).optional(),
+});
 
 export const CaseDetailSchema = z.object({
   cover_photo: z.array(z.string()).optional(),
@@ -39,7 +47,7 @@ export const CaseDetailCreateSchema = CaseDetailSchema;
 
 export const AssignMoldReportSchema = z.object({
   assigned_mycologist_id: z.string({required_error: "Assigned mycologist ID is required."}).min(1),
-  status: z.string().optional(),
+  status: z.enum(["in progress", "in_progress"]).optional(),
 });
 
 export const SearchMoldReportsQuerySchema = z.object({
