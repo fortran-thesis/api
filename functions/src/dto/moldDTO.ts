@@ -114,6 +114,17 @@ export const FinalizeVerdictSchema = z.object({
   mycologist_notes: payload.mycologist_notes,
 }));
 
+export const MoldCaseCreateSchema = z.object({
+  user_id: z.string().optional(),
+  mycologist_id: z.string().min(1).optional(),
+  name: z.string().min(1).optional(),
+  mold_report_id: z.string().min(1).optional(),
+  photo_url: z.string().nullable().optional(),
+  priority: z.enum(["low", "medium", "high"]).optional(),
+  start_date: zTimestamp.optional(),
+  end_date: zTimestamp.optional(),
+}).passthrough();
+
 export const SearchMoldCasesQuerySchema = z.object({
   search: z.string().optional(),
   priority: z.enum(["low", "medium", "high"]).optional(),
@@ -128,6 +139,7 @@ export type MoldUpdateRequest = z.infer<typeof MoldUpdateSchema>;
 export type CultivationLogRequest = z.infer<typeof CultivationLogSchema>;
 export type CultivationDetailsRequest = z.infer<typeof CultivationDetailsSchema>;
 export type FinalizeVerdictRequest = z.infer<typeof FinalizeVerdictSchema>;
+export type MoldCaseCreateRequest = z.infer<typeof MoldCaseCreateSchema>;
 export type SearchMoldCasesQuery = z.infer<typeof SearchMoldCasesQuerySchema>;
 
 /**

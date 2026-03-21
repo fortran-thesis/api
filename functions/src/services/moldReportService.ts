@@ -672,25 +672,22 @@ export const getMoldReportStatusCounts = async (userId?: string): Promise<{
   in_progress: number;
   resolved: number;
   rejected: number;
-  closed: number;
 } | null> => {
   try {
     const mapping: Record<string, string[]> = {
       pending: ["pending"],
-      in_progress: ["in progress", "in_progress", "assigned"],
-      resolved: ["resolved", "done"],
+      in_progress: ["in progress"],
+      resolved: ["resolved"],
       rejected: ["rejected"],
-      closed: ["closed"],
     };
 
     // Parallelize all independent count queries.
-    const [total, pending, inProgress, resolved, rejected, closed] = await Promise.all([
+    const [total, pending, inProgress, resolved, rejected] = await Promise.all([
       countTotalReports(userId),
       countReportsByStatuses(mapping.pending, userId),
       countReportsByStatuses(mapping.in_progress, userId),
       countReportsByStatuses(mapping.resolved, userId),
       countReportsByStatuses(mapping.rejected, userId),
-      countReportsByStatuses(mapping.closed, userId),
     ]);
 
     return {
@@ -699,7 +696,6 @@ export const getMoldReportStatusCounts = async (userId?: string): Promise<{
       in_progress: inProgress ?? 0,
       resolved: resolved ?? 0,
       rejected: rejected ?? 0,
-      closed: closed ?? 0,
     };
   } catch (error) {
     devLog(error);

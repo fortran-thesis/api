@@ -14,6 +14,7 @@ import {
   MoldReportUpdateSchema,
   CaseDetailCreateSchema,
   AssignMoldReportSchema,
+  RejectMoldReportSchema,
   SearchMoldReportsQuerySchema,
 } from "../dto/reportDTO";
 import {
@@ -146,6 +147,7 @@ router.patch(
   "/:id/reject",
   verifyUser(Role.ADMIN),
   validateParams(ReportIdSchema),
+  validateBody(RejectMoldReportSchema),
   auditLog(AuditAction.REJECT_MOLD_REPORT, (req) => `Rejected report ${req.params.id}`),
   notify({
     type: NotificationType.MOLD_REPORT_REJECTED,
@@ -153,7 +155,10 @@ router.patch(
       {recipientId: body?.data?.user_id},
     ],
     referenceType: "mold_report",
-    contextFn: (_req, body) => ({case_name: body?.data?.case_name ?? ""}),
+    contextFn: (req, body) => ({
+      case_name: body?.data?.case_name ?? "",
+      rejection_reason: req.body?.rejection_reason ?? "",
+    }),
   }),
   cacheInvalidate("mold-reports", "update"),
   cacheInvalidate("mold-cases-all", "update"),

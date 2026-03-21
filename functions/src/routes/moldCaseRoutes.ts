@@ -11,12 +11,15 @@ import {
   CultivationDetailsSchema,
   SearchMoldCasesQuerySchema,
   FinalizeVerdictSchema,
+  MoldCaseCreateSchema,
 } from "../dto/moldDTO";
 import {ReportIdSchema} from "../dto/reportDTO";
 import {AuditAction, Role} from "../types/enums";
+import {NotificationType} from "../types/models/notificationTypes";
 import {upload} from "../middlewares/upload";
 import {cacheGet, cacheInvalidate} from "../middlewares/cacheMiddleware";
 import {auditLog} from "../middlewares/auditLogger";
+import {notify} from "../middlewares/notificationMiddleware";
 import {
   createMoldCase,
   getAllMoldCases,
@@ -43,6 +46,7 @@ const router = Router();
 router.post(
   "/",
   verifyUser(),
+  validateBody(MoldCaseCreateSchema),
   cacheInvalidate("mold-cases-all", "create"),
   cacheInvalidate("mold-cases-assigned", "create"),
   async (req: Request, res: Response) => {
@@ -222,6 +226,14 @@ router.patch(
   validateParams(MoldIdSchema),
   validateBody(FinalizeVerdictSchema),
   auditLog(AuditAction.RESOLVE_MOLD_REPORT, (req) => `Finalized verdict for case ${req.params.id}`),
+  notify({
+    type: NotificationType.MOLD_REPORT_RESOLVED,
+    recipientsFn: (_req, body) => [
+      {recipientId: body?.data?.report_owner_id},
+    ],
+    referenceType: "mold_case",
+    contextFn: (_req, body) => ({case_name: body?.data?.case_name ?? ""}),
+  }),
   cacheInvalidate("mold-cases-all", "update"),
   cacheInvalidate("mold-cases-assigned", "update"),
   async (req: Request, res: Response) => {

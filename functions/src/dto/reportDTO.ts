@@ -35,7 +35,7 @@ export const MoldReportSchema = z.object({
 });
 
 export const MoldReportUpdateSchema = MoldReportSchema.partial().extend({
-  status: z.enum(["pending", "in progress", "in_progress", "resolved", "rejected", "closed"]).optional(),
+  status: z.enum(["pending", "in progress", "resolved", "rejected"]).optional(),
 });
 
 export const CaseDetailSchema = z.object({
@@ -47,12 +47,18 @@ export const CaseDetailCreateSchema = CaseDetailSchema;
 
 export const AssignMoldReportSchema = z.object({
   assigned_mycologist_id: z.string({required_error: "Assigned mycologist ID is required."}).min(1),
-  status: z.enum(["in progress", "in_progress"]).optional(),
+  status: z.enum(["in progress"]).optional(),
+  priority: z.enum(["low", "medium", "high"]).optional(),
+});
+
+export const RejectMoldReportSchema = z.object({
+  rejection_reason: z.string().trim().min(1, {message: "Rejection reason is required."}),
 });
 
 export const SearchMoldReportsQuerySchema = z.object({
   search: z.string().optional(),
   status: z.enum(["pending", "in progress", "resolved", "rejected"]).optional(),
+  scope: z.enum(["own", "assigned", "all"]).optional(),
   priority: z.enum(["low", "medium", "high"]).optional(),
   limit: z.string().regex(/^\d+$/).optional(),
   pageToken: z.string().optional(),
@@ -65,4 +71,5 @@ export type MoldReportRequest = z.infer<typeof MoldReportSchema>;
 export type MoldReportUpdateRequest = z.infer<typeof MoldReportUpdateSchema>;
 export type CaseDetailRequest = z.infer<typeof CaseDetailSchema>;
 export type AssignMoldReportRequest = z.infer<typeof AssignMoldReportSchema>;
+export type RejectMoldReportRequest = z.infer<typeof RejectMoldReportSchema>;
 export type SearchMoldReportsQuery = z.infer<typeof SearchMoldReportsQuerySchema>;

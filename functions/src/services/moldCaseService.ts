@@ -683,7 +683,7 @@ export const getCombinedTotalCounts = async (): Promise<{
     pending: number;
     in_progress: number;
     resolved: number;
-    closed: number;
+    rejected: number;
   } | null;
   moldCases: {low: number; medium: number; high: number} | null;
 } | null> => {

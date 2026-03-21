@@ -15,7 +15,7 @@ import {
 } from "../types/models/firestoreCollections";
 
 const collection = getCollectionName(FirestoreCollection.MOLD_REPORTS);
-const CLOSED_STATUSES = ["closed", "rejected"];
+const CLOSED_STATUSES = ["rejected"];
 const OPEN_STATUSES = ["pending", "in progress", "resolved"];
 
 export const addMoldReport = async (data: MoldReport) =>
@@ -34,7 +34,7 @@ export const findAllMoldReports = async (
     const queryModifier = (q: FirebaseFirestore.Query) => {
       switch (statusFilter) {
       case "closed":
-        return q.where("status", "==", "closed");
+        return q.where("status", "==", "rejected");
       case "rejected":
         return q.where("status", "==", "rejected");
       case "all":
@@ -177,7 +177,7 @@ export const deleteMoldReport = async (id: string) =>
   deleteDocument(collection, id);
 export const softDeleteMoldReport = async (id: string) =>
   updateDocument(collection, id, {
-    status: "closed",
+    status: "rejected",
   } as any);
 
 export const findMoldReportsBySearch = async (

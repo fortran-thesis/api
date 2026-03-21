@@ -147,11 +147,17 @@ export const createMoldCase = async (req: Request, res: Response) => {
   try {
     // Accept body directly (no multipart) or from body.details if present
     const details: Omit<MoldCase, "is_archived"> = req.body.details || req.body;
-    // Auto-populate user_id from the authenticated user if not provided
-    const userId = details.user_id || req.user?.id;
+    const userId = req.user?.id;
+    if (!userId) {
+      return sendError(res, "Unauthorized", 401);
+    }
+    if (details.user_id && details.user_id !== userId) {
+      return sendError(res, "user_id must match authenticated user", 403);
+    }
+
     const moldCase: MoldCase | null = await addMoldCaseToFirestore({
       ...details,
-      ...(userId ? {user_id: userId} : {}),
+      user_id: userId,
       is_archived: false,
     });
     if (!moldCase) return sendError(res, "Failed to create mold case", 400);
@@ -2059,6 +2065,8 @@ export const finalizeVerdict = async (req: Request, res: Response) => {
     devLog(`[finalizeVerdict] ✅ Verdict finalized for case ${caseId}: ${moldName} (${confidence}%)`);
     return sendSuccess(res, {
       moldCaseId: caseId,
+      report_owner_id: moldCase.user_id ?? null,
+      case_name: moldCase.name ?? "",
       final_verdict: verdict,
       report_sync_warning: reportSyncWarning,
     });

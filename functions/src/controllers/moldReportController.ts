@@ -27,30 +27,40 @@ import {AuditAction, Role} from "../types/enums";
 import {getCombinedTotalCounts, getMoldCasePriorityBreakdown, addMoldCaseToFirestore, retrieveMoldCaseByReportId, updateMoldCaseInFirestore} from "../services/moldCaseService";
 import {Timestamp} from "firebase-admin/firestore";
 
-type MoldReportLifecycleStatus = MoldReport["status"] | "closed";
+type MoldReportLifecycleStatus = MoldReport["status"];
 
 const ALLOWED_STATUS_TRANSITIONS: Record<MoldReportLifecycleStatus, MoldReportLifecycleStatus[]> = {
   pending: ["in progress", "rejected"],
   "in progress": ["resolved", "rejected"],
-  resolved: ["closed"],
-  rejected: [],
-  closed: [],
+  resolved: ["rejected", "pending"],
+  rejected: ["pending"],
 };
 
 const normalizeStatus = (status: string): MoldReportLifecycleStatus | null => {
   const trimmed = status.trim().toLowerCase();
-  if (trimmed === "in_progress") return "in progress";
   if (trimmed === "in progress") return "in progress";
   if (trimmed === "pending") return "pending";
   if (trimmed === "resolved") return "resolved";
   if (trimmed === "rejected") return "rejected";
-  if (trimmed === "closed") return "closed";
   return null;
 };
 
 const canTransitionStatus = (from: MoldReportLifecycleStatus, to: MoldReportLifecycleStatus): boolean => {
   if (from === to) return true;
   return ALLOWED_STATUS_TRANSITIONS[from].includes(to);
+};
+
+const canAccessReport = (
+  actor: Request["user"],
+  report: MoldReport
+): boolean => {
+  if (!actor) return false;
+  const role = actor.user.role;
+  if (role === Role.ADMIN) return true;
+  if (role === Role.CURATOR) {
+    return report.assigned_mycologist_id === actor.id || report.user_id === actor.id;
+  }
+  return report.user_id === actor.id;
 };
 
 export const createMoldReport = async (req: Request, res: Response) => {
@@ -513,9 +523,30 @@ export const getAllMoldReports = async (req: Request, res: Response) => {
     | string
     | undefined;
   try {
-    // Include all reports (open, closed, and rejected)
-    const result: PaginatedResult<MoldReport[]> | null =
-      await retrieveAllMoldReports(limit, false, pageToken); // false = include all (backward compat)
+    const actor = req.user;
+    if (!actor) return sendError(res, "Unauthorized", 401);
+
+    const requestedScope = (req.query.scope as string | undefined)?.toLowerCase();
+    const defaultScope = actor.user.role === Role.ADMIN ? "all" : actor.user.role === Role.CURATOR ? "assigned" : "own";
+    const scope = requestedScope || defaultScope;
+
+    if (!["all", "own", "assigned"].includes(scope)) {
+      return sendError(res, "Invalid scope. Allowed: all, own, assigned", 400);
+    }
+
+    if (scope === "all" && actor.user.role !== Role.ADMIN) {
+      return sendError(res, "Forbidden", 403);
+    }
+
+    let result: PaginatedResult<MoldReport[]> | PaginatedResult<Omit<MoldReport, "user_id">[]> | null = null;
+    if (scope === "all") {
+      result = await retrieveAllMoldReports(limit, false, pageToken);
+    } else if (scope === "assigned") {
+      result = await retrieveAssignedMoldReports(actor.id, limit, pageToken);
+    } else {
+      result = await retrieveAllMoldReportsByUser(actor.id, limit, false, pageToken);
+    }
+
     if (!result) return sendError(res, "Failed to retrieve mold reports", 404);
     return sendSuccess(res, result);
   } catch (error) {
@@ -769,9 +800,14 @@ export const getAllClosedMoldReports = async (
     | undefined;
   const uid: string | undefined = req.user?.id;
   try {
-    if (!uid) return sendError(res, "Unauthorized", 401);
-    const result: PaginatedResult<MoldReport[]> | null =
-      await retrieveAllMoldReports(limit, true, pageToken);
+    const actor = req.user;
+    if (!actor || !uid) return sendError(res, "Unauthorized", 401);
+
+    const result: PaginatedResult<MoldReport[]> | PaginatedResult<Omit<MoldReport, "user_id">[]> | null =
+      actor.user.role === Role.ADMIN ?
+        await retrieveAllMoldReports(limit, true, pageToken) :
+        await retrieveAllMoldReportsByUser(uid, limit, true, pageToken);
+
     if (!result) return sendError(res, "Failed to retrieve mold reports", 404);
     return sendSuccess(res, result);
   } catch (error) {
@@ -1070,6 +1106,11 @@ export const postCaseDetail = async (req: Request, res: Response) => {
 
     const actor = req.user;
 
+    if (!actor) return sendError(res, "Unauthorized", 401);
+    if (!canAccessReport(actor, report)) {
+      return sendError(res, "Forbidden", 403);
+    }
+
     // If the requester is the report owner, treat this as a user follow-up:
     // append the case detail, reset status to 'pending', and unassign the mycologist.
     if (actor && actor.id === report.user_id) {
@@ -1080,6 +1121,10 @@ export const postCaseDetail = async (req: Request, res: Response) => {
       if (!created) {
         return sendError(res, "Failed to add case detail to report", 400);
       }
+      if (!canTransitionStatus(report.status, "pending")) {
+        return sendError(res, `Cannot add follow-up while report is '${report.status}'`, 409);
+      }
+
       await updateMoldReportInFirestore(id, {
         status: "pending",
         assigned_mycologist_id: null,
@@ -1213,9 +1258,14 @@ export const assignReport = async (req: Request, res: Response) => {
 
     const normalizedStatus: MoldReport["status"] = "in progress";
 
+    const casePriority = (details.priority as "low" | "medium" | "high" | undefined) ?? ((current as any).priority as "low" | "medium" | "high" | undefined) ?? "low";
+
+    const normalizedPriority = details.priority as "low" | "medium" | "high" | undefined;
+
     const updated = await updateMoldReportInFirestore(id, {
       assigned_mycologist_id: details.assigned_mycologist_id,
       status: normalizedStatus,
+      ...(normalizedPriority ? {priority: normalizedPriority} : {}),
     });
     if (!updated) return sendError(res, "Failed to assign mycologist", 400);
 
@@ -1229,7 +1279,7 @@ export const assignReport = async (req: Request, res: Response) => {
         mycologist_id: details.assigned_mycologist_id,
         name: updated.case_name,
         user_id: reportOwnerId,
-        priority: (details.priority as "low" | "medium" | "high") ?? "low",
+        priority: casePriority,
         start_date: Timestamp.now() as any,
         end_date: null as any,
         is_archived: false,
@@ -1247,6 +1297,7 @@ export const assignReport = async (req: Request, res: Response) => {
         await updateMoldCaseInFirestore(existingCaseId, {
           user_id: reportOwnerId,
           mycologist_id: details.assigned_mycologist_id,
+          ...(normalizedPriority ? {priority: casePriority} : {}),
         } as Partial<MoldCase>);
         devLog(`[assignReport] Repaired MoldCase ownership/assignee for report=${id}`);
       }
@@ -1328,6 +1379,7 @@ export const assignReport = async (req: Request, res: Response) => {
 export const rejectReport = async (req: Request, res: Response) => {
   try {
     const id: string = req.params.id;
+    const rejectionReason: string = req.body.rejection_reason;
     const current = await retrieveMoldReportById(id);
     if (!current) return sendError(res, "Mold report not found", 404);
     if (!canTransitionStatus(current.status, "rejected")) {
@@ -1338,6 +1390,7 @@ export const rejectReport = async (req: Request, res: Response) => {
     const updated = await updateMoldReportInFirestore(id, {
       status: "rejected",
       assigned_mycologist_id: null,
+      rejection_reason: rejectionReason,
     });
     if (!updated) return sendError(res, "Failed to reject/close report", 400);
     return sendSuccess(res, updated);
@@ -1363,6 +1416,10 @@ export const reviewReport = async (req: Request, res: Response) => {
     const id: string = req.params.id;
     const actor = req.user;
     if (!actor) return sendError(res, "Unauthorized", 401);
+
+    const current = await retrieveMoldReportById(id);
+    if (!current) return sendError(res, "Mold report not found", 404);
+    if (!canAccessReport(actor, current)) return sendError(res, "Forbidden", 403);
 
     const reviewerId = actor.id;
 
@@ -1605,6 +1662,7 @@ export const getMoldReportById = async (req: Request, res: Response) => {
     const id: string = req.params.id;
     const report: MoldReport | null = await retrieveMoldReportById(id);
     if (!report) return sendError(res, "Failed to retrieve mold report", 404);
+    if (!canAccessReport(req.user, report)) return sendError(res, "Forbidden", 403);
     return sendSuccess(res, report);
   } catch (error) {
     devLog(error);
@@ -1690,14 +1748,15 @@ export const patchMoldReport = async (req: Request, res: Response) => {
     const id: string = req.params.id;
     const details: Partial<MoldReport> & {status?: string} = req.body;
 
+    const current = await retrieveMoldReportById(id);
+    if (!current) return sendError(res, "Mold report not found", 404);
+    if (!canAccessReport(req.user, current)) return sendError(res, "Forbidden", 403);
+
     if (details.assigned_mycologist_id !== undefined) {
       return sendError(res, "Use /:id/assign to change mycologist assignment", 400);
     }
 
     if (details.status !== undefined) {
-      const current = await retrieveMoldReportById(id);
-      if (!current) return sendError(res, "Mold report not found", 404);
-
       const normalizedTargetStatus = normalizeStatus(details.status);
       if (!normalizedTargetStatus) {
         return sendError(res, "Invalid status value", 400);
@@ -1761,6 +1820,9 @@ export const patchMoldReport = async (req: Request, res: Response) => {
 export const deleteMoldReport = async (req: Request, res: Response) => {
   try {
     const id: string = req.params.id;
+    const current = await retrieveMoldReportById(id);
+    if (!current) return sendError(res, "Mold report not found", 404);
+    if (!canAccessReport(req.user, current)) return sendError(res, "Forbidden", 403);
     await removeMoldReport(id);
     return sendSuccess(res, "Successfully deleted mold report");
   } catch (error) {
@@ -1804,7 +1866,8 @@ export const softDeleteMoldReport = async (req: Request, res: Response) => {
     const id: string = req.params.id;
     const current = await retrieveMoldReportById(id);
     if (!current) return sendError(res, "Mold report not found", 404);
-    if (!canTransitionStatus(current.status, "closed")) {
+    if (!canAccessReport(req.user, current)) return sendError(res, "Forbidden", 403);
+    if (!canTransitionStatus(current.status, "rejected")) {
       return sendError(res, `Cannot close report with status '${current.status}'`, 409);
     }
 
@@ -1912,10 +1975,14 @@ export const softDeleteMoldReport = async (req: Request, res: Response) => {
  */
 export const searchMoldReports = async (req: Request, res: Response) => {
   try {
+    const actor = req.user;
+    if (!actor) return sendError(res, "Unauthorized", 401);
+
     const searchQuery: string | undefined = req.query.search as
       | string
       | undefined;
     const status: string | undefined = req.query.status as string | undefined;
+    const scope: string | undefined = req.query.scope as string | undefined;
     const priority: string | undefined = req.query.priority as
       | string
       | undefined;
@@ -1924,11 +1991,33 @@ export const searchMoldReports = async (req: Request, res: Response) => {
       | string
       | undefined;
 
-    // Filter by user ID if the user is a regular user (Role.USER / 'farmer')
-    // Admins and Curators should be able to search all reports
-    const userId = req.user?.user.role === Role.USER ? req.user?.id : undefined;
+    let userId: string | undefined;
+    let assignedOnlyId: string | undefined;
 
-    const result: PaginatedResult<MoldReport[]> | null =
+    if (scope === "all") {
+      if (actor.user.role !== Role.ADMIN) {
+        return sendError(res, "Forbidden", 403);
+      }
+    } else if (scope === "assigned") {
+      if (actor.user.role === Role.ADMIN) {
+        // admins can search across all by default
+      } else if (actor.user.role === Role.CURATOR) {
+        assignedOnlyId = actor.id;
+      } else {
+        return sendError(res, "Forbidden", 403);
+      }
+    } else {
+      // default scope: own for farmer, assigned for curator, all for admin
+      if (actor.user.role === Role.ADMIN) {
+        userId = undefined;
+      } else if (actor.user.role === Role.CURATOR) {
+        assignedOnlyId = actor.id;
+      } else {
+        userId = actor.id;
+      }
+    }
+
+    const result =
       await searchAndFilterMoldReports(
         searchQuery,
         status,
@@ -1939,6 +2028,13 @@ export const searchMoldReports = async (req: Request, res: Response) => {
       );
 
     if (!result) return sendError(res, "Failed to retrieve mold reports", 500);
+
+    if (assignedOnlyId) {
+      return sendSuccess(res, {
+        ...result,
+        snapshot: result.snapshot.filter((report) => report.assigned_mycologist_id === assignedOnlyId),
+      });
+    }
 
     return sendSuccess(res, result);
   } catch (error) {

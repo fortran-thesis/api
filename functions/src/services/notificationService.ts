@@ -84,7 +84,9 @@ const NOTIFICATION_TEMPLATES: Record<NotificationType, TemplateResolver> = {
 
   [NotificationType.MOLD_REPORT_REJECTED]: (ctx) => ({
     title: "Report Rejected",
-    body: `Your mold report "${ctx.case_name ?? "Untitled"}" has been reviewed and rejected.`,
+    body: ctx.rejection_reason ?
+      `Your mold report "${ctx.case_name ?? "Untitled"}" has been reviewed and rejected. Reason: ${ctx.rejection_reason}` :
+      `Your mold report "${ctx.case_name ?? "Untitled"}" has been reviewed and rejected.`,
   }),
 
   [NotificationType.MOLD_REPORT_RESOLVED]: (ctx) => ({

@@ -29,6 +29,7 @@ export interface MoldReport {
   case_details?: Array<MoldReportDetails>
   host: string
   location: string
+  priority?: "low" | "medium" | "high"
   status: "pending" | "in progress" | "resolved" | "rejected"
   reported_symptoms?: string[];
   reported_signs?: string[];
@@ -39,6 +40,7 @@ export interface MoldReport {
     confidence: number;
     timestamp?: Timestamp;
   }>;
+  rejection_reason?: string;
 }
 
 export interface MoldReportDetails {
