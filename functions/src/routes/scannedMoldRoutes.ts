@@ -6,8 +6,7 @@ import {validateBody, validateParams, validateQuery} from "../middlewares/valida
 import {AuditAction} from "../types/enums";
 import {auditLog} from "../middlewares/auditLogger";
 import {cacheGet, cacheInvalidate} from "../middlewares/cacheMiddleware";
-import {ScannedMoldIdSchema, ScannedMoldUpdateSchema} from "../dto/scannedMoldDTO";
-import {PaginationQuerySchema} from "../dto/paginationDTO";
+import {ScannedMoldIdSchema, ScannedMoldQuerySchema, ScannedMoldUpdateSchema} from "../dto/scannedMoldDTO";
 import {
   createScannedMold,
   getAllScannedMolds,
@@ -31,7 +30,7 @@ router.post(
   }
 );
 
-router.get("/", verifyUser(), validateQuery(PaginationQuerySchema), cacheGet("scanned-molds"), async (req: Request, res: Response): Promise<void> => {
+router.get("/", verifyUser(), validateQuery(ScannedMoldQuerySchema), cacheGet("scanned-molds"), async (req: Request, res: Response): Promise<void> => {
   await getAllScannedMolds(req, res);
 });
 

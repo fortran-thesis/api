@@ -5,11 +5,18 @@ import {
   validateQuery,
   validateBody} from "../middlewares/validation";
 import {PaginationQuerySchema} from "../dto/paginationDTO";
-import {MoldIdSchema, CultivationLogSchema, CultivationDetailsSchema, SearchMoldCasesQuerySchema} from "../dto/moldDTO";
+import {
+  MoldIdSchema,
+  CultivationLogSchema,
+  CultivationDetailsSchema,
+  SearchMoldCasesQuerySchema,
+  FinalizeVerdictSchema,
+} from "../dto/moldDTO";
 import {ReportIdSchema} from "../dto/reportDTO";
-import {Role} from "../types/enums";
+import {AuditAction, Role} from "../types/enums";
 import {upload} from "../middlewares/upload";
 import {cacheGet, cacheInvalidate} from "../middlewares/cacheMiddleware";
+import {auditLog} from "../middlewares/auditLogger";
 import {
   createMoldCase,
   getAllMoldCases,
@@ -191,6 +198,7 @@ router.patch(
   verifyUser(),
   validateParams(MoldIdSchema),
   validateBody(CultivationDetailsSchema),
+  auditLog(AuditAction.UPDATE_MOLD_CASE, (req) => `Updated cultivation details for case ${req.params.id}`),
   cacheInvalidate("mold-cases-all", "update"),
   cacheInvalidate("mold-cases-assigned", "update"),
   async (req: Request, res: Response) => {
@@ -212,6 +220,8 @@ router.patch(
   "/:id/verdict",
   verifyUser(),
   validateParams(MoldIdSchema),
+  validateBody(FinalizeVerdictSchema),
+  auditLog(AuditAction.RESOLVE_MOLD_REPORT, (req) => `Finalized verdict for case ${req.params.id}`),
   cacheInvalidate("mold-cases-all", "update"),
   cacheInvalidate("mold-cases-assigned", "update"),
   async (req: Request, res: Response) => {

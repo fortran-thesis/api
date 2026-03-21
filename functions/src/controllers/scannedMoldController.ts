@@ -1,9 +1,11 @@
 import {Request, Response} from "express";
+import {Timestamp} from "firebase-admin/firestore";
 import {devLog} from "../utils/dev";
 import {defaultError, sendError, sendSuccess} from "../utils/response";
 import {PaginatedResult, ScannedMold, WithId} from "../types/types";
 import {uploadFile} from "../lib/storage";
 import {StorageFolder, generateStoragePath} from "../configs/storage";
+import {ScannedMoldCreateSchema} from "../dto/scannedMoldDTO";
 import {
   addScannedMoldToFirestore,
   retrieveAllScannedMolds,
@@ -94,8 +96,50 @@ import {
  */
 export const createScannedMold = async (req: Request, res: Response) => {
   try {
-    const details: Omit<ScannedMold, "image_url" | "uploaded_at"> = req.body;
+    const rawScannedResults = req.body.scanned_results;
+    let scannedResults = rawScannedResults;
+    if (typeof rawScannedResults === "string") {
+      try {
+        scannedResults = JSON.parse(rawScannedResults);
+      } catch (_error) {
+        return sendError(res, "scanned_results must be a valid JSON object.", 400);
+      }
+    }
+
+    const parsed = ScannedMoldCreateSchema.safeParse({
+      ...req.body,
+      scanned_results: scannedResults,
+    });
+    if (!parsed.success) {
+      const messages = parsed.error.errors.map((e) => e.message).join(", ");
+      return sendError(res, messages, 400);
+    }
+
+    const authenticatedUserId = req.user?.id;
+    const requestUserId = parsed.data.user_id;
+    const userId = authenticatedUserId || requestUserId;
+    if (!userId) {
+      return sendError(res, "User ID is required.", 400);
+    }
+
+    const details: Omit<ScannedMold, "image_url"> = {
+      user_id: userId,
+      image_format: parsed.data.image_format,
+      scan_modality: parsed.data.scan_modality,
+      source_flow: parsed.data.source_flow,
+      ...(parsed.data.source_tab ? {source_tab: parsed.data.source_tab} : {}),
+      ...(parsed.data.mold_id ? {mold_id: parsed.data.mold_id} : {}),
+      ...(parsed.data.predicted_class_name ? {predicted_class_name: parsed.data.predicted_class_name} : {}),
+      ...(parsed.data.mold_case_id ? {mold_case_id: parsed.data.mold_case_id} : {}),
+      ...(parsed.data.captured_at ? {captured_at: Timestamp.fromDate(new Date(parsed.data.captured_at))} : {}),
+      scanned_results: parsed.data.scanned_results,
+    };
+
     const photo: Express.Multer.File = req.file as Express.Multer.File;
+    if (!photo) {
+      return sendError(res, "Photo is required.", 400);
+    }
+
     const filePath = generateStoragePath(StorageFolder.SCANNED_MOLDS, photo.originalname);
     const url = await uploadFile(filePath, photo.buffer, photo.mimetype);
     if (!url) {
@@ -197,10 +241,16 @@ export const createScannedMold = async (req: Request, res: Response) => {
 export const getAllScannedMolds = async (req: Request, res: Response) => {
   const limit: number = parseInt(req.query.limit as string) || 10;
   const pageToken: string | undefined = req.query.pageToken as string | undefined;
+  const moldCaseId = req.query.mold_case_id as string | undefined;
+  const scanModality = req.query.scan_modality as "microscopic" | "macroscopic" | undefined;
   try {
     const molds: PaginatedResult<ScannedMold[]> | null = await retrieveAllScannedMolds(
       limit,
-      pageToken
+      pageToken,
+      {
+        mold_case_id: moldCaseId,
+        scan_modality: scanModality,
+      }
     );
     if (!molds) return sendError(res, "Failed to retrieve scanned molds", 404);
     return sendSuccess(res, molds);

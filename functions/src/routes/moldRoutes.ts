@@ -6,6 +6,7 @@ import {
   getAllMolds,
   getMoldById,
   getMoldByName,
+  getMoldByPredictedClassName,
   patchMold,
   softDeleteMold,
 } from "../controllers/moldController";
@@ -50,7 +51,7 @@ router.get(
 
 router.get(
   "/:id",
-  verifyUser(Role.CURATOR),
+  verifyUser(),
   sanitizeParams,
   validateParams(MoldIdSchema),
   async (req: Request, res: Response) => {
@@ -65,6 +66,15 @@ router.get(
   validateParams(NameParamSchema),
   async (req: Request, res: Response) => {
     await getMoldByName(req, res);
+  }
+);
+
+router.get(
+  "/predicted-class-name/:classname",
+  verifyUser(),
+  sanitizeParams,
+  async (req: Request, res: Response) => {
+    await getMoldByPredictedClassName(req, res);
   }
 );
 

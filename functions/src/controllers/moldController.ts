@@ -7,6 +7,7 @@ import {
   retrieveAllMolds,
   retrieveMoldById,
   retrieveMoldByName,
+  retrieveMoldByPredictedClassName,
   softRemoveMold,
   updateMoldInFirestore,
 } from "../services/moldService";
@@ -492,6 +493,52 @@ export const getMoldByName = async (req: Request, res: Response) => {
   try {
     const name: string = req.params.name;
     const mold: Mold | null = await retrieveMoldByName(name);
+    if (!mold) return sendError(res, "Failed to retrieve mold", 404);
+    return sendSuccess(res, mold);
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
+/**
+ * @swagger
+ * /api/v1/mold/predicted-class-name/{classname}:
+ *   get:
+ *     summary: Get mold by predicted class name (taxonomy name from ML model)
+ *     tags: [Molds]
+ *     security:
+ *       - bearerAuth: []
+ *       - cookieAuth: []
+ *     description: Retrieve a specific mold by its predicted_class_name (e.g., "Aspergillus_section_Nigri"). Requires authentication.
+ *     parameters:
+ *       - in: path
+ *         name: classname
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Predicted class name from ML model (e.g., Aspergillus_section_Nigri)
+ *     responses:
+ *       200:
+ *         description: Mold retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *       404:
+ *         description: Mold not found
+ *       500:
+ *         description: Server error
+ */
+export const getMoldByPredictedClassName = async (req: Request, res: Response) => {
+  try {
+    const classname: string = req.params.classname;
+    const mold: Mold | null = await retrieveMoldByPredictedClassName(classname);
     if (!mold) return sendError(res, "Failed to retrieve mold", 404);
     return sendSuccess(res, mold);
   } catch (error) {
