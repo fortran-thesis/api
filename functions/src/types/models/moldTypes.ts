@@ -68,6 +68,29 @@ export interface CultivationDetails {
   in_vitro_details: {
     incubation_temperature: number;
   };
+  specimen_types?: string[];
+  specimen_quantities?: string[];
+  specimen_types_csv?: string;
+  specimen_quantities_csv?: string;
+  initial_symptoms?: string[];
+  initial_symptoms_csv?: string;
+  initial_characteristics?: string[];
+  initial_characteristics_csv?: string;
+  location_gathered?: string;
+  initial_microscopic?: string;
+  initial_macroscopic?: string;
+  initial_microscopic_color?: string;
+  initial_microscopic_texture?: string;
+  initial_macroscopic_color?: string;
+  initial_macroscopic_texture?: string;
+  initial_macroscopic_symptoms?: string;
+  initial_macroscopic_characteristics?: string;
+  initial_microscopic_image_url?: string;
+  initial_macroscopic_image_url?: string;
+  date_observation?: string;
+  microscopic_ai_snapshot?: Record<string, unknown>;
+  scanned_microscopic_ids?: string[];
+  scanned_macroscopic_ids?: string[];
 }
 
 export interface CultivationLog {

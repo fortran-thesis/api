@@ -4,7 +4,23 @@ export interface ScannedMold {
   user_id: string;
   image_url: string;
   image_format: string;
+  scan_modality: ScanModality;
+  source_flow: ScanSourceFlow;
+  source_tab?: ScanSourceTab;
+  mold_id?: string | null;
+  predicted_class_name?: string;
+  mold_case_id?: string;
+  captured_at?: Timestamp;
   scanned_results: ScannedResult;
+}
+
+export type ScanModality = "microscopic" | "macroscopic";
+export type ScanSourceFlow = "identification" | "monitoring_initial" | "cultivation_log";
+export type ScanSourceTab = "in-vivo" | "in-vitro";
+
+export interface ScannedMoldQueryFilters {
+  mold_case_id?: string;
+  scan_modality?: ScanModality;
 }
 
 export interface ScannedResult {
