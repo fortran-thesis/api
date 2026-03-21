@@ -46,7 +46,6 @@ const normalizeStatus = (status: string): MoldReportLifecycleStatus | null => {
 };
 
 const canTransitionStatus = (from: MoldReportLifecycleStatus, to: MoldReportLifecycleStatus): boolean => {
-  if (from === to) return true;
   return ALLOWED_STATUS_TRANSITIONS[from].includes(to);
 };
 

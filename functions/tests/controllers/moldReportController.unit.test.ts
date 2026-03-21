@@ -72,14 +72,14 @@ describe("moldReportController transitions (unit)", () => {
   it("blocks reject when report status cannot transition to rejected", async () => {
     mockMoldReportService.retrieveMoldReportById.mockResolvedValue({
       id: "report-1",
-      status: "resolved",
+      status: "rejected",
     } as any);
 
     await moldReportController.rejectReport(mockReq as Request, mockRes as Response);
 
     expect(mockResponseUtils.sendError).toHaveBeenCalledWith(
       mockRes,
-      "Cannot reject report with status 'resolved'",
+      "Cannot reject report with status 'rejected'",
       409
     );
   });
@@ -100,8 +100,24 @@ describe("moldReportController transitions (unit)", () => {
     );
   });
 
-  it("blocks invalid patch transition pending to closed", async () => {
-    mockReq.body = {status: "closed"};
+  it("blocks invalid patch transition resolved to in progress", async () => {
+    mockReq.body = {status: "in progress"};
+    mockMoldReportService.retrieveMoldReportById.mockResolvedValue({
+      id: "report-1",
+      status: "resolved",
+    } as any);
+
+    await moldReportController.patchMoldReport(mockReq as Request, mockRes as Response);
+
+    expect(mockResponseUtils.sendError).toHaveBeenCalledWith(
+      mockRes,
+      "Invalid status transition from 'resolved' to 'in progress'",
+      409
+    );
+  });
+
+  it("blocks in progress transition via patch (requires /assign endpoint)", async () => {
+    mockReq.body = {status: "in progress"};
     mockMoldReportService.retrieveMoldReportById.mockResolvedValue({
       id: "report-1",
       status: "pending",
@@ -111,42 +127,22 @@ describe("moldReportController transitions (unit)", () => {
 
     expect(mockResponseUtils.sendError).toHaveBeenCalledWith(
       mockRes,
-      "Invalid status transition from 'pending' to 'closed'",
-      409
+      "Use /:id/assign or /:id/reject for this transition",
+      400
     );
   });
 
-  it("allows valid patch transition resolved to closed", async () => {
-    mockReq.body = {status: "closed"};
+  it("blocks soft delete when report status is already rejected", async () => {
     mockMoldReportService.retrieveMoldReportById.mockResolvedValue({
       id: "report-1",
-      status: "resolved",
-    } as any);
-    mockMoldReportService.updateMoldReportInFirestore.mockResolvedValue({
-      id: "report-1",
-      status: "closed",
-    } as any);
-
-    await moldReportController.patchMoldReport(mockReq as Request, mockRes as Response);
-
-    expect(mockMoldReportService.updateMoldReportInFirestore).toHaveBeenCalledWith(
-      "report-1",
-      expect.objectContaining({status: "closed"})
-    );
-    expect(mockResponseUtils.sendSuccess).toHaveBeenCalled();
-  });
-
-  it("blocks soft close when report status is not resolved", async () => {
-    mockMoldReportService.retrieveMoldReportById.mockResolvedValue({
-      id: "report-1",
-      status: "pending",
+      status: "rejected",
     } as any);
 
     await moldReportController.softDeleteMoldReport(mockReq as Request, mockRes as Response);
 
     expect(mockResponseUtils.sendError).toHaveBeenCalledWith(
       mockRes,
-      "Cannot close report with status 'pending'",
+      "Cannot close report with status 'rejected'",
       409
     );
   });

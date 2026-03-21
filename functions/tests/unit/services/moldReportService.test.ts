@@ -135,7 +135,6 @@ describe("moldReportService (unit)", () => {
         in_progress: 25,
         resolved: 25,
         rejected: 25,
-        closed: 25,
       });
     });
 
