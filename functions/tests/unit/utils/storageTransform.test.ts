@@ -18,6 +18,7 @@ describe("storageTransform", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     clearSignedUrlCache();
+    delete process.env.FIREBASE_STORAGE_EMULATOR_HOST;
   });
 
   describe("transformToSignedUrl", () => {
@@ -94,6 +95,23 @@ describe("storageTransform", () => {
       const result = await transformToSignedUrl(filePath);
 
       expect(result).toBe(expectedUrl);
+    });
+
+    it("should use localhost when storage emulator host is set", async () => {
+      process.env.FIREBASE_STORAGE_EMULATOR_HOST = "firebase-emulator:9199";
+
+      const filePath = "scanned-molds/123_photo.jpg";
+      const fakeFile = {
+        getMetadata: jest.fn().mockResolvedValue([{metadata: {firebaseStorageDownloadTokens: "existing-token"}}]),
+        setMetadata: jest.fn(),
+      };
+      (storage.getFileRef as jest.Mock).mockReturnValue(fakeFile);
+
+      const result = await transformToSignedUrl(filePath);
+
+      expect(result).toContain("localhost:9199");
+      expect(result).toContain("token=existing-token");
+      expect(fakeFile.getMetadata).toHaveBeenCalled();
     });
 
     it("should return existing public URL as-is", async () => {
