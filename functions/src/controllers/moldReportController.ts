@@ -1,7 +1,7 @@
 import {Request, Response} from "express";
 import {devLog} from "../utils/dev";
 import {defaultError, sendError, sendSuccess} from "../utils/response";
-import {MoldReport, MoldReportDetails, PaginatedResult} from "../types/types";
+import {MoldCase, MoldReport, MoldReportDetails, PaginatedResult} from "../types/types";
 import {uploadFiles} from "../lib/storage";
 import {StorageFolder} from "../configs/storage";
 import {
@@ -24,8 +24,34 @@ import {
 import {performMoldLookup} from "../services/lookupService";
 import {createLog} from "../utils/logging";
 import {AuditAction, Role} from "../types/enums";
-import {getCombinedTotalCounts, getMoldCasePriorityBreakdown, addMoldCaseToFirestore, retrieveMoldCaseByReportId} from "../services/moldCaseService";
+import {getCombinedTotalCounts, getMoldCasePriorityBreakdown, addMoldCaseToFirestore, retrieveMoldCaseByReportId, updateMoldCaseInFirestore} from "../services/moldCaseService";
 import {Timestamp} from "firebase-admin/firestore";
+
+type MoldReportLifecycleStatus = MoldReport["status"] | "closed";
+
+const ALLOWED_STATUS_TRANSITIONS: Record<MoldReportLifecycleStatus, MoldReportLifecycleStatus[]> = {
+  pending: ["in progress", "rejected"],
+  "in progress": ["resolved", "rejected"],
+  resolved: ["closed"],
+  rejected: [],
+  closed: [],
+};
+
+const normalizeStatus = (status: string): MoldReportLifecycleStatus | null => {
+  const trimmed = status.trim().toLowerCase();
+  if (trimmed === "in_progress") return "in progress";
+  if (trimmed === "in progress") return "in progress";
+  if (trimmed === "pending") return "pending";
+  if (trimmed === "resolved") return "resolved";
+  if (trimmed === "rejected") return "rejected";
+  if (trimmed === "closed") return "closed";
+  return null;
+};
+
+const canTransitionStatus = (from: MoldReportLifecycleStatus, to: MoldReportLifecycleStatus): boolean => {
+  if (from === to) return true;
+  return ALLOWED_STATUS_TRANSITIONS[from].includes(to);
+};
 
 export const createMoldReport = async (req: Request, res: Response) => {
   /**
@@ -1056,6 +1082,7 @@ export const postCaseDetail = async (req: Request, res: Response) => {
       }
       await updateMoldReportInFirestore(id, {
         status: "pending",
+        assigned_mycologist_id: null,
       });
       // Audit log
       if (actor) {
@@ -1174,28 +1201,55 @@ export const assignReport = async (req: Request, res: Response) => {
     const id: string = req.params.id;
     const details: { assigned_mycologist_id: string; status?: string; priority?: string } =
       req.body;
+
+    const current = await retrieveMoldReportById(id);
+    if (!current) return sendError(res, "Mold report not found", 404);
+    if (!canTransitionStatus(current.status, "in progress")) {
+      return sendError(res, `Cannot assign report with status '${current.status}'`, 409);
+    }
+    if (current.assigned_mycologist_id) {
+      return sendError(res, "Report is already assigned", 409);
+    }
+
+    const normalizedStatus: MoldReport["status"] = "in progress";
+
     const updated = await updateMoldReportInFirestore(id, {
       assigned_mycologist_id: details.assigned_mycologist_id,
-      // Cast here because DTO allows arbitrary string; repo enforces allowed statuses
-      status: (details.status as any) || "in progress",
+      status: normalizedStatus,
     });
     if (!updated) return sendError(res, "Failed to assign mycologist", 400);
 
     // Auto-create a MoldCase linked to this report if one doesn't exist yet.
     // This ensures GET /mold-case/by-report/:id works as soon as a mycologist is assigned.
-    const existingCase = await retrieveMoldCaseByReportId(id);
+    const reportOwnerId = updated.user_id || current.user_id;
+    const existingCase = await retrieveMoldCaseByReportId(id, reportOwnerId);
     if (!existingCase) {
       await addMoldCaseToFirestore({
         mold_report_id: id,
         mycologist_id: details.assigned_mycologist_id,
         name: updated.case_name,
-        user_id: updated.user_id,
+        user_id: reportOwnerId,
         priority: (details.priority as "low" | "medium" | "high") ?? "low",
         start_date: Timestamp.now() as any,
         end_date: null as any,
         is_archived: false,
       });
       devLog(`[assignReport] Auto-created MoldCase for report=${id}`);
+    } else {
+      const existingCaseId = (existingCase as any)?.id as string | undefined;
+      if (!existingCaseId) {
+        return sendSuccess(res, updated);
+      }
+      // Self-heal older/stale docs where ownership drifted to a non-reporter user.
+      const needsOwnerRepair = existingCase.user_id !== reportOwnerId;
+      const needsMycologistRepair = existingCase.mycologist_id !== details.assigned_mycologist_id;
+      if (needsOwnerRepair || needsMycologistRepair) {
+        await updateMoldCaseInFirestore(existingCaseId, {
+          user_id: reportOwnerId,
+          mycologist_id: details.assigned_mycologist_id,
+        } as Partial<MoldCase>);
+        devLog(`[assignReport] Repaired MoldCase ownership/assignee for report=${id}`);
+      }
     }
 
     return sendSuccess(res, updated);
@@ -1274,7 +1328,13 @@ export const assignReport = async (req: Request, res: Response) => {
 export const rejectReport = async (req: Request, res: Response) => {
   try {
     const id: string = req.params.id;
-    // Mark as closed and clear assigned mycologist
+    const current = await retrieveMoldReportById(id);
+    if (!current) return sendError(res, "Mold report not found", 404);
+    if (!canTransitionStatus(current.status, "rejected")) {
+      return sendError(res, `Cannot reject report with status '${current.status}'`, 409);
+    }
+
+    // Mark as rejected and clear assigned mycologist
     const updated = await updateMoldReportInFirestore(id, {
       status: "rejected",
       assigned_mycologist_id: null,
@@ -1628,8 +1688,38 @@ export const getMoldReportById = async (req: Request, res: Response) => {
 export const patchMoldReport = async (req: Request, res: Response) => {
   try {
     const id: string = req.params.id;
-    const details: Partial<MoldReport> = req.body;
-    const updated = await updateMoldReportInFirestore(id, details);
+    const details: Partial<MoldReport> & {status?: string} = req.body;
+
+    if (details.assigned_mycologist_id !== undefined) {
+      return sendError(res, "Use /:id/assign to change mycologist assignment", 400);
+    }
+
+    if (details.status !== undefined) {
+      const current = await retrieveMoldReportById(id);
+      if (!current) return sendError(res, "Mold report not found", 404);
+
+      const normalizedTargetStatus = normalizeStatus(details.status);
+      if (!normalizedTargetStatus) {
+        return sendError(res, "Invalid status value", 400);
+      }
+
+      if (!canTransitionStatus(current.status, normalizedTargetStatus)) {
+        return sendError(
+          res,
+          `Invalid status transition from '${current.status}' to '${normalizedTargetStatus}'`,
+          409
+        );
+      }
+
+      // Keep explicit lifecycle endpoints for assignment/rejection workflows.
+      if (normalizedTargetStatus === "in progress" || normalizedTargetStatus === "rejected") {
+        return sendError(res, "Use /:id/assign or /:id/reject for this transition", 400);
+      }
+
+      (details as any).status = normalizedTargetStatus;
+    }
+
+    const updated = await updateMoldReportInFirestore(id, details as Partial<MoldReport>);
     if (!updated) return sendError(res, "Failed to update mold report", 404);
     return sendSuccess(res, updated);
   } catch (error) {
@@ -1712,6 +1802,12 @@ export const deleteMoldReport = async (req: Request, res: Response) => {
 export const softDeleteMoldReport = async (req: Request, res: Response) => {
   try {
     const id: string = req.params.id;
+    const current = await retrieveMoldReportById(id);
+    if (!current) return sendError(res, "Mold report not found", 404);
+    if (!canTransitionStatus(current.status, "closed")) {
+      return sendError(res, `Cannot close report with status '${current.status}'`, 409);
+    }
+
     await softRemoveMoldReport(id);
     return sendSuccess(res, "Successfully closed mold report.");
   } catch (error) {

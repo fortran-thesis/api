@@ -25,6 +25,26 @@ import {Timestamp} from "firebase-admin/firestore";
 import {retrieveMoldReportById, updateMoldReportInFirestore} from "../services/moldReportService";
 import {performMoldLookup} from "../services/lookupService";
 
+const getActorContext = (req: Request) => {
+  const userId = req.user?.id;
+  const role = String(req.user?.user?.role || "").toLowerCase();
+  return {userId, role};
+};
+
+const isAdminRole = (role: string) => role === "admin" || role === "administrator";
+
+const canReadMoldCase = (moldCase: MoldCase, userId?: string, role?: string) => {
+  if (isAdminRole(role || "")) return true;
+  if (!userId) return false;
+  return moldCase.mycologist_id === userId || moldCase.user_id === userId;
+};
+
+const canManageMoldCase = (moldCase: MoldCase, userId?: string, role?: string) => {
+  if (isAdminRole(role || "")) return true;
+  if (!userId) return false;
+  return moldCase.mycologist_id === userId;
+};
+
 export const createMoldCase = async (req: Request, res: Response) => {
   /**
    * @swagger
@@ -609,6 +629,14 @@ export const patchMoldCase = async (req: Request, res: Response) => {
    */
   try {
     const id: string = req.params.id;
+    const moldCase = await retrieveMoldCaseById(id);
+    if (!moldCase) return sendError(res, "Mold case not found", 404);
+
+    const {userId, role} = getActorContext(req);
+    if (!canManageMoldCase(moldCase, userId, role)) {
+      return sendError(res, "Forbidden", 403);
+    }
+
     // Support both req.body.details and direct properties
     const details: Partial<MoldCase> = req.body.details || req.body;
     if (!details || Object.keys(details).length === 0) {
@@ -818,8 +846,18 @@ export const getMoldCaseByReportId = async (req: Request, res: Response) => {
    */
   try {
     const reportId: string = req.params.id;
-    const moldCase = await retrieveMoldCaseByReportId(reportId);
+    const {userId, role} = getActorContext(req);
+    const linkedReport = await retrieveMoldReportById(reportId);
+    if (!linkedReport) return sendError(res, "Mold report not found", 404);
+
+    const moldCase = await retrieveMoldCaseByReportId(reportId, linkedReport.user_id);
     if (!moldCase) return sendError(res, "No mold case found for this report", 404);
+
+    const isReportOwner = !!userId && linkedReport.user_id === userId;
+    if (!canReadMoldCase(moldCase, userId, role) && !isReportOwner) {
+      return sendError(res, "Forbidden", 403);
+    }
+
     return sendSuccess(res, moldCase);
   } catch (error) {
     devLog(error);
@@ -944,6 +982,14 @@ export const addCultivationLog = async (req: Request, res: Response) => {
    */
   try {
     const caseId: string = req.params.id;
+    const moldCase = await retrieveMoldCaseById(caseId);
+    if (!moldCase) return sendError(res, "Mold case not found", 404);
+
+    const {userId, role} = getActorContext(req);
+    if (!canManageMoldCase(moldCase, userId, role)) {
+      return sendError(res, "Forbidden", 403);
+    }
+
     const logData = req.body;
 
     // Handle image upload if provided
@@ -1092,13 +1138,20 @@ export const updateCultivationDetails = async (req: Request, res: Response) => {
    */
   try {
     const caseId: string = req.params.id;
+    const moldCase = await retrieveMoldCaseById(caseId);
+    if (!moldCase) return sendError(res, "Mold case not found", 404);
+
+    const {userId, role} = getActorContext(req);
+    if (!canManageMoldCase(moldCase, userId, role)) {
+      return sendError(res, "Forbidden", 403);
+    }
+
     const details = req.body;
     const updated = await updateCultivationDetailsInCase(caseId, details);
     if (!updated) return sendError(res, "Failed to update cultivation details", 400);
 
     // Re-run lookup in background if report has reported_* fields
-    const moldCase = await retrieveMoldCaseById(caseId);
-    if (moldCase && moldCase.mold_report_id) {
+    if (moldCase.mold_report_id) {
       const moldReport = await retrieveMoldReportById(moldCase.mold_report_id);
       if (moldReport) {
         devLog(`[updateCultivationDetails] Re-running lookup for report ${moldCase.mold_report_id}`);
@@ -1106,13 +1159,20 @@ export const updateCultivationDetails = async (req: Request, res: Response) => {
         const reportedSigns = (moldReport as any).reported_signs || [];
         const reportedCharacteristics = (moldReport as any).reported_characteristics || [];
 
-        // Extract characteristics from cultivation details if available
+        // Extract characteristics from cultivation details if available.
+        // Mobile sends nested `cultivation_details`, while some clients may send flat shape.
+        const detailsPayload = (details?.cultivation_details ?? details ?? {}) as Record<string, any>;
         const additionalCharacteristics: string[] = [];
-        if (details.in_vivo_details?.lesion_color) {
-          additionalCharacteristics.push(details.in_vivo_details.lesion_color);
+        if (detailsPayload.in_vivo_details?.lesion_color) {
+          additionalCharacteristics.push(String(detailsPayload.in_vivo_details.lesion_color));
         }
-        if (details.in_vitro_details?.colony_color) {
-          additionalCharacteristics.push(details.in_vitro_details.colony_color);
+        if (detailsPayload.in_vitro_details?.colony_color) {
+          additionalCharacteristics.push(String(detailsPayload.in_vitro_details.colony_color));
+        }
+        if (Array.isArray(detailsPayload.initial_characteristics)) {
+          additionalCharacteristics.push(
+            ...detailsPayload.initial_characteristics.map((v: unknown) => String(v))
+          );
         }
 
         const allCharacteristics = [...reportedCharacteristics, ...additionalCharacteristics];
@@ -1487,6 +1547,12 @@ export const getMoldCaseById = async (req: Request, res: Response) => {
     const id: string = req.params.id;
     const moldCase = await retrieveMoldCaseById(id);
     if (!moldCase) return sendError(res, "Mold case not found", 404);
+
+    const {userId, role} = getActorContext(req);
+    if (!canReadMoldCase(moldCase, userId, role)) {
+      return sendError(res, "Forbidden", 403);
+    }
+
     return sendSuccess(res, moldCase);
   } catch (error) {
     devLog(error);
@@ -1734,6 +1800,14 @@ export const getCultivationLogs = async (req: Request, res: Response) => {
    */
   try {
     const id: string = req.params.id;
+    const moldCase = await retrieveMoldCaseById(id);
+    if (!moldCase) return sendError(res, "Mold case not found", 404);
+
+    const {userId, role} = getActorContext(req);
+    if (!canReadMoldCase(moldCase, userId, role)) {
+      return sendError(res, "Forbidden", 403);
+    }
+
     const limit = parseInt(req.query.limit as string, 10) || 50;
     const pageToken = req.query.pageToken as string | undefined;
     const result = await getCultivationLogsFromCase(id, limit, pageToken);
@@ -1825,6 +1899,14 @@ export const removeCultivationLog = async (req: Request, res: Response) => {
    */
   try {
     const id: string = req.params.id;
+    const moldCase = await retrieveMoldCaseById(id);
+    if (!moldCase) return sendError(res, "Mold case not found", 404);
+
+    const {userId, role} = getActorContext(req);
+    if (!canManageMoldCase(moldCase, userId, role)) {
+      return sendError(res, "Forbidden", 403);
+    }
+
     const logId: string = req.params.logId;
     if (!logId || !logId.trim()) {
       return sendError(res, "Log ID is required.", 400);
@@ -1922,13 +2004,18 @@ export const finalizeVerdict = async (req: Request, res: Response) => {
       return sendError(res, "Mold case not found", 404);
     }
 
+    const {userId, role} = getActorContext(req);
+    if (!canManageMoldCase(moldCase, userId, role)) {
+      return sendError(res, "Forbidden", 403);
+    }
+
     // Update the mold case with final verdict
     const verdict = {
       moldId,
       moldName,
       confidence,
-      mycologist_notes: mycologistNotes,
       verdict_timestamp: Timestamp.now(),
+      ...(mycologistNotes !== undefined ? {mycologist_notes: mycologistNotes} : {}),
     };
 
     const updatedCase = await updateMoldCaseInFirestore(caseId, {
@@ -1939,19 +2026,41 @@ export const finalizeVerdict = async (req: Request, res: Response) => {
       return sendError(res, "Failed to update mold case with verdict", 400);
     }
 
-    // Update the associated report status to resolved (in background)
+    // Update the associated report status to resolved and surface failures explicitly.
+    let reportSyncWarning: string | null = null;
     if (moldCase.mold_report_id) {
-      updateMoldReportInFirestore(moldCase.mold_report_id, {
-        status: "resolved",
-      }).catch((err) => {
+      try {
+        const linkedReport = await retrieveMoldReportById(moldCase.mold_report_id);
+        if (!linkedReport) {
+          reportSyncWarning = "Verdict saved, but linked report could not be found";
+        } else if (linkedReport.status !== "in progress") {
+          reportSyncWarning = `Verdict saved, but report status '${linkedReport.status}' cannot transition to 'resolved'`;
+        }
+
+        if (reportSyncWarning) {
+          devLog(`[finalizeVerdict] Warning: ${reportSyncWarning}`);
+        }
+
+        if (!reportSyncWarning) {
+        const reportUpdated = await updateMoldReportInFirestore(moldCase.mold_report_id, {
+          status: "resolved",
+        });
+        if (!reportUpdated) {
+          reportSyncWarning = "Verdict saved, but report status sync did not persist";
+          devLog(`[finalizeVerdict] Warning: Report status sync returned no update for report ${moldCase.mold_report_id}`);
+        }
+        }
+      } catch (err) {
+        reportSyncWarning = "Verdict saved, but report status sync failed";
         devLog(`[finalizeVerdict] Warning: Failed to update report status: ${err}`);
-      });
+      }
     }
 
     devLog(`[finalizeVerdict] ✅ Verdict finalized for case ${caseId}: ${moldName} (${confidence}%)`);
     return sendSuccess(res, {
       moldCaseId: caseId,
       final_verdict: verdict,
+      report_sync_warning: reportSyncWarning,
     });
   } catch (error) {
     devLog("[finalizeVerdict] Error:", String(error));
