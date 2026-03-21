@@ -3,6 +3,8 @@ import {devLog} from "./dev";
 import {LRUCache} from "lru-cache";
 import {isHttpUrl, parseStorageReference} from "./storageUrl";
 import {getDefaultBucket} from "../configs/storage";
+import {getFileRef} from "../lib/storage";
+import {randomUUID} from "crypto";
 
 const DEFAULT_SIGNED_URL_TTL_SECONDS = 7200;
 const signedUrlCache = new LRUCache<string, string>({
@@ -26,6 +28,12 @@ export const transformToSignedUrl = async (
 ): Promise<string | null> => {
   if (!filePath) return null;
 
+  // Ensure filePath is actually a string (not an object like Timestamp)
+  if (typeof filePath !== "string") {
+    devLog(`transformToSignedUrl: filePath is not a string, type=${typeof filePath}, returning null`);
+    return null;
+  }
+
   // If it's already a URL (absolute path starting with http/https), return as-is
   if (isHttpUrl(filePath)) {
     devLog("transformToSignedUrl: Input is already a URL, returning as-is");
@@ -43,12 +51,44 @@ export const transformToSignedUrl = async (
     `${protocol}://${host}/v0/b/${bucket}/o/${encodedPath}?alt=media`;
 
   // When the Firebase Storage emulator is active, signed URLs are not supported.
-  // Build a public emulator download URL instead (port 9199 is exposed on the host).
+  // Return a tokenized direct media URL so browser image tags can load without
+  // attaching auth headers. If token metadata is missing, create one.
   const storageEmulatorHost = process.env.FIREBASE_STORAGE_EMULATOR_HOST;
   if (storageEmulatorHost) {
-    const emulatorDownloadUrl = toDownloadUrl("localhost:9199", "http");
-    devLog(`transformToSignedUrl: Emulator mode — returning download URL: ${emulatorDownloadUrl}`);
-    return emulatorDownloadUrl;
+    try {
+      const file = getFileRef(parsed.filePath, bucket);
+      const [metadata] = await file.getMetadata();
+      const rawTokens = metadata?.metadata?.firebaseStorageDownloadTokens;
+      const existingToken =
+        (typeof rawTokens === "string" ? rawTokens : "")
+          .split(",")
+          .map((token: string) => token.trim())
+          .find(Boolean);
+
+      let downloadToken = existingToken;
+      if (!downloadToken) {
+        downloadToken = randomUUID();
+        await file.setMetadata({
+          metadata: {
+            ...(metadata?.metadata || {}),
+            firebaseStorageDownloadTokens: downloadToken,
+          },
+        });
+      }
+
+      const emulatorPort = storageEmulatorHost.split(":")[1] || "9199";
+      const emulatorHostForBrowser = `localhost:${emulatorPort}`;
+
+      const emulatorDownloadUrl = `${toDownloadUrl(emulatorHostForBrowser, "http")}&token=${encodeURIComponent(downloadToken)}`;
+      devLog(`transformToSignedUrl: Emulator mode — returning tokenized URL: ${emulatorDownloadUrl}`);
+      return emulatorDownloadUrl;
+    } catch (error) {
+      devLog(`transformToSignedUrl: Emulator token URL failed, falling back to direct media URL: ${error}`);
+      const emulatorPort = storageEmulatorHost.split(":")[1] || "9199";
+      const emulatorHostForBrowser = `localhost:${emulatorPort}`;
+      const emulatorDownloadUrl = toDownloadUrl(emulatorHostForBrowser, "http");
+      return emulatorDownloadUrl;
+    }
   }
 
   const cacheKey = `${bucket}:${parsed.filePath}:${expiresInSeconds}`;

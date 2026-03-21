@@ -1,5 +1,6 @@
 import {getCache, setCache, deleteCache, deleteCachePattern} from "./redis";
 import {devLog} from "./dev";
+import {createHash} from "crypto";
 
 /**
  * Cache Manager for modular Redis caching
@@ -43,9 +44,10 @@ export function generateListCacheKey(resource: string, query?: Record<string, an
       return acc;
     }, {} as Record<string, any>);
 
-  // Create a hash from query params
+  // Create a collision-resistant hash from query params.
+  // Truncated base64 prefixes can collide for different pageToken values.
   const queryString = JSON.stringify(sortedQuery);
-  const hash = Buffer.from(queryString).toString("base64").substring(0, 16);
+  const hash = createHash("sha256").update(queryString).digest("hex").substring(0, 24);
   return `${resource}:list:${hash}`;
 }
 
