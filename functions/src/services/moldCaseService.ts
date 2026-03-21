@@ -5,7 +5,7 @@ import {
   Timestamp,
   WriteResult,
 } from "firebase-admin/firestore";
-import {documentToJson, queryToJson} from "../lib/firestore";
+import {documentToJson, queryToJson, getDb} from "../lib/firestore";
 import {devLog} from "../utils/dev";
 import {
   addMoldCase,
@@ -32,7 +32,6 @@ import {transformToSignedUrl} from "../utils/storageTransform";
 import {cacheItem, getCachedItem, cacheList, getCachedList} from "../utils/cacheManager";
 // Cache TTL for this service (in seconds) — keep signed URLs consistent with cached responses
 const MOLD_CASE_SERVICE_TTL_SECONDS = 300;
-import {getDb} from "../lib/firestore";
 import {getCollectionName, FirestoreCollection} from "../types/models/firestoreCollections";
 import {getRoleCounts, getDisabledCounts} from "./userService";
 import {getMoldReportStatusCounts} from "./moldReportService";
@@ -407,12 +406,12 @@ export const retrieveMoldCaseByReportId = async (
     // normalize dates and ensure photo_url is a string
     const raw = mostRecent;
     const normalized: any = {...raw};
-    
+
     // Ensure photo_url is a string or null (not a Firestore object)
     if (normalized.photo_url && typeof normalized.photo_url !== "string") {
       normalized.photo_url = null;
     }
-    
+
     if (
       raw.start_date &&
       typeof (raw.start_date as any).toDate === "function"

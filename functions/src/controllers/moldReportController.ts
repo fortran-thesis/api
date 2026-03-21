@@ -30,10 +30,10 @@ import {Timestamp} from "firebase-admin/firestore";
 type MoldReportLifecycleStatus = MoldReport["status"];
 
 const ALLOWED_STATUS_TRANSITIONS: Record<MoldReportLifecycleStatus, MoldReportLifecycleStatus[]> = {
-  pending: ["in progress", "rejected"],
+  "pending": ["in progress", "rejected"],
   "in progress": ["resolved", "rejected"],
-  resolved: ["rejected", "pending"],
-  rejected: ["pending"],
+  "resolved": ["rejected", "pending"],
+  "rejected": ["pending"],
 };
 
 const normalizeStatus = (status: string): MoldReportLifecycleStatus | null => {

@@ -2048,13 +2048,13 @@ export const finalizeVerdict = async (req: Request, res: Response) => {
         }
 
         if (!reportSyncWarning) {
-        const reportUpdated = await updateMoldReportInFirestore(moldCase.mold_report_id, {
-          status: "resolved",
-        });
-        if (!reportUpdated) {
-          reportSyncWarning = "Verdict saved, but report status sync did not persist";
-          devLog(`[finalizeVerdict] Warning: Report status sync returned no update for report ${moldCase.mold_report_id}`);
-        }
+          const reportUpdated = await updateMoldReportInFirestore(moldCase.mold_report_id, {
+            status: "resolved",
+          });
+          if (!reportUpdated) {
+            reportSyncWarning = "Verdict saved, but report status sync did not persist";
+            devLog(`[finalizeVerdict] Warning: Report status sync returned no update for report ${moldCase.mold_report_id}`);
+          }
         }
       } catch (err) {
         reportSyncWarning = "Verdict saved, but report status sync failed";
