@@ -15,10 +15,12 @@
  */
 import {envOptions} from "../configs/environment";
 import {devLog} from "../utils/dev";
+import {logger} from "../configs/logger";
 
 /** Resolved at startup from environment */
-const LAMBDA_URL = envOptions.lambdaUrl;
+const LAMBDA_URL = (envOptions.lambdaUrl || "").trim();
 const INTERNAL_KEY = (envOptions.modelInternalKey || "").trim();
+const MODEL_PROXY_TIMEOUT_MS = Number(process.env.MODEL_PROXY_TIMEOUT_MS || "120000");
 
 export interface ProxyResult {
   status: number;
@@ -108,6 +110,11 @@ const parseUpstreamBody = async (res: Response): Promise<unknown> => {
   }
 };
 
+const isTimeoutError = (err: unknown): boolean => {
+  if (!(err instanceof Error)) return false;
+  return err.name === "TimeoutError" || err.name === "AbortError";
+};
+
 // ---------------------------------------------------------------------------
 // JSON predict
 // ---------------------------------------------------------------------------
@@ -123,10 +130,12 @@ export const proxyJsonPredict = async (
   queryParams?: Record<string, string>
 ): Promise<ProxyResult> => {
   if (!LAMBDA_URL) {
-    return {status: 503, body: {error: "Model service URL not configured"}};
+    logger.error({ctx: "modelProxy", endpoint: "v3/predict"}, "MODEL_LAMBDA_URL is empty");
+    return {status: 500, body: {error: "Model service URL not configured"}};
   }
   if (!INTERNAL_KEY) {
-    return {status: 503, body: {error: "Model service internal key not configured"}};
+    logger.error({ctx: "modelProxy", endpoint: "v3/predict"}, "MODEL_INTERNAL_KEY is empty");
+    return {status: 500, body: {error: "Model service internal key not configured"}};
   }
 
   const headers = makeHeaders({"Content-Type": "application/json"});
@@ -135,17 +144,32 @@ export const proxyJsonPredict = async (
   // ── v3 fusion endpoint (fusion model) ─────────────────────────────────────
   try {
     const url = buildModelUrl("v3/predict", withInternalKeyFallback(queryParams));
+    const startedAt = Date.now();
     const res = await fetch(url.toString(), {
       method: "POST",
       headers,
       body,
-      signal: AbortSignal.timeout(55_000),
+      signal: AbortSignal.timeout(MODEL_PROXY_TIMEOUT_MS),
     });
 
     const upstreamBody = await parseUpstreamBody(res);
+    const latencyMs = Date.now() - startedAt;
+    logger.info(
+      {
+        ctx: "modelProxy",
+        endpoint: "v3/predict",
+        status: res.status,
+        latencyMs,
+      },
+      "Upstream model request completed"
+    );
     return {status: res.status, body: tagBody(upstreamBody, "fusion")};
   } catch (err) {
     devLog(err, "modelProxy:jsonPredict failed");
+    logger.error({err, ctx: "modelProxy", endpoint: "v3/predict"}, "Upstream model request failed");
+    if (isTimeoutError(err)) {
+      return {status: 504, body: {error: "Model service timed out"}};
+    }
     return {status: 502, body: {error: "Model service unavailable"}};
   }
 };
@@ -167,10 +191,12 @@ export const proxyMultipartPredict = async (
   queryParams?: Record<string, string>
 ): Promise<ProxyResult> => {
   if (!LAMBDA_URL) {
-    return {status: 503, body: {error: "Model service URL not configured"}};
+    logger.error({ctx: "modelProxy", endpoint: "v3/predict-multipart"}, "MODEL_LAMBDA_URL is empty");
+    return {status: 500, body: {error: "Model service URL not configured"}};
   }
   if (!INTERNAL_KEY) {
-    return {status: 503, body: {error: "Model service internal key not configured"}};
+    logger.error({ctx: "modelProxy", endpoint: "v3/predict-multipart"}, "MODEL_INTERNAL_KEY is empty");
+    return {status: 500, body: {error: "Model service internal key not configured"}};
   }
 
   const headers = makeHeaders();
@@ -188,17 +214,35 @@ export const proxyMultipartPredict = async (
   // ── v3 fusion multipart endpoint ─────────────────────────────────────────
   try {
     const url = buildModelUrl("v3/predict-multipart", withInternalKeyFallback(queryParams));
+    const startedAt = Date.now();
     const res = await fetch(url.toString(), {
       method: "POST",
       headers,
       body: buildFormData() as any,
-      signal: AbortSignal.timeout(55_000),
+      signal: AbortSignal.timeout(MODEL_PROXY_TIMEOUT_MS),
     });
 
     const upstreamBody = await parseUpstreamBody(res);
+    const latencyMs = Date.now() - startedAt;
+    logger.info(
+      {
+        ctx: "modelProxy",
+        endpoint: "v3/predict-multipart",
+        status: res.status,
+        latencyMs,
+      },
+      "Upstream model request completed"
+    );
     return {status: res.status, body: tagBody(upstreamBody, "fusion")};
   } catch (err) {
     devLog(err, "modelProxy:multipartPredict failed");
+    logger.error(
+      {err, ctx: "modelProxy", endpoint: "v3/predict-multipart"},
+      "Upstream model request failed"
+    );
+    if (isTimeoutError(err)) {
+      return {status: 504, body: {error: "Model service timed out"}};
+    }
     return {status: 502, body: {error: "Model service unavailable"}};
   }
 };
