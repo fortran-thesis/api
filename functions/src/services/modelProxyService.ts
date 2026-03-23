@@ -63,62 +63,21 @@ const withInternalKeyFallback = (params?: Record<string, string>): Record<string
   return {...params, internal_key: INTERNAL_KEY};
 };
 
-/** Attaches query params to a URL, returning the URL instance for chaining. */
-const applyQueryParams = (url: URL, params?: Record<string, string>): URL => {
-  if (params) {
-    for (const [k, v] of Object.entries(params)) {
-      url.searchParams.set(k, v);
-    }
-  }
-  return url;
-};
-
 /**
- * Build a model endpoint URL while preserving any base path segment
- * (for example API Gateway stages like /prod).
+ * Build upstream URL by preserving the configured base URL exactly.
+ * This avoids implicit stage/path rewrites that can cause API Gateway 404.
  */
-const buildModelUrl = (path: string, params?: Record<string, string>): URL => {
-  const normalizedBase = LAMBDA_URL.endsWith("/") ? LAMBDA_URL : `${LAMBDA_URL}/`;
-  const normalizedPath = path.startsWith("/") ? path.slice(1) : path;
-  const url = new URL(normalizedPath, normalizedBase);
-  return applyQueryParams(url, params);
-};
+const buildModelUrl = (path: string, params?: Record<string, string>): string => {
+  const joined = `${LAMBDA_URL}${path}`;
+  if (!params || Object.keys(params).length === 0) return joined;
 
-/**
- * Build candidate URLs to survive API Gateway stage mismatches.
- * Primary keeps configured base path; fallback swaps between `/default` and root.
- */
-const buildModelUrlCandidates = (path: string, params?: Record<string, string>): URL[] => {
-  const normalizedPath = path.startsWith("/") ? path.slice(1) : path;
-  const candidates: URL[] = [buildModelUrl(normalizedPath, params)];
-
-  try {
-    const base = new URL(LAMBDA_URL.endsWith("/") ? LAMBDA_URL : `${LAMBDA_URL}/`);
-    const stagePath = base.pathname.replace(/\/+$/, "");
-
-    // If configured URL already includes /default, also try root.
-    if (/\/default$/i.test(stagePath)) {
-      const root = new URL(base.origin + "/");
-      candidates.push(applyQueryParams(new URL(normalizedPath, root), params));
-    }
-
-    // If configured URL is root, also try /default stage.
-    if (stagePath === "" || stagePath === "/") {
-      const withDefault = new URL(base.origin + "/default/");
-      candidates.push(applyQueryParams(new URL(normalizedPath, withDefault), params));
-    }
-  } catch {
-    // Ignore fallback generation errors and use primary candidate.
+  const query = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    query.set(k, v);
   }
 
-  // Deduplicate candidate URLs while preserving order.
-  const seen = new Set<string>();
-  return candidates.filter((u) => {
-    const key = u.toString();
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+  const sep = joined.includes("?") ? "&" : "?";
+  return `${joined}${sep}${query.toString()}`;
 };
 
 /**
@@ -180,51 +139,30 @@ export const proxyJsonPredict = async (
 
   // ── v3 fusion endpoint (fusion model) ─────────────────────────────────────
   try {
-    const candidates = buildModelUrlCandidates("v3/predict", withInternalKeyFallback(queryParams));
+    const url = buildModelUrl("v3/predict", withInternalKeyFallback(queryParams));
+    const startedAt = Date.now();
+    const res = await fetch(url, {
+      method: "POST",
+      headers,
+      body,
+      signal: AbortSignal.timeout(MODEL_PROXY_TIMEOUT_MS),
+    });
 
-    for (let index = 0; index < candidates.length; index += 1) {
-      const url = candidates[index];
-      const startedAt = Date.now();
-      const res = await fetch(url.toString(), {
-        method: "POST",
-        headers,
-        body,
-        signal: AbortSignal.timeout(MODEL_PROXY_TIMEOUT_MS),
-      });
+    const upstreamBody = await parseUpstreamBody(res);
+    const latencyMs = Date.now() - startedAt;
 
-      const upstreamBody = await parseUpstreamBody(res);
-      const latencyMs = Date.now() - startedAt;
+    logger.info(
+      {
+        ctx: "modelProxy",
+        endpoint: "v3/predict",
+        status: res.status,
+        latencyMs,
+        url,
+      },
+      "Upstream model request completed"
+    );
 
-      logger.info(
-        {
-          ctx: "modelProxy",
-          endpoint: "v3/predict",
-          status: res.status,
-          latencyMs,
-          url: url.toString(),
-          attempt: index + 1,
-          fallbackUsed: index > 0,
-        },
-        "Upstream model request completed"
-      );
-
-      if (res.status === 404 && index < candidates.length - 1) {
-        logger.warn(
-          {
-            ctx: "modelProxy",
-            endpoint: "v3/predict",
-            url: url.toString(),
-            attempt: index + 1,
-          },
-          "Upstream returned 404; retrying with stage fallback URL"
-        );
-        continue;
-      }
-
-      return {status: res.status, body: tagBody(upstreamBody, "fusion")};
-    }
-
-    return {status: 404, body: {error: "Model endpoint not found"}};
+    return {status: res.status, body: tagBody(upstreamBody, "fusion")};
   } catch (err) {
     devLog(err, "modelProxy:jsonPredict failed");
     logger.error({err, ctx: "modelProxy", endpoint: "v3/predict"}, "Upstream model request failed");
@@ -274,51 +212,30 @@ export const proxyMultipartPredict = async (
 
   // ── v3 fusion multipart endpoint ─────────────────────────────────────────
   try {
-    const candidates = buildModelUrlCandidates("v3/predict-multipart", withInternalKeyFallback(queryParams));
+    const url = buildModelUrl("v3/predict-multipart", withInternalKeyFallback(queryParams));
+    const startedAt = Date.now();
+    const res = await fetch(url, {
+      method: "POST",
+      headers,
+      body: buildFormData() as any,
+      signal: AbortSignal.timeout(MODEL_PROXY_TIMEOUT_MS),
+    });
 
-    for (let index = 0; index < candidates.length; index += 1) {
-      const url = candidates[index];
-      const startedAt = Date.now();
-      const res = await fetch(url.toString(), {
-        method: "POST",
-        headers,
-        body: buildFormData() as any,
-        signal: AbortSignal.timeout(MODEL_PROXY_TIMEOUT_MS),
-      });
+    const upstreamBody = await parseUpstreamBody(res);
+    const latencyMs = Date.now() - startedAt;
 
-      const upstreamBody = await parseUpstreamBody(res);
-      const latencyMs = Date.now() - startedAt;
+    logger.info(
+      {
+        ctx: "modelProxy",
+        endpoint: "v3/predict-multipart",
+        status: res.status,
+        latencyMs,
+        url,
+      },
+      "Upstream model request completed"
+    );
 
-      logger.info(
-        {
-          ctx: "modelProxy",
-          endpoint: "v3/predict-multipart",
-          status: res.status,
-          latencyMs,
-          url: url.toString(),
-          attempt: index + 1,
-          fallbackUsed: index > 0,
-        },
-        "Upstream model request completed"
-      );
-
-      if (res.status === 404 && index < candidates.length - 1) {
-        logger.warn(
-          {
-            ctx: "modelProxy",
-            endpoint: "v3/predict-multipart",
-            url: url.toString(),
-            attempt: index + 1,
-          },
-          "Upstream returned 404; retrying with stage fallback URL"
-        );
-        continue;
-      }
-
-      return {status: res.status, body: tagBody(upstreamBody, "fusion")};
-    }
-
-    return {status: 404, body: {error: "Model endpoint not found"}};
+    return {status: res.status, body: tagBody(upstreamBody, "fusion")};
   } catch (err) {
     devLog(err, "modelProxy:multipartPredict failed");
     logger.error(
