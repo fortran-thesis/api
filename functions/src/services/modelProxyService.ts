@@ -47,7 +47,7 @@ const makeHeaders = (extra: Record<string, string> = {}): Record<string, string>
   if (INTERNAL_KEY) {
     headers["X-Internal-Key"] = INTERNAL_KEY;
   } else {
-    devLog(`[modelProxy] WARNING: INTERNAL_KEY is empty/unset`);
+    devLog("[modelProxy] WARNING: INTERNAL_KEY is empty/unset");
   }
   return headers;
 };
