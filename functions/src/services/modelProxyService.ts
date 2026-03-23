@@ -5,8 +5,8 @@
  *
  * Endpoints
  * ---------
- * - JSON:      `/v3/predict` (IntermediateFusionModel)
- * - Multipart:  `/v3/predict-multipart` (IntermediateFusionModel)
+ * - JSON:      `/api/v3/predict` (IntermediateFusionModel)
+ * - Multipart:  `/api/v3/predict-multipart` (IntermediateFusionModel)
  *
  * Response tagging
  * ----------------
@@ -32,7 +32,7 @@ export interface ProxyResult {
  * Injected by the proxy into every successful response body so clients
  * can select the correct response parser without guessing.
  *
- * - `"fusion"` – `/v3/predict` or `/v3/predict-multipart`
+ * - `"fusion"` – `/api/v3/predict` or `/api/v3/predict-multipart`
  *               Shape: `{ fusion: { predicted_class, confidence, probabilities }, cnn, used_fusion }`
  * - `"legacy"` – `/v2/predict` or `/default/multimodal-prediction`
  *               Shape: `{ predicted_class, confidence, probabilities, cnn, used_ann }`
@@ -111,6 +111,14 @@ const isTimeoutError = (err: unknown): boolean => {
   return err.name === "TimeoutError" || err.name === "AbortError";
 };
 
+const buildPathCandidates = (endpointPath: string): string[] => {
+  const normalized = endpointPath.replace(/^\/+/, "");
+  const withoutApi = normalized.startsWith("api/") ? normalized.slice(4) : normalized;
+  const withDoubleApi = normalized.startsWith("api/") ? `api/${normalized}` : `api/${normalized}`;
+
+  return Array.from(new Set([normalized, withDoubleApi, withoutApi]));
+};
+
 // ---------------------------------------------------------------------------
 // JSON predict
 // ---------------------------------------------------------------------------
@@ -126,11 +134,11 @@ export const proxyJsonPredict = async (
   queryParams?: Record<string, string>
 ): Promise<ProxyResult> => {
   if (!LAMBDA_URL) {
-    logger.error({ctx: "modelProxy", endpoint: "v3/predict"}, "MODEL_LAMBDA_URL is empty");
+    logger.error({ctx: "modelProxy", endpoint: "api/v3/predict"}, "MODEL_LAMBDA_URL is empty");
     return {status: 500, body: {error: "Model service URL not configured"}};
   }
   if (!INTERNAL_KEY) {
-    logger.error({ctx: "modelProxy", endpoint: "v3/predict"}, "MODEL_INTERNAL_KEY is empty");
+    logger.error({ctx: "modelProxy", endpoint: "api/v3/predict"}, "MODEL_INTERNAL_KEY is empty");
     return {status: 500, body: {error: "Model service internal key not configured"}};
   }
 
@@ -139,33 +147,56 @@ export const proxyJsonPredict = async (
 
   // ── v3 fusion endpoint (fusion model) ─────────────────────────────────────
   try {
-    const url = buildModelUrl("v3/predict", withInternalKeyFallback(queryParams));
-    const startedAt = Date.now();
-    const res = await fetch(url, {
-      method: "POST",
-      headers,
-      body,
-      signal: AbortSignal.timeout(MODEL_PROXY_TIMEOUT_MS),
-    });
+    const pathCandidates = buildPathCandidates("api/v3/predict");
 
-    const upstreamBody = await parseUpstreamBody(res);
-    const latencyMs = Date.now() - startedAt;
+    for (let index = 0; index < pathCandidates.length; index += 1) {
+      const path = pathCandidates[index];
+      const url = buildModelUrl(path, withInternalKeyFallback(queryParams));
+      const startedAt = Date.now();
+      const res = await fetch(url, {
+        method: "POST",
+        headers,
+        body,
+        signal: AbortSignal.timeout(MODEL_PROXY_TIMEOUT_MS),
+      });
 
-    logger.info(
-      {
-        ctx: "modelProxy",
-        endpoint: "v3/predict",
-        status: res.status,
-        latencyMs,
-        url,
-      },
-      "Upstream model request completed"
-    );
+      const upstreamBody = await parseUpstreamBody(res);
+      const latencyMs = Date.now() - startedAt;
 
-    return {status: res.status, body: tagBody(upstreamBody, "fusion")};
+      logger.info(
+        {
+          ctx: "modelProxy",
+          endpoint: "api/v3/predict",
+          resolvedPath: path,
+          status: res.status,
+          latencyMs,
+          url,
+          attempt: index + 1,
+        },
+        "Upstream model request completed"
+      );
+
+      if (res.status === 404 && index < pathCandidates.length - 1) {
+        logger.warn(
+          {
+            ctx: "modelProxy",
+            endpoint: "api/v3/predict",
+            resolvedPath: path,
+            url,
+            attempt: index + 1,
+          },
+          "Upstream returned 404 for endpoint path; trying next path candidate"
+        );
+        continue;
+      }
+
+      return {status: res.status, body: tagBody(upstreamBody, "fusion")};
+    }
+
+    return {status: 404, body: {error: "Model endpoint not found"}};
   } catch (err) {
     devLog(err, "modelProxy:jsonPredict failed");
-    logger.error({err, ctx: "modelProxy", endpoint: "v3/predict"}, "Upstream model request failed");
+    logger.error({err, ctx: "modelProxy", endpoint: "api/v3/predict"}, "Upstream model request failed");
     if (isTimeoutError(err)) {
       return {status: 504, body: {error: "Model service timed out"}};
     }
@@ -190,11 +221,11 @@ export const proxyMultipartPredict = async (
   queryParams?: Record<string, string>
 ): Promise<ProxyResult> => {
   if (!LAMBDA_URL) {
-    logger.error({ctx: "modelProxy", endpoint: "v3/predict-multipart"}, "MODEL_LAMBDA_URL is empty");
+    logger.error({ctx: "modelProxy", endpoint: "api/v3/predict-multipart"}, "MODEL_LAMBDA_URL is empty");
     return {status: 500, body: {error: "Model service URL not configured"}};
   }
   if (!INTERNAL_KEY) {
-    logger.error({ctx: "modelProxy", endpoint: "v3/predict-multipart"}, "MODEL_INTERNAL_KEY is empty");
+    logger.error({ctx: "modelProxy", endpoint: "api/v3/predict-multipart"}, "MODEL_INTERNAL_KEY is empty");
     return {status: 500, body: {error: "Model service internal key not configured"}};
   }
 
@@ -212,34 +243,57 @@ export const proxyMultipartPredict = async (
 
   // ── v3 fusion multipart endpoint ─────────────────────────────────────────
   try {
-    const url = buildModelUrl("v3/predict-multipart", withInternalKeyFallback(queryParams));
-    const startedAt = Date.now();
-    const res = await fetch(url, {
-      method: "POST",
-      headers,
-      body: buildFormData() as any,
-      signal: AbortSignal.timeout(MODEL_PROXY_TIMEOUT_MS),
-    });
+    const pathCandidates = buildPathCandidates("api/v3/predict-multipart");
 
-    const upstreamBody = await parseUpstreamBody(res);
-    const latencyMs = Date.now() - startedAt;
+    for (let index = 0; index < pathCandidates.length; index += 1) {
+      const path = pathCandidates[index];
+      const url = buildModelUrl(path, withInternalKeyFallback(queryParams));
+      const startedAt = Date.now();
+      const res = await fetch(url, {
+        method: "POST",
+        headers,
+        body: buildFormData() as any,
+        signal: AbortSignal.timeout(MODEL_PROXY_TIMEOUT_MS),
+      });
 
-    logger.info(
-      {
-        ctx: "modelProxy",
-        endpoint: "v3/predict-multipart",
-        status: res.status,
-        latencyMs,
-        url,
-      },
-      "Upstream model request completed"
-    );
+      const upstreamBody = await parseUpstreamBody(res);
+      const latencyMs = Date.now() - startedAt;
 
-    return {status: res.status, body: tagBody(upstreamBody, "fusion")};
+      logger.info(
+        {
+          ctx: "modelProxy",
+          endpoint: "api/v3/predict-multipart",
+          resolvedPath: path,
+          status: res.status,
+          latencyMs,
+          url,
+          attempt: index + 1,
+        },
+        "Upstream model request completed"
+      );
+
+      if (res.status === 404 && index < pathCandidates.length - 1) {
+        logger.warn(
+          {
+            ctx: "modelProxy",
+            endpoint: "api/v3/predict-multipart",
+            resolvedPath: path,
+            url,
+            attempt: index + 1,
+          },
+          "Upstream returned 404 for endpoint path; trying next path candidate"
+        );
+        continue;
+      }
+
+      return {status: res.status, body: tagBody(upstreamBody, "fusion")};
+    }
+
+    return {status: 404, body: {error: "Model endpoint not found"}};
   } catch (err) {
     devLog(err, "modelProxy:multipartPredict failed");
     logger.error(
-      {err, ctx: "modelProxy", endpoint: "v3/predict-multipart"},
+      {err, ctx: "modelProxy", endpoint: "api/v3/predict-multipart"},
       "Upstream model request failed"
     );
     if (isTimeoutError(err)) {
