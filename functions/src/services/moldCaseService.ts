@@ -51,6 +51,33 @@ const transformMoldCaseImages = async (moldCase: MoldCase): Promise<MoldCase> =>
     }
   }
 
+  const details = (transformed as any).cultivation_details;
+  if (details && typeof details === "object") {
+    const signIfString = async (value: unknown): Promise<string | unknown> => {
+      if (typeof value !== "string" || value.trim().length === 0) return value;
+      return (await transformToSignedUrl(value, MOLD_CASE_SERVICE_TTL_SECONDS)) || value;
+    };
+
+    details.initial_microscopic_image_url = await signIfString(details.initial_microscopic_image_url);
+    details.initial_macroscopic_image_url = await signIfString(details.initial_macroscopic_image_url);
+
+    const initialObservations = details.initial_observations;
+    if (initialObservations && typeof initialObservations === "object") {
+      initialObservations.initial_microscopic_image_url =
+        await signIfString(initialObservations.initial_microscopic_image_url);
+      initialObservations.initial_macroscopic_image_url =
+        await signIfString(initialObservations.initial_macroscopic_image_url);
+      initialObservations.microscopic_image_url =
+        await signIfString(initialObservations.microscopic_image_url);
+      initialObservations.macroscopic_image_url =
+        await signIfString(initialObservations.macroscopic_image_url);
+      initialObservations.microscopic_image_path =
+        await signIfString(initialObservations.microscopic_image_path);
+      initialObservations.macroscopic_image_path =
+        await signIfString(initialObservations.macroscopic_image_path);
+    }
+  }
+
   return transformed;
 };
 

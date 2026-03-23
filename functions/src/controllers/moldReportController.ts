@@ -62,6 +62,17 @@ const canAccessReport = (
   return report.user_id === actor.id;
 };
 
+const extractCaseCoverPhoto = (report: MoldReport): string | null => {
+  const details = Array.isArray(report.case_details) ? report.case_details : [];
+  for (let i = details.length - 1; i >= 0; i--) {
+    const entry = details[i];
+    const cover = Array.isArray(entry?.cover_photo) ? entry.cover_photo : [];
+    const first = cover.find((url) => typeof url === "string" && url.trim().length > 0);
+    if (first) return first;
+  }
+  return null;
+};
+
 export const createMoldReport = async (req: Request, res: Response) => {
   /**
    * @swagger
@@ -1243,7 +1254,7 @@ export const postCaseDetail = async (req: Request, res: Response) => {
 export const assignReport = async (req: Request, res: Response) => {
   try {
     const id: string = req.params.id;
-    const details: { assigned_mycologist_id: string; status?: string; priority?: string } =
+    const details: { assigned_mycologist_id: string; status?: string; end_date?: Timestamp } =
       req.body;
 
     const current = await retrieveMoldReportById(id);
@@ -1257,16 +1268,14 @@ export const assignReport = async (req: Request, res: Response) => {
 
     const normalizedStatus: MoldReport["status"] = "in progress";
 
-    const casePriority = (details.priority as "low" | "medium" | "high" | undefined) ?? ((current as any).priority as "low" | "medium" | "high" | undefined) ?? "low";
-
-    const normalizedPriority = details.priority as "low" | "medium" | "high" | undefined;
+    const casePriority = ((current as any).priority as "low" | "medium" | "high" | undefined) ?? "low";
 
     const updated = await updateMoldReportInFirestore(id, {
       assigned_mycologist_id: details.assigned_mycologist_id,
       status: normalizedStatus,
-      ...(normalizedPriority ? {priority: normalizedPriority} : {}),
     });
     if (!updated) return sendError(res, "Failed to assign mycologist", 400);
+    const casePhotoUrl = extractCaseCoverPhoto(updated);
 
     // Auto-create a MoldCase linked to this report if one doesn't exist yet.
     // This ensures GET /mold-case/by-report/:id works as soon as a mycologist is assigned.
@@ -1280,7 +1289,8 @@ export const assignReport = async (req: Request, res: Response) => {
         user_id: reportOwnerId,
         priority: casePriority,
         start_date: Timestamp.now() as any,
-        end_date: null as any,
+        end_date: (details.end_date ?? null) as any,
+        photo_url: casePhotoUrl,
         is_archived: false,
       });
       devLog(`[assignReport] Auto-created MoldCase for report=${id}`);
@@ -1292,11 +1302,14 @@ export const assignReport = async (req: Request, res: Response) => {
       // Self-heal older/stale docs where ownership drifted to a non-reporter user.
       const needsOwnerRepair = existingCase.user_id !== reportOwnerId;
       const needsMycologistRepair = existingCase.mycologist_id !== details.assigned_mycologist_id;
-      if (needsOwnerRepair || needsMycologistRepair) {
+      const needsEndDateRepair = !!details.end_date && !existingCase.end_date;
+      const needsPhotoRepair = !!casePhotoUrl && !existingCase.photo_url;
+      if (needsOwnerRepair || needsMycologistRepair || needsEndDateRepair || needsPhotoRepair) {
         await updateMoldCaseInFirestore(existingCaseId, {
           user_id: reportOwnerId,
           mycologist_id: details.assigned_mycologist_id,
-          ...(normalizedPriority ? {priority: casePriority} : {}),
+          end_date: details.end_date,
+          ...(needsPhotoRepair ? {photo_url: casePhotoUrl} : {}),
         } as Partial<MoldCase>);
         devLog(`[assignReport] Repaired MoldCase ownership/assignee for report=${id}`);
       }

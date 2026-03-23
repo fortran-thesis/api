@@ -142,6 +142,7 @@ export const createMoldipedia = async (req: Request, res: Response) => {
       ...details,
       author_id: authorId,
       cover_photo: url,
+      is_archived: false,
     });
     if (!article) {
       return sendError(res, "Failed to create moldipedia article", 400);

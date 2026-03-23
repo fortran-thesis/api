@@ -1,6 +1,6 @@
 import {z} from "zod";
 import {ReportReason} from "../types/enums";
-import {zTimestamp} from "./shared";
+import {zTimestamp, zTimestampOptional} from "./shared";
 
 const ID_REGEX = /^[A-Za-z0-9_-]+$/;
 
@@ -48,7 +48,7 @@ export const CaseDetailCreateSchema = CaseDetailSchema;
 export const AssignMoldReportSchema = z.object({
   assigned_mycologist_id: z.string({required_error: "Assigned mycologist ID is required."}).min(1),
   status: z.enum(["in progress"]).optional(),
-  priority: z.enum(["low", "medium", "high"]).optional(),
+  end_date: zTimestampOptional,
 });
 
 export const RejectMoldReportSchema = z.object({

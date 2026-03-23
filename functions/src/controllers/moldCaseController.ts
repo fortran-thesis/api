@@ -1153,7 +1153,32 @@ export const updateCultivationDetails = async (req: Request, res: Response) => {
     }
 
     const details = req.body;
-    const updated = await updateCultivationDetailsInCase(caseId, details);
+    const normalizedCultivationDetails =
+      (details?.cultivation_details ?? details ?? {}) as Record<string, any>;
+
+    const initialMicroscopic =
+      typeof normalizedCultivationDetails.initial_microscopic === "string" ?
+        normalizedCultivationDetails.initial_microscopic.trim() :
+        "";
+
+    if (!normalizedCultivationDetails.microscopic_ai_snapshot && initialMicroscopic) {
+      normalizedCultivationDetails.microscopic_ai_snapshot = {
+        identified_mold: initialMicroscopic,
+        model_source: "fallback_from_initial_microscopic",
+        captured_at: new Date().toISOString(),
+      };
+    } else if (normalizedCultivationDetails.microscopic_ai_snapshot && initialMicroscopic) {
+      const snapshot = normalizedCultivationDetails.microscopic_ai_snapshot as Record<string, any>;
+      if (!snapshot.identified_mold || String(snapshot.identified_mold).trim().length === 0) {
+        snapshot.identified_mold = initialMicroscopic;
+      }
+    }
+
+    const normalizedDetails = details?.cultivation_details ?
+      {...details, cultivation_details: normalizedCultivationDetails} :
+      normalizedCultivationDetails;
+
+    const updated = await updateCultivationDetailsInCase(caseId, normalizedDetails);
     if (!updated) return sendError(res, "Failed to update cultivation details", 400);
 
     // Re-run lookup in background if report has reported_* fields
@@ -1167,7 +1192,7 @@ export const updateCultivationDetails = async (req: Request, res: Response) => {
 
         // Extract characteristics from cultivation details if available.
         // Mobile sends nested `cultivation_details`, while some clients may send flat shape.
-        const detailsPayload = (details?.cultivation_details ?? details ?? {}) as Record<string, any>;
+        const detailsPayload = normalizedCultivationDetails;
         const additionalCharacteristics: string[] = [];
         if (detailsPayload.in_vivo_details?.lesion_color) {
           additionalCharacteristics.push(String(detailsPayload.in_vivo_details.lesion_color));

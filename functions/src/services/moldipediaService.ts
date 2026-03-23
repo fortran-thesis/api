@@ -32,6 +32,7 @@ export const addMoldipediaToFirestore = async (
   try {
     const detailsWithMetadata: WithMetadata<Moldipedia> = {
       ...details,
+      is_archived: false,
       metadata: {
         created_at: Timestamp.now(),
         updated_at: null,
