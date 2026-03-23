@@ -18,7 +18,7 @@ import {devLog} from "../utils/dev";
 
 /** Resolved at startup from environment */
 const LAMBDA_URL = envOptions.lambdaUrl;
-const INTERNAL_KEY = envOptions.modelInternalKey;
+const INTERNAL_KEY = (envOptions.modelInternalKey || "").trim();
 
 export interface ProxyResult {
   status: number;
@@ -93,6 +93,21 @@ const tagBody = (body: unknown, source: ModelSource): unknown => {
   return body;
 };
 
+/**
+ * Parse upstream body safely. API Gateway/Lambda can return non-JSON error pages
+ * (or empty bodies), which would otherwise throw and be misreported as 502.
+ */
+const parseUpstreamBody = async (res: Response): Promise<unknown> => {
+  const raw = await res.text();
+  if (!raw) return {};
+
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return {error: raw};
+  }
+};
+
 // ---------------------------------------------------------------------------
 // JSON predict
 // ---------------------------------------------------------------------------
@@ -110,6 +125,9 @@ export const proxyJsonPredict = async (
   if (!LAMBDA_URL) {
     return {status: 503, body: {error: "Model service URL not configured"}};
   }
+  if (!INTERNAL_KEY) {
+    return {status: 503, body: {error: "Model service internal key not configured"}};
+  }
 
   const headers = makeHeaders({"Content-Type": "application/json"});
   const body = JSON.stringify(payload);
@@ -124,7 +142,8 @@ export const proxyJsonPredict = async (
       signal: AbortSignal.timeout(55_000),
     });
 
-    return {status: res.status, body: tagBody(await res.json(), "fusion")};
+    const upstreamBody = await parseUpstreamBody(res);
+    return {status: res.status, body: tagBody(upstreamBody, "fusion")};
   } catch (err) {
     devLog(err, "modelProxy:jsonPredict failed");
     return {status: 502, body: {error: "Model service unavailable"}};
@@ -150,6 +169,9 @@ export const proxyMultipartPredict = async (
   if (!LAMBDA_URL) {
     return {status: 503, body: {error: "Model service URL not configured"}};
   }
+  if (!INTERNAL_KEY) {
+    return {status: 503, body: {error: "Model service internal key not configured"}};
+  }
 
   const headers = makeHeaders();
 
@@ -173,7 +195,8 @@ export const proxyMultipartPredict = async (
       signal: AbortSignal.timeout(55_000),
     });
 
-    return {status: res.status, body: tagBody(await res.json(), "fusion")};
+    const upstreamBody = await parseUpstreamBody(res);
+    return {status: res.status, body: tagBody(upstreamBody, "fusion")};
   } catch (err) {
     devLog(err, "modelProxy:multipartPredict failed");
     return {status: 502, body: {error: "Model service unavailable"}};
