@@ -40,6 +40,7 @@ import {
 import {getAuthUserById, getAuthUsersByIds, getAuthUserNamesByIds} from "../lib/auth";
 import {batchRetrieveMoldCasesByReportIds, retrieveMoldCaseByReportId} from "./moldCaseService";
 import {transformToSignedUrl} from "../utils/storageTransform";
+import {normalizeResponseTimestamps} from "../utils/normalizeResponse";
 
 // Cache TTL for this service (in seconds) — signed URLs should match cached responses
 const MOLD_REPORT_SERVICE_TTL_SECONDS = 300;
@@ -92,16 +93,7 @@ const transformCoverPhotos = async (
 // Helper: convert date_observed Timestamp to ISO string for client responses
 const normalizeDateObserved = <T>(obj: T): T => {
   if (!obj || typeof obj !== "object") return obj;
-  const copy: any = {...obj};
-  const v = copy.date_observed;
-  if (v && typeof v === "object" && (v as any).toDate instanceof Function) {
-    try {
-      copy.date_observed = (v as any).toDate().toISOString();
-    } catch (e) {
-      // leave as-is if conversion fails
-    }
-  }
-  return copy as T;
+  return normalizeResponseTimestamps(obj);
 };
 
 export const addMoldReportToFirestore = async (
@@ -169,7 +161,7 @@ export const addMoldReportToFirestore = async (
     const result = documentToJson<MoldReport>(doc);
     result.case_details = caseDetailsArray;
     (result as any)._caseDetailIds = caseDetailIds;
-    return result;
+    return normalizeResponseTimestamps(result);
   } catch (error) {
     devLog(`addMoldReportToFirestore: ❌ Error - ${error}`);
     devLog(error);
@@ -404,7 +396,7 @@ export const retrieveMoldReportById = async (
     }
 
     devLog("retrieveMoldReportById: ✅ Report retrieved successfully");
-    return nr;
+    return normalizeResponseTimestamps(nr);
   } catch (error) {
     devLog(`retrieveMoldReportById: ❌ Error - ${error}`);
     devLog(error);
@@ -564,10 +556,10 @@ export const addCaseDetailToReport = async (
     await invalidateAllLists("mold-reports-unassigned");
     await invalidateAllLists("mold-reports-assigned");
 
-    return {
+    return normalizeResponseTimestamps({
       id: doc.id,
       ...doc.data() as MoldReportDetails,
-    };
+    });
   } catch (error) {
     devLog(error);
     return null;

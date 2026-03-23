@@ -142,6 +142,61 @@ export const updateCultivationDetails = async (
         ...incomingDetails,
       };
 
+      // Preserve nested structures during partial updates.
+      const mergeNestedObject = (key: string) => {
+        const existingValue = existingDetails[key];
+        const incomingValue = incomingDetails[key];
+        if (
+          existingValue &&
+          typeof existingValue === "object" &&
+          !Array.isArray(existingValue) &&
+          incomingValue &&
+          typeof incomingValue === "object" &&
+          !Array.isArray(incomingValue)
+        ) {
+          mergedDetails[key] = {
+            ...(existingValue as Record<string, unknown>),
+            ...(incomingValue as Record<string, unknown>),
+          };
+        }
+      };
+
+      mergeNestedObject("in_vivo_details");
+      mergeNestedObject("in_vitro_details");
+      mergeNestedObject("initial_observations");
+      mergeNestedObject("microscopic_ai_snapshot");
+
+      // Keep top-level and nested initial observation image keys aligned.
+      const initialObservationsRaw = mergedDetails.initial_observations;
+      const initialObservations =
+        (initialObservationsRaw && typeof initialObservationsRaw === "object" && !Array.isArray(initialObservationsRaw)) ?
+          {...(initialObservationsRaw as Record<string, unknown>)} :
+          {};
+
+      const syncAlias = (topLevelKey: string, nestedKey: string) => {
+        const topValue = mergedDetails[topLevelKey];
+        const nestedValue = initialObservations[nestedKey];
+
+        if (typeof topValue === "string" && topValue.trim().length > 0 && !nestedValue) {
+          initialObservations[nestedKey] = topValue;
+        }
+
+        if (typeof nestedValue === "string" && nestedValue.trim().length > 0 && !topValue) {
+          mergedDetails[topLevelKey] = nestedValue;
+        }
+      };
+
+      syncAlias("initial_microscopic_image_url", "initial_microscopic_image_url");
+      syncAlias("initial_macroscopic_image_url", "initial_macroscopic_image_url");
+      syncAlias("microscopic_image_url", "microscopic_image_url");
+      syncAlias("macroscopic_image_url", "macroscopic_image_url");
+      syncAlias("microscopic_image_path", "microscopic_image_path");
+      syncAlias("macroscopic_image_path", "macroscopic_image_path");
+
+      if (Object.keys(initialObservations).length > 0) {
+        mergedDetails.initial_observations = initialObservations;
+      }
+
       const microIds = (mergedDetails.scanned_microscopic_ids as unknown[] | undefined);
       if (Array.isArray(microIds)) {
         mergedDetails.scanned_microscopic_ids =

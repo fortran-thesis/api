@@ -29,7 +29,8 @@ import {
 } from "../repositories/cultivationLogRepository";
 import {CultivationLog, MoldCase, PaginatedResult, WithId, WithMetadata} from "../types/types";
 import {transformToSignedUrl} from "../utils/storageTransform";
-import {cacheItem, getCachedItem, cacheList, getCachedList} from "../utils/cacheManager";
+import {cacheItem, getCachedItem, cacheList, getCachedList, invalidateAllLists} from "../utils/cacheManager";
+import {normalizeResponseTimestamps} from "../utils/normalizeResponse";
 // Cache TTL for this service (in seconds) — keep signed URLs consistent with cached responses
 const MOLD_CASE_SERVICE_TTL_SECONDS = 300;
 import {getCollectionName, FirestoreCollection} from "../types/models/firestoreCollections";
@@ -87,6 +88,15 @@ const transformLogImageUrl = async (log: WithId<CultivationLog>): Promise<WithId
     log.image_url = await transformToSignedUrl(log.image_url, MOLD_CASE_SERVICE_TTL_SECONDS) || log.image_url;
   }
   return log;
+};
+
+const normalizeCaseResponse = <T>(value: T): T => normalizeResponseTimestamps(value);
+
+const invalidateMoldCaseListCaches = async (): Promise<void> => {
+  await Promise.all([
+    invalidateAllLists("mold-cases-all"),
+    invalidateAllLists("mold-cases-assigned"),
+  ]);
 };
 
 export const addMoldCaseToFirestore = async (
@@ -172,32 +182,7 @@ export const retrieveAllMoldCasesByUser = async (
     );
     if (!cases) throw new Error("No cases found.");
     const raw = queryToJson<MoldCase>(cases.snapshot);
-    const normalized = raw.map((c) => {
-      const copy: any = {...c};
-      try {
-        if (
-          copy.start_date &&
-          typeof copy.start_date === "object" &&
-          (copy.start_date as any).toDate instanceof Function
-        ) {
-          copy.start_date = (copy.start_date as any).toDate().toISOString();
-        }
-      } catch (e) {
-        /* ignore */
-      }
-      try {
-        if (
-          copy.end_date &&
-          typeof copy.end_date === "object" &&
-          (copy.end_date as any).toDate instanceof Function
-        ) {
-          copy.end_date = (copy.end_date as any).toDate().toISOString();
-        }
-      } catch (e) {
-        /* ignore */
-      }
-      return copy as MoldCase;
-    });
+    const normalized = raw.map((c) => normalizeCaseResponse(c));
 
     // Transform photo URLs and cultivation log image URLs
     const transformed = await Promise.all(
@@ -243,32 +228,7 @@ export const retrieveAssignedMoldCases = async (
       await findAssignedMoldCases(mycologistId, limit, token);
     if (!cases) throw new Error("No assigned cases found.");
     const raw = queryToJson<MoldCase>(cases.snapshot);
-    const normalized = raw.map((c) => {
-      const copy: any = {...c};
-      try {
-        if (
-          copy.start_date &&
-          typeof copy.start_date === "object" &&
-          (copy.start_date as any).toDate instanceof Function
-        ) {
-          copy.start_date = (copy.start_date as any).toDate().toISOString();
-        }
-      } catch (e) {
-        /* ignore */
-      }
-      try {
-        if (
-          copy.end_date &&
-          typeof copy.end_date === "object" &&
-          (copy.end_date as any).toDate instanceof Function
-        ) {
-          copy.end_date = (copy.end_date as any).toDate().toISOString();
-        }
-      } catch (e) {
-        /* ignore */
-      }
-      return copy as MoldCase;
-    });
+    const normalized = raw.map((c) => normalizeCaseResponse(c));
 
     // Transform photo URLs and cultivation log image URLs
     const transformed = await Promise.all(
@@ -306,20 +266,7 @@ export const searchAssignedMoldCasesByMycologist = async (
       ...doc.data(),
     } as unknown as MoldCase));
 
-    const normalized = raw.map((c) => {
-      const copy: any = {...c};
-      try {
-        if (copy.start_date && typeof copy.start_date === "object" && (copy.start_date as any).toDate instanceof Function) {
-          copy.start_date = (copy.start_date as any).toDate().toISOString();
-        }
-      } catch (e) {/* ignore */}
-      try {
-        if (copy.end_date && typeof copy.end_date === "object" && (copy.end_date as any).toDate instanceof Function) {
-          copy.end_date = (copy.end_date as any).toDate().toISOString();
-        }
-      } catch (e) {/* ignore */}
-      return copy as MoldCase;
-    });
+    const normalized = raw.map((c) => normalizeCaseResponse(c));
 
     const transformed = await Promise.all(normalized.map((c) => transformMoldCaseImages(c)));
 
@@ -340,29 +287,7 @@ export const retrieveMoldCaseById = async (
     const moldCase: DocumentSnapshot | null = await findMoldCaseById(id);
     if (!moldCase) throw new Error("No case found.");
     const cases = documentToJson<MoldCase>(moldCase);
-    const copy: any = {...cases};
-    try {
-      if (
-        copy.start_date &&
-        typeof copy.start_date === "object" &&
-        (copy.start_date as any).toDate instanceof Function
-      ) {
-        copy.start_date = (copy.start_date as any).toDate().toISOString();
-      }
-    } catch (e) {
-      /* ignore */
-    }
-    try {
-      if (
-        copy.end_date &&
-        typeof copy.end_date === "object" &&
-        (copy.end_date as any).toDate instanceof Function
-      ) {
-        copy.end_date = (copy.end_date as any).toDate().toISOString();
-      }
-    } catch (e) {
-      /* ignore */
-    }
+    const copy: any = normalizeCaseResponse(cases);
 
     // Transform photo URL and cultivation log image URLs
     return await transformMoldCaseImages(copy as MoldCase);
@@ -439,15 +364,9 @@ export const retrieveMoldCaseByReportId = async (
       normalized.photo_url = null;
     }
 
-    if (
-      raw.start_date &&
-      typeof (raw.start_date as any).toDate === "function"
-    ) {
-      normalized.start_date = (raw.start_date as any).toDate().toISOString();
-    }
-    if (raw.end_date && typeof (raw.end_date as any).toDate === "function") {
-      normalized.end_date = (raw.end_date as any).toDate().toISOString();
-    }
+    const dateNormalized = normalizeCaseResponse(raw);
+    normalized.start_date = (dateNormalized as any).start_date;
+    normalized.end_date = (dateNormalized as any).end_date;
 
     // Enrich with mycologist display name
     if (normalized.mycologist_id) {
@@ -464,7 +383,7 @@ export const retrieveMoldCaseByReportId = async (
     }
 
     // Transform photo URL and cultivation log image URLs
-    return await transformMoldCaseImages(normalized as MoldCase);
+    return await transformMoldCaseImages(normalizeCaseResponse(normalized as MoldCase));
   } catch (error) {
     devLog(error);
     return null;
@@ -571,6 +490,8 @@ export const updateMoldCaseInFirestore = async (
     );
     if (!result) throw new Error("Failed to update mold case.");
 
+    await invalidateMoldCaseListCaches();
+
     const updatedCase = await retrieveMoldCaseById(id);
     return updatedCase;
   } catch (error) {
@@ -583,6 +504,7 @@ export const softRemoveMoldCase = async (id: string): Promise<void> => {
   try {
     const result: WriteResult | null = await softDeleteMoldCase(id);
     if (!result) throw new Error("Failed to soft delete mold case");
+    await invalidateMoldCaseListCaches();
   } catch (error) {
     devLog(error);
   }
@@ -592,6 +514,7 @@ export const removeMoldCase = async (id: string): Promise<void> => {
   try {
     const result: WriteResult | null = await deleteMoldCase(id);
     if (!result) throw new Error("Failed to delete mold case");
+    await invalidateMoldCaseListCaches();
   } catch (error) {
     devLog(error);
   }
@@ -689,6 +612,7 @@ export const updateCultivationDetailsInCase = async (
     if (!result) throw new Error("Failed to update cultivation details");
 
     const updated = await retrieveMoldCaseById(caseId);
+    await invalidateMoldCaseListCaches();
     return updated;
   } catch (error) {
     devLog(error);

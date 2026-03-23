@@ -1218,6 +1218,43 @@ export const updateCultivationDetails = async (req: Request, res: Response) => {
                   timestamp: Timestamp.now(),
                 })),
               });
+
+              if (lookupResults.length > 0) {
+                const topResult = lookupResults[0] as Record<string, any>;
+                const confidenceRaw = topResult.confidence;
+                const confidenceValue =
+                  typeof confidenceRaw === "number" ?
+                    confidenceRaw :
+                    Number(confidenceRaw);
+                const normalizedConfidence =
+                  Number.isFinite(confidenceValue) ? confidenceValue : null;
+                const confidenceDisplay =
+                  normalizedConfidence === null ?
+                    "" :
+                    `${normalizedConfidence <= 1 ? (normalizedConfidence * 100).toFixed(1) : normalizedConfidence.toFixed(1)}%`;
+
+                await updateCultivationDetailsInCase(caseId, {
+                  cultivation_details: {
+                    microscopic_ai_snapshot: {
+                      identified_mold:
+                        topResult.moldName ||
+                        topResult.mold_name ||
+                        topResult.identified_mold ||
+                        "",
+                      mold_id:
+                        topResult.moldId ||
+                        topResult.mold_id ||
+                        "",
+                      confidence: normalizedConfidence,
+                      confidence_display: confidenceDisplay,
+                      model_source: "lookup_refresh",
+                      captured_at: new Date().toISOString(),
+                      top_predictions: lookupResults,
+                    },
+                  },
+                });
+              }
+
               devLog(`[updateCultivationDetails] ✅ Updated lookup results: ${lookupResults.length} matches`);
             } catch (err) {
               devLog(`[updateCultivationDetails] ⚠️ Failed to update lookup results: ${err}`);
@@ -2051,6 +2088,8 @@ export const finalizeVerdict = async (req: Request, res: Response) => {
 
     const updatedCase = await updateMoldCaseInFirestore(caseId, {
       final_verdict: verdict,
+      is_archived: true,
+      end_date: moldCase.end_date || Timestamp.now(),
     });
 
     if (!updatedCase) {

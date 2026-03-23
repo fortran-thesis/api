@@ -23,6 +23,7 @@ import {
   PaginatedResult,
 } from "../types/types";
 import {transformToSignedUrl} from "../utils/storageTransform";
+import {normalizeResponseTimestamps} from "../utils/normalizeResponse";
 import {retrieveUserById} from "./userService";
 import {getAuthUsersByIds} from "../lib/auth";
 
@@ -42,7 +43,7 @@ export const addMoldipediaToFirestore = async (
     const doc: DocumentSnapshot | null =
       await addMoldipedia(detailsWithMetadata);
     if (!doc) throw new Error("Cannot add moldipedia.");
-    return documentToJson<WithId<Moldipedia>>(doc);
+    return normalizeResponseTimestamps(documentToJson<WithId<Moldipedia>>(doc));
   } catch (error) {
     devLog(error);
     return null;
@@ -92,12 +93,12 @@ export const retrieveAllMoldipedia = async (
         // eslint-disable-next-line camelcase
         const {author_id: _, ...rest} = item;
 
-        return {
+        return normalizeResponseTimestamps({
           ...rest,
           cover_photo:
             (await transformToSignedUrl(item.cover_photo)) || item.cover_photo,
           author: authorName,
-        };
+        });
       })
     );
 
@@ -135,11 +136,11 @@ export const retrieveMoldipediaById = async (
     // eslint-disable-next-line camelcase
     const {author_id: _, ...rest} = moldipedia;
 
-    return {
+    return normalizeResponseTimestamps({
       ...rest,
       cover_photo: signedUrl || moldipedia.cover_photo,
       author: authorName,
-    };
+    });
   } catch (error) {
     devLog(error);
     return null;
@@ -222,12 +223,12 @@ export const retrieveArchivedMoldipedia = async (
         }
         // eslint-disable-next-line camelcase
         const {author_id: _, ...rest} = item;
-        return {
+        return normalizeResponseTimestamps({
           ...rest,
           cover_photo:
             (await transformToSignedUrl(item.cover_photo)) || item.cover_photo,
           author: authorName,
-        };
+        });
       })
     );
 

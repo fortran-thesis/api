@@ -22,6 +22,9 @@ import {
   cacheList,
   getCachedItem,
   cacheItem,
+  invalidateAllLists,
+  invalidateItem,
+  invalidateAllCounts,
 } from "../utils/cacheManager";
 
 const RESOURCE = "molds";
@@ -42,6 +45,10 @@ export const addMoldToFirestore = async (
     const mold: DocumentSnapshot | null = await addMold(detailsWithMetadata);
     if (!mold) throw new Error("Cannot add mold.");
     const result = documentToJson<WithId<Mold>>(mold);
+    await Promise.all([
+      invalidateAllLists(RESOURCE),
+      invalidateAllCounts(RESOURCE),
+    ]);
     return result;
   } catch (error) {
     devLog(error);
@@ -153,6 +160,12 @@ export const updateMoldInFirestore = async (
     const result: WriteResult | null = await updateMold(id, details);
     if (!result) throw new Error("Failed to update mold.");
 
+    await Promise.all([
+      invalidateItem(RESOURCE, id),
+      invalidateAllLists(RESOURCE),
+      invalidateAllCounts(RESOURCE),
+    ]);
+
     const updatedMold = await retrieveMoldById(id);
     return updatedMold;
   } catch (error) {
@@ -165,6 +178,11 @@ export const softRemoveMold = async (id: string): Promise<void> => {
   try {
     const result: WriteResult | null = await softDeleteMold(id);
     if (!result) throw new Error("Failed to delete mold");
+    await Promise.all([
+      invalidateItem(RESOURCE, id),
+      invalidateAllLists(RESOURCE),
+      invalidateAllCounts(RESOURCE),
+    ]);
   } catch (error) {
     devLog(error);
   }
@@ -174,6 +192,11 @@ export const removeMold = async (id: string): Promise<void> => {
   try {
     const result: WriteResult | null = await deleteMold(id);
     if (!result) throw new Error("Failed to delete mold");
+    await Promise.all([
+      invalidateItem(RESOURCE, id),
+      invalidateAllLists(RESOURCE),
+      invalidateAllCounts(RESOURCE),
+    ]);
   } catch (error) {
     devLog(error);
   }
