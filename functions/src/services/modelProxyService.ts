@@ -61,6 +61,17 @@ const applyQueryParams = (url: URL, params?: Record<string, string>): URL => {
 };
 
 /**
+ * Build a model endpoint URL while preserving any base path segment
+ * (for example API Gateway stages like /prod).
+ */
+const buildModelUrl = (path: string, params?: Record<string, string>): URL => {
+  const normalizedBase = LAMBDA_URL.endsWith("/") ? LAMBDA_URL : `${LAMBDA_URL}/`;
+  const normalizedPath = path.startsWith("/") ? path.slice(1) : path;
+  const url = new URL(normalizedPath, normalizedBase);
+  return applyQueryParams(url, params);
+};
+
+/**
  * Merges a `_model_source` tag into the response body.
  * If the body is not a plain object the tag is dropped silently.
  */
@@ -94,7 +105,7 @@ export const proxyJsonPredict = async (
 
   // ── v3 fusion endpoint (fusion model) ─────────────────────────────────────
   try {
-    const url = applyQueryParams(new URL("/v3/predict", LAMBDA_URL), queryParams);
+    const url = buildModelUrl("v3/predict", queryParams);
     const res = await fetch(url.toString(), {
       method: "POST",
       headers,
@@ -143,7 +154,7 @@ export const proxyMultipartPredict = async (
 
   // ── v3 fusion multipart endpoint ─────────────────────────────────────────
   try {
-    const url = applyQueryParams(new URL("/v3/predict-multipart", LAMBDA_URL), queryParams);
+    const url = buildModelUrl("v3/predict-multipart", queryParams);
     const res = await fetch(url.toString(), {
       method: "POST",
       headers,

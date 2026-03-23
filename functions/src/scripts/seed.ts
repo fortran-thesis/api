@@ -272,11 +272,19 @@ export const seedMoldReports = async (farmerUid: string, mycologistUid?: string)
       // case_details is intentionally excluded from the parent document and
       // written to the mold_reports/{id}/case_details subcollection instead.
 
-      // Determine whether this status should have an assigned mycologist
-      const statusesRequiringAssignment = ["in progress", "resolved", "closed"];
-
-      const shouldAssign = statusesRequiringAssignment.includes(report.status);
+      // Assignment model: only in-progress reports are assigned to a mycologist.
+      const shouldAssign = report.status === "in progress";
       const assignedMycologistId = shouldAssign ? (mycologistUid ?? null) : null;
+
+      if (shouldAssign && !assignedMycologistId) {
+        console.warn(
+          `⚠️  Report "${report.case_name}" is in progress but no mycologist UID was provided. ` +
+          "Seeding report as pending to keep report-case linkage consistent."
+        );
+      }
+
+      const normalizedStatus =
+        shouldAssign && assignedMycologistId ? report.status : (report.status === "in progress" ? "pending" : report.status);
 
       // Do NOT write priority on the report document (priority belongs to MoldCase)
       const reportData: any = {
@@ -286,7 +294,7 @@ export const seedMoldReports = async (farmerUid: string, mycologistUid?: string)
         assigned_mycologist_id: assignedMycologistId,
         host: report.host,
         location: report.location,
-        status: report.status,
+        status: normalizedStatus,
         metadata: {
           created_at: Timestamp.now(),
           updated_at: null,
@@ -308,10 +316,10 @@ export const seedMoldReports = async (farmerUid: string, mycologistUid?: string)
         .collection(FirestoreSubcollection.CASE_DETAILS)
         .add(caseDetailData);
 
-      // If this report should have an assigned mycologist, create a MoldCase.
+      // Create MoldCase only for in-progress reports that are assigned to a mycologist.
       // Priority is only stored on the MoldCase. Use a deterministic default
       // (no randomness) — set to "medium" unless a different rule is desired.
-      if (assignedMycologistId) {
+      if (normalizedStatus === "in progress" && assignedMycologistId) {
         try {
           const createdCase = await addMoldCaseToFirestore({
             mold_report_id: docRef.id,
@@ -319,8 +327,9 @@ export const seedMoldReports = async (farmerUid: string, mycologistUid?: string)
             name: report.case_name,
             user_id: farmerUid,
             priority: "medium",
-            start_date: Timestamp.now() as any,
+            start_date: report.date_observed as any,
             end_date: null as any,
+            photo_url: null,
             is_archived: false,
           });
           if (createdCase) {
@@ -361,7 +370,7 @@ const MOLDIPEDIA_SEED = [
   },
 ];
 
-export const seedMoldipedia = async (authorUid: string) => {
+export const seedMoldipedia = async (mycologistUid: string) => {
   const db = getFirestore(firebase);
   const moldipediaCollection = getCollectionName(FirestoreCollection.MOLDIPEDIA);
 
@@ -374,12 +383,12 @@ export const seedMoldipedia = async (authorUid: string) => {
       const articleData = {
         title: article.title,
         body: article.body,
-        author_id: authorUid,
+        author_id: mycologistUid,
         cover_photo: "",
         tags: article.tags,
         is_archived: false,
-        mycologist_id: null,
-        approved_at: null,
+        mycologist_id: mycologistUid,
+        approved_at: Timestamp.now(),
         metadata: {
           created_at: Timestamp.now(),
           updated_at: null,
@@ -741,8 +750,8 @@ if (require.main === module) {
   seedTestUsers()
     .then(async (users) => {
       const farmer = users.find((u) => u.role === Role.USER);
-      const admin = users.find((u) => u.role === Role.ADMIN);
       const mycologist = users.find((u) => u.role === Role.CURATOR);
+      const admin = users.find((u) => u.role === Role.ADMIN);
 
       if (farmer) {
         await seedMoldReports(farmer.uid, mycologist?.uid);
@@ -750,11 +759,16 @@ if (require.main === module) {
         console.warn("⚠️  No farmer user found — skipping mold reports seed.");
       }
 
+      if (mycologist) {
+        await seedMoldipedia(mycologist.uid);
+      } else {
+        console.warn("⚠️  No mycologist user found — skipping Moldipedia seed.");
+      }
+
       if (admin) {
-        await seedMoldipedia(admin.uid);
         await seedFaqs(admin.uid);
       } else {
-        console.warn("⚠️  No admin user found — skipping Moldipedia seed.");
+        console.warn("⚠️  No admin user found — skipping FAQ seed.");
       }
 
       await seedMolds();
