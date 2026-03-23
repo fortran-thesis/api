@@ -46,8 +46,19 @@ const makeHeaders = (extra: Record<string, string> = {}): Record<string, string>
   const headers: Record<string, string> = {...extra};
   if (INTERNAL_KEY) {
     headers["X-Internal-Key"] = INTERNAL_KEY;
+  } else {
+    devLog(`[modelProxy] WARNING: INTERNAL_KEY is empty/unset`);
   }
   return headers;
+};
+
+/**
+ * Payload v1 gateways can occasionally drop custom headers.
+ * Add the same internal key as a query fallback for server-to-server calls.
+ */
+const withInternalKeyFallback = (params?: Record<string, string>): Record<string, string> | undefined => {
+  if (!INTERNAL_KEY) return params;
+  return {...params, internal_key: INTERNAL_KEY};
 };
 
 /** Attaches query params to a URL, returning the URL instance for chaining. */
@@ -105,7 +116,7 @@ export const proxyJsonPredict = async (
 
   // ── v3 fusion endpoint (fusion model) ─────────────────────────────────────
   try {
-    const url = buildModelUrl("v3/predict", queryParams);
+    const url = buildModelUrl("v3/predict", withInternalKeyFallback(queryParams));
     const res = await fetch(url.toString(), {
       method: "POST",
       headers,
@@ -154,7 +165,7 @@ export const proxyMultipartPredict = async (
 
   // ── v3 fusion multipart endpoint ─────────────────────────────────────────
   try {
-    const url = buildModelUrl("v3/predict-multipart", queryParams);
+    const url = buildModelUrl("v3/predict-multipart", withInternalKeyFallback(queryParams));
     const res = await fetch(url.toString(), {
       method: "POST",
       headers,
