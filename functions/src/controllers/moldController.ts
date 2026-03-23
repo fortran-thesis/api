@@ -73,19 +73,16 @@ import {Mold, MoldDetails, PaginatedResult, WithId} from "../types/types";
  *                   prevention:
  *                     type: object
  *                     properties:
- *                       fungicide:
- *                         type: array
- *                         items:
- *                           type: string
- *                       additional_info:
- *                         type: array
- *                         items:
- *                           type: object
- *                           properties:
- *                             title:
- *                               type: string
- *                             description:
- *                               type: string
+ *                       physicalControl:
+ *                         type: string
+ *                       mechanicalControl:
+ *                         type: string
+ *                       culturalControl:
+ *                         type: string
+ *                       biologicalControl:
+ *                         type: string
+ *                       chemicalControl:
+ *                         type: string
  *               photos:
  *                 type: array
  *                 items:

@@ -34,10 +34,16 @@ export const createFAQ = async (req: Request, res: Response) => {
    *         application/json:
    *           schema:
    *             type: object
+   *             required:
+   *               - question
+   *               - answer
+   *               - user_id
    *             properties:
    *               question:
    *                 type: string
    *               answer:
+   *                 type: string
+   *               user_id:
    *                 type: string
    *     responses:
    *       200:

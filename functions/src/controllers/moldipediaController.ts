@@ -40,8 +40,8 @@ export const createMoldipedia = async (req: Request, res: Response) => {
    *             properties:
    *               details:
    *                 type: string
-   *                 description: JSON string of Moldipedia object with properties - title (string), body (string), author_id (string), tags (array of strings)
-   *                 example: '{"title":"Understanding Aspergillus","body":"Aspergillus is a genus...","author_id":"user123","tags":["fungi"]}'
+   *                 description: JSON string of Moldipedia object with properties - title (string), body (string), author_id (string)
+   *                 example: '{"title":"Understanding Aspergillus","body":"Aspergillus is a genus...","author_id":"user123"}'
    *               cover_photo:
    *                 type: string
    *                 format: binary
@@ -610,17 +610,19 @@ export const getAllArchivedMoldipedia = async (req: Request, res: Response) => {
    *                           created_at:
    *                             type: string
    *                             format: date-time
-   *                           updated_at:
-   *                             type: string
-   *                             format: date-time   *                           mycologist_id:
+  *                           updated_at:
+  *                             type: string
+  *                             format: date-time
+  *                           mycologist_id:
    *                             type: string
    *                             nullable: true
    *                             description: ID of the mycologist who reviewed/approved this article
-   *                           approved_at:
-   *                             type: string
-   *                             format: date-time
-   *                             nullable: true
-   *                             description: Timestamp when the article was reviewed/approved   *                     nextPageToken:
+  *                           approved_at:
+  *                             type: string
+  *                             format: date-time
+  *                             nullable: true
+  *                             description: Timestamp when the article was reviewed/approved
+  *                     nextPageToken:
    *                       type: string
    *                       nullable: true
    *       500:

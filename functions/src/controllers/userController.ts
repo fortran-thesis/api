@@ -98,7 +98,7 @@ export const getUserById = async (req: Request, res: Response) => {
 /**
  * Get user by email
  *
- * @route GET /api/v1/users/email/{email}
+ * @route GET /api/v1/user/email/{email}
  * @param req - Express request object
  * @param res - Express response object
  * @returns 200: User found, 404: User not found, 500: Server error
@@ -107,7 +107,7 @@ export const getUserById = async (req: Request, res: Response) => {
 export const getUserByEmail = async (req: Request, res: Response) => {
   /**
    * @swagger
-   * /api/v1/users/email/{email}:
+    * /api/v1/user/email/{email}:
    *   get:
    *     summary: Get user by email
    *     tags: [Users]
@@ -177,7 +177,7 @@ export const getUserByEmail = async (req: Request, res: Response) => {
 /**
  * Get all users (admin only)
  *
- * @route GET /api/v1/users
+ * @route GET /api/v1/user
  * @param req - Express request object
  * @param res - Express response object
  * @returns 200: List of users, 403: Forbidden, 500: Server error
@@ -187,7 +187,7 @@ export const getUserByEmail = async (req: Request, res: Response) => {
 export const getAllUsers = async (req: Request, res: Response) => {
   /**
    * @swagger
-   * /api/v1/users:
+    * /api/v1/user:
    *   get:
    *     summary: Get all users (admin only)
    *     tags: [Users]
@@ -237,17 +237,10 @@ export const getAllUsers = async (req: Request, res: Response) => {
 export const getUserProfile = async (req: Request, res: Response) => {
   /**
    * @swagger
-   * /api/v1/users/{id}:
+  * /api/v1/user/profile:
    *   get:
-   *     summary: Get user by ID
+  *     summary: Get authenticated user's profile
    *     tags: [Users]
-   *     parameters:
-   *       - in: path
-   *         name: id
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: User ID
    *     security:
    *       - bearerAuth: []
    *       - cookieAuth: []
@@ -684,7 +677,7 @@ export const deleteUser = async (req: Request, res: Response) => {
 /**
  * Soft delete user
  *
- * @route DELETE /api/v1/users/soft/{id}
+ * @route DELETE /api/v1/user/soft/{id}
  * @param req - Express request object
  * @param res - Express response object
  * @returns 200: Success, 500: Server error
@@ -693,7 +686,7 @@ export const deleteUser = async (req: Request, res: Response) => {
 export const softDeleteUser = async (req: Request, res: Response) => {
   /**
    * @swagger
-   * /api/v1/users/soft/{id}:
+    * /api/v1/user/soft/{id}:
    *   delete:
    *     summary: Soft delete user
    *     tags: [Users]

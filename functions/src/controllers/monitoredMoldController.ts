@@ -29,7 +29,14 @@ import {StorageFolder, generateStoragePath} from "../configs/storage";
  *         multipart/form-data:
  *           schema:
  *             type: object
+ *             required:
+ *               - details
+ *               - photo
  *             properties:
+ *               details:
+ *                 type: string
+ *                 description: JSON stringified object containing monitored mold fields (e.g. moldipedia_id, user_id, location, notes)
+ *                 example: '{"moldipedia_id":"mold123","user_id":"user123","location":"Greenhouse A","notes":"Initial monitoring"}'
  *               photo:
  *                 type: string
  *                 format: binary

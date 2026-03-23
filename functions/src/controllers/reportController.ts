@@ -14,7 +14,7 @@ import {
 export const createReport = async (req: Request, res: Response) => {
   /**
    * @swagger
-   * /api/v1/reports:
+    * /api/v1/report:
    *   post:
    *     summary: Create a new report
    *     tags: [Reports]
@@ -112,7 +112,7 @@ export const createReport = async (req: Request, res: Response) => {
 export const getAllReports = async (req: Request, res: Response) => {
   /**
    * @swagger
-   * /api/v1/reports:
+    * /api/v1/report:
    *   get:
    *     summary: Get all reports
    *     tags: [Reports]
@@ -207,7 +207,7 @@ export const getAllReports = async (req: Request, res: Response) => {
 export const getReportById = async (req: Request, res: Response) => {
   /**
    * @swagger
-   * /api/v1/reports/{id}:
+    * /api/v1/report/{id}:
    *   get:
    *     summary: Get report by ID
    *     tags: [Reports]
@@ -288,7 +288,7 @@ export const getReportById = async (req: Request, res: Response) => {
 export const patchReport = async (req: Request, res: Response) => {
   /**
    * @swagger
-   * /api/v1/reports/{id}:
+    * /api/v1/report/{id}:
    *   patch:
    *     summary: Update report
    *     tags: [Reports]
@@ -398,7 +398,7 @@ export const patchReport = async (req: Request, res: Response) => {
 export const deleteReport = async (req: Request, res: Response) => {
   /**
    * @swagger
-   * /api/v1/reports/hard/{id}:
+    * /api/v1/report/hard/{id}:
    *   delete:
    *     summary: Hard delete report
    *     tags: [Reports]
@@ -453,7 +453,7 @@ export const deleteReport = async (req: Request, res: Response) => {
 export const softDeleteReport = async (req: Request, res: Response) => {
   /**
    * @swagger
-   * /api/v1/reports/soft/{id}:
+    * /api/v1/report/soft/{id}:
    *   delete:
    *     summary: Soft delete report
    *     tags: [Reports]

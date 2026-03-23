@@ -48,7 +48,7 @@ const canManageMoldCase = (moldCase: MoldCase, userId?: string, role?: string) =
 export const createMoldCase = async (req: Request, res: Response) => {
   /**
    * @swagger
-   * /api/v1/mold-cases:
+  * /api/v1/mold-case:
    *   post:
    *     summary: Create a new mold folder
    *     tags: [MoldCases]
@@ -171,7 +171,7 @@ export const createMoldCase = async (req: Request, res: Response) => {
 export const getAllMoldCases = async (req: Request, res: Response) => {
   /**
    * @swagger
-   * /api/v1/mold-folders:
+  * /api/v1/mold-case:
    *   get:
    *     summary: Get all mold folders for a user
    *     tags: [MoldCases]
@@ -406,7 +406,7 @@ export const getAllArchivedMoldCases = async (
 ) => {
   /**
    * @swagger
-   * /api/v1/mold-folders/archive:
+   * /api/v1/mold-case/archive:
    *   get:
    *     summary: Get all archived mold folders for a user
    *     tags: [MoldCases]
@@ -530,7 +530,7 @@ export const getAllArchivedMoldCases = async (
 export const patchMoldCase = async (req: Request, res: Response) => {
   /**
    * @swagger
-   * /api/v1/mold-folders/{id}:
+  * /api/v1/mold-case/{id}:
    *   patch:
    *     summary: Update a mold folder
    *     tags: [MoldCases]
@@ -660,9 +660,9 @@ export const patchMoldCase = async (req: Request, res: Response) => {
 export const deleteMoldCase = async (req: Request, res: Response) => {
   /**
    * @swagger
-   * /api/v1/mold-folders/{id}:
+  * /api/v1/mold-case/hard/{id}:
    *   delete:
-   *     summary: Delete mold folder
+  *     summary: Hard delete mold case
    *     tags: [MoldCases]
    *     security:
    *       - bearerAuth: []
@@ -675,10 +675,10 @@ export const deleteMoldCase = async (req: Request, res: Response) => {
    *         required: true
    *         schema:
    *           type: string
-   *         description: Mold folder ID
+  *         description: Mold case ID
    *     responses:
    *       200:
-   *         description: Successfully deleted mold folder
+  *         description: Successfully deleted mold case
    *         content:
    *           application/json:
    *             schema:
@@ -716,9 +716,9 @@ export const deleteMoldCase = async (req: Request, res: Response) => {
 export const softDeleteMoldCase = async (req: Request, res: Response) => {
   /**
    * @swagger
-   * /api/v1/mold-folders/soft/{id}:
+  * /api/v1/mold-case/soft/{id}:
    *   delete:
-   *     summary: Soft delete mold folder
+  *     summary: Soft delete mold case
    *     tags: [MoldCases]
    *     security:
    *       - bearerAuth: []
@@ -731,10 +731,10 @@ export const softDeleteMoldCase = async (req: Request, res: Response) => {
    *         required: true
    *         schema:
    *           type: string
-   *         description: Mold folder ID
+  *         description: Mold case ID
    *     responses:
    *       200:
-   *         description: Successfully soft deleted mold folder
+  *         description: Successfully soft deleted mold case
    *         content:
    *           application/json:
    *             schema:
@@ -847,7 +847,7 @@ export const softDeleteMoldCase = async (req: Request, res: Response) => {
  */
 export const getMoldCaseByReportId = async (req: Request, res: Response) => {
   /**
-   * GET /api/v1/mold-cases/by-report/:id
+   * GET /api/v1/mold-case/by-report/:id
    * Retrieve the mold case associated with a given mold report ID
    */
   try {
@@ -983,7 +983,7 @@ export const getMoldCaseByReportId = async (req: Request, res: Response) => {
  */
 export const addCultivationLog = async (req: Request, res: Response) => {
   /**
-   * POST /api/v1/mold-cases/:id/logs
+   * POST /api/v1/mold-case/:id/logs
    * Add a cultivation log entry to a mold case (stored in subcollection)
    */
   try {
@@ -1139,7 +1139,7 @@ export const addCultivationLog = async (req: Request, res: Response) => {
  */
 export const updateCultivationDetails = async (req: Request, res: Response) => {
   /**
-   * PATCH /api/v1/mold-cases/:caseId/cultivation-details
+   * PATCH /api/v1/mold-case/:caseId/cultivation-details
    * Update cultivation details (in_vivo and/or in_vitro)
    */
   try {
@@ -1379,7 +1379,7 @@ export const updateCultivationDetails = async (req: Request, res: Response) => {
  */
 export const analyzeCultivationLogImage = async (req: Request, res: Response) => {
   /**
-   * POST /api/v1/mold-cases/:id/analyze-cultivation
+   * POST /api/v1/mold-case/:id/analyze-cultivation
    * Analyze cultivation image using Gemini AI
    *
    * Body:
@@ -1413,7 +1413,7 @@ export const analyzeCultivationLogImage = async (req: Request, res: Response) =>
 
 /**
  * @swagger
- * /api/v1/mold-cases/search:
+ * /api/v1/mold-case/search:
  *   get:
  *     summary: Search and filter assigned mold cases for mycologist
  *     tags: [MoldCases]
@@ -1506,7 +1506,7 @@ export const searchAssignedMoldCases = async (req: Request, res: Response) => {
  * Get mold cases count with metadata (latest createdAt timestamp)
  * Admin only endpoint
  *
- * @route GET /api/v1/mold-cases/counts/metadata
+ * @route GET /api/v1/mold-case/counts/metadata
  * @param req - Express request object
  * @param res - Express response object
  * @returns 200: Count and metadata, 500: Server error
@@ -1990,7 +1990,7 @@ export const removeCultivationLog = async (req: Request, res: Response) => {
 
 /**
  * @swagger
- * /api/v1/mold-cases/{id}/verdict:
+ * /api/v1/mold-case/{id}/verdict:
  *   patch:
  *     summary: Finalize mold verdict for a case
  *     tags: [MoldCases]

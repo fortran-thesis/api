@@ -17,7 +17,7 @@ import {
 
 /**
  * @swagger
- * /api/v1/scanned-molds:
+ * /api/v1/scan:
  *   post:
  *     summary: Create a new scanned mold
  *     tags: [ScannedMold]
@@ -31,12 +31,46 @@ import {
  *         multipart/form-data:
  *           schema:
  *             type: object
+ *             required:
+ *               - image_format
+ *               - scan_modality
+ *               - source_flow
+ *               - scanned_results
+ *               - photo
  *             properties:
- *               name:
+ *               image_format:
  *                 type: string
- *               description:
+ *               scan_modality:
  *                 type: string
- *               image:
+ *                 enum: [microscopic, macroscopic]
+ *               source_flow:
+ *                 type: string
+ *                 enum: [identification, monitoring_initial, cultivation_log]
+ *               source_tab:
+ *                 type: string
+ *                 enum: [in-vivo, in-vitro]
+ *               user_id:
+ *                 type: string
+ *               mold_id:
+ *                 type: string
+ *               predicted_class_name:
+ *                 type: string
+ *               mold_case_id:
+ *                 type: string
+ *               captured_at:
+ *                 type: string
+ *                 format: date-time
+ *               scanned_results:
+ *                 type: object
+ *                 required:
+ *                   - confidence_score
+ *                   - flagged
+ *                 properties:
+ *                   confidence_score:
+ *                     type: number
+ *                   flagged:
+ *                     type: boolean
+ *               photo:
  *                 type: string
  *                 format: binary
  *     responses:
@@ -164,7 +198,7 @@ export const createScannedMold = async (req: Request, res: Response) => {
 
 /**
  * @swagger
- * /api/v1/scanned-molds:
+ * /api/v1/scan:
  *   get:
  *     summary: Get all scanned molds
  *     tags: [ScannedMold]
@@ -262,7 +296,7 @@ export const getAllScannedMolds = async (req: Request, res: Response) => {
 
 /**
  * @swagger
- * /api/v1/scanned-molds/{id}:
+ * /api/v1/scan/{id}:
  *   get:
  *     summary: Get scanned mold by ID
  *     tags: [ScannedMold]
@@ -306,7 +340,7 @@ export const getScannedMoldById = async (req: Request, res: Response) => {
 
 /**
  * @swagger
- * /api/v1/scanned-molds/{id}:
+ * /api/v1/scan/{id}:
  *   patch:
  *     summary: Update scanned mold
  *     tags: [ScannedMold]
@@ -363,7 +397,7 @@ export const patchScannedMold = async (req: Request, res: Response) => {
 
 /**
  * @swagger
- * /api/v1/scanned-molds/hard/{id}:
+ * /api/v1/scan/hard/{id}:
  *   delete:
  *     summary: Hard delete scanned mold
  *     tags: [ScannedMold]
@@ -404,7 +438,7 @@ export const deleteScannedMold = async (req: Request, res: Response) => {
 
 /**
  * @swagger
- * /api/v1/scanned-molds/soft/{id}:
+ * /api/v1/scan/soft/{id}:
  *   delete:
  *     summary: Soft delete scanned mold
  *     tags: [ScannedMold]

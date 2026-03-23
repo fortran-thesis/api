@@ -76,7 +76,7 @@ const extractCaseCoverPhoto = (report: MoldReport): string | null => {
 export const createMoldReport = async (req: Request, res: Response) => {
   /**
    * @swagger
-   * /api/v1/mold-reports:
+   * /api/v1/mold-report:
    *   post:
    *     summary: Create a new mold report
    *     tags: [MoldReport]
@@ -116,12 +116,8 @@ export const createMoldReport = async (req: Request, res: Response) => {
    *                           type: string
    *                   description:
    *                     type: string
-   *                   assigned_mycologist_id:
-   *                     type: string
    *                   status:
    *                     type: string
-   *                   is_archived:
-   *                     type: boolean
    *                 description: MoldReport DTO
    *               cover_photo:
    *                 type: string
@@ -657,7 +653,7 @@ export const getAllMoldReportsByUser = async (req: Request, res: Response) => {
 
 /**
  * @swagger
- * /api/v1/mold-reports/user/closed:
+ * /api/v1/mold-report/user/closed:
  *   get:
  *     summary: Get authenticated user's closed mold reports
  *     tags: [MoldReport]
@@ -831,7 +827,7 @@ export const getAllArchivedMoldReports = getAllClosedMoldReports;
 
 /**
  * @swagger
- * /api/v1/mold-reports/aggregate/closed:
+ * /api/v1/mold-report/aggregate/closed:
  *   get:
  *     summary: Get aggregated closed mold reports (future implementation)
  *     tags: [MoldReport]
@@ -896,7 +892,7 @@ export const getAggregatedClosedMoldReports = async (
 
 /**
  * @swagger
- * /api/v1/mold-reports/aggregate/rejected:
+ * /api/v1/mold-report/aggregate/rejected:
  *   get:
  *     summary: Get aggregated rejected mold reports (future implementation)
  *     tags: [MoldReport]
@@ -968,7 +964,7 @@ export const getAggregatedRejectedMoldReports = async (
 
 /**
  * @swagger
- * /api/v1/mold-reports/unassigned:
+ * /api/v1/mold-report/unassigned:
  *   get:
  *     summary: Get unassigned mold reports
  *     tags: [MoldReport]
@@ -1414,10 +1410,17 @@ export const rejectReport = async (req: Request, res: Response) => {
 
 /**
  * @swagger
- * /api/v1/mold-report/:id/review:
+ * /api/v1/mold-report/{id}/review:
  *   patch:
  *     summary: Mark a mold report as reviewed by the authenticated mycologist
  *     tags: [MoldReport]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Mold report ID
  *     security:
  *       - bearerAuth: []
  *       - cookieAuth: []

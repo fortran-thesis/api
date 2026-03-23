@@ -24,9 +24,6 @@ import {banUser, toggleUser} from "../services/adminService";
  *               id:
  *                 type: string
  *                 description: User ID
- *               email:
- *                 type: string
- *                 description: User email
  *     responses:
  *       200:
  *         description: Successfully disabled user
@@ -91,9 +88,6 @@ export const disableUser = async (req: Request, res: Response) => {
  *               id:
  *                 type: string
  *                 description: User ID
- *               email:
- *                 type: string
- *                 description: User email
  *     responses:
  *       200:
  *         description: Successfully enabled user
@@ -158,9 +152,6 @@ export const enableUser = async (req: Request, res: Response) => {
  *               id:
  *                 type: string
  *                 description: User ID
- *               email:
- *                 type: string
- *                 description: User email
  *     responses:
  *       200:
  *         description: Successfully banned user

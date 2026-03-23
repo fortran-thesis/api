@@ -39,7 +39,7 @@ export const createSystemRequest = async (req: Request, res: Response) => {
  *               message:
  *                 type: string
  *                 description: Message content
- *               userId:
+ *               user_id:
  *                 type: string
  *                 description: Optional user ID
  *     responses:
@@ -63,7 +63,7 @@ export const createSystemRequest = async (req: Request, res: Response) => {
  *                       enum: [feedback, bug]
  *                     message:
  *                       type: string
- *                     userId:
+ *                     user_id:
  *                       type: string
  *                     created_at:
  *                       type: string
