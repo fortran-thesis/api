@@ -35,6 +35,12 @@ import {
  *     security:
  *       - bearerAuth: []
  *       - cookieAuth: []
+ *     description: |
+ *       Returns paginated notifications for the authenticated user ordered by creation date descending. Soft-deleted notifications (those with `metadata.deleted_at` set) are not excluded at the database query level and may appear in results. Clients should filter on `metadata.deleted_at` if needed.
+ *
+ *       `is_read` filter is applied as a Firestore `where` clause.
+ *       `type` filter is applied as a Firestore `where` clause.
+ *       Both filters can be combined.
  *     parameters:
  *       - in: query
  *         name: is_read

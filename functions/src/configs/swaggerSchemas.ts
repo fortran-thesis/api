@@ -247,8 +247,9 @@ export const swaggerSchemas = {
             example: "User sent offensive messages",
           },
           created_at: {
-            type: "object",
-            description: "Timestamp object",
+            type: "string",
+            format: "date-time",
+            description: "ISO 8601 timestamp",
           },
         },
       },
@@ -278,7 +279,7 @@ export const swaggerSchemas = {
       cover_photo: {
         type: "string",
         format: "uri",
-        description: "URL to the cover photo",
+        description: "Signed Google Cloud Storage URL. Valid for 2 hours from the time of the response. Do not cache this URL beyond that window.",
         example: "https://example.com/photo.jpg",
       },
       tags: {
@@ -332,6 +333,7 @@ export const swaggerSchemas = {
           },
           cover_photo: {
             type: "string",
+            description: "Signed Google Cloud Storage URL. Valid for 2 hours from the time of the response. Do not cache this URL beyond that window.",
             example: "https://example.com/photo.jpg",
           },
           tags: {
@@ -405,6 +407,7 @@ export const swaggerSchemas = {
       photo_url: {
         type: "string",
         format: "uri",
+        description: "Signed Google Cloud Storage URL. Valid for 2 hours from the time of the response. Do not cache this URL beyond that window.",
         example: "https://example.com/avatar.jpg",
       },
       phone_number: {
@@ -414,6 +417,21 @@ export const swaggerSchemas = {
       disabled: {
         type: "boolean",
         example: false,
+      },
+    },
+  },
+  UserProfileUpdateRequest: {
+    type: "object",
+    properties: {
+      username: {type: "string"},
+      firstName: {type: "string"},
+      lastName: {type: "string"},
+      email: {type: "string", format: "email"},
+      displayName: {type: "string"},
+      address: {type: "string"},
+      phoneNumber: {
+        type: "string",
+        description: "Philippine numbers are normalized to E.164 (+63...) before storage. Pass any local format (09XX, 639XX, +639XX).",
       },
     },
   },
@@ -484,7 +502,9 @@ export const swaggerSchemas = {
             type: "string",
             nullable: true,
             description:
-              "Token for the next page, null if no more pages",
+              "Opaque cursor token for fetching the next page. Pass as the `pageToken` " +
+              "query parameter in the next request. Null when no further pages exist. " +
+              "The internal format is base64-encoded JSON and must be treated as opaque.",
             example: "eyJsYXN0SWQiOiIxMjMifQ==",
           },
         },
@@ -510,8 +530,9 @@ export const swaggerSchemas = {
         example: "Kitchen Wall Mold",
       },
       date_observed: {
-        type: "object",
-        description: "Timestamp when mold was observed",
+        type: "string",
+        format: "date-time",
+        description: "ISO 8601 timestamp when mold was observed",
       },
       user_id: {
         type: "string",
@@ -534,7 +555,7 @@ export const swaggerSchemas = {
               items: {
                 type: "string",
               },
-              description: "URLs to photos",
+              description: "Signed Google Cloud Storage URLs. Each URL is valid for 2 hours from the time of the response. Do not cache beyond that window.",
             },
             description: {
               type: "string",
@@ -685,9 +706,14 @@ export const swaggerSchemas = {
       metadata: {
         type: "object",
         properties: {
-          created_at: {type: "object", description: "Firestore Timestamp"},
-          updated_at: {type: "object", nullable: true},
-          deleted_at: {type: "object", nullable: true},
+          created_at: {type: "string", format: "date-time"},
+          updated_at: {type: "string", format: "date-time", nullable: true},
+          deleted_at: {
+            type: "string",
+            format: "date-time",
+            nullable: true,
+            description: "Non-null for soft-deleted notifications. These are not filtered server-side and may appear in list results.",
+          },
         },
       },
     },
@@ -713,6 +739,10 @@ export const swaggerSchemas = {
           nextPageToken: {
             type: "string",
             nullable: true,
+            description:
+              "Opaque cursor token for fetching the next page. Pass as the `pageToken` " +
+              "query parameter in the next request. Null when no further pages exist. " +
+              "The internal format is base64-encoded JSON and must be treated as opaque.",
             example: "eyJsYXN0SWQiOiIxMjMifQ==",
           },
         },
