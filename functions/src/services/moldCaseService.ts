@@ -16,6 +16,7 @@ import {
   findMoldCaseById,
   findMoldCaseByName,
   findMoldCaseByReportId,
+  findMoldCasesByMoldipediaId,
   softDeleteMoldCase,
   updateMoldCase as updateMoldCaseRepo,
   updateCultivationDetails,
@@ -305,6 +306,24 @@ export const retrieveMoldCaseByName = async (
     if (!moldCase) throw new Error("No case found.");
     const cases = queryToJson<MoldCase>(moldCase);
     return cases.length > 0 ? cases[0] : null;
+  } catch (error) {
+    devLog(error);
+    return null;
+  }
+};
+
+export const retrieveMoldCasesByMoldipediaId = async (
+  moldipediaId: string
+): Promise<MoldCase[] | null> => {
+  try {
+    const moldCaseSnap: QuerySnapshot | null = await findMoldCasesByMoldipediaId(moldipediaId);
+    if (!moldCaseSnap) return null;
+    const cases = queryToJson<MoldCase>(moldCaseSnap);
+    if (cases.length === 0) return null;
+
+    const normalized = cases.map((c) => normalizeCaseResponse(c));
+    const transformed = await Promise.all(normalized.map((c) => transformMoldCaseImages(c)));
+    return transformed;
   } catch (error) {
     devLog(error);
     return null;

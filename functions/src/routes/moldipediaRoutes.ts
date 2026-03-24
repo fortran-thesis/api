@@ -23,6 +23,7 @@ import {
   archiveMoldipediaArticle,
   unarchiveMoldipediaArticle,
 } from "../controllers/moldipediaController";
+import {getMoldCasesByMoldipediaId} from "../controllers/moldCaseController";
 import {sanitizeParams} from "../middlewares/sanitation";
 import {cacheGet, cacheInvalidate} from "../middlewares/cacheMiddleware";
 import {upload} from "../middlewares/upload";
@@ -58,6 +59,16 @@ router.get(
   validateQuery(SearchMoldipediaQuerySchema),
   async (req: Request, res: Response) => {
     await getAllArchivedMoldipedia(req, res);
+  }
+);
+
+router.get(
+  "/:id/cases",
+  verifyUser(),
+  sanitizeParams,
+  validateParams(MoldipediaIdSchema),
+  async (req: Request, res: Response) => {
+    await getMoldCasesByMoldipediaId(req, res);
   }
 );
 

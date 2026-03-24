@@ -26,6 +26,25 @@ export const findMoldCaseByName = async (name: string) =>
   getDocumentsByField(collection, "name", name);
 export const findMoldCaseByReportId = async (reportId: string) =>
   getDocumentsByField(collection, "mold_report_id", reportId);
+
+export const findMoldCasesByMoldipediaId = async (
+  moldipediaId: string
+): Promise<FirebaseFirestore.QuerySnapshot | null> => {
+  try {
+    const querySnap = await getFirestore(firebase)
+      .collection(collection)
+      .where("final_verdict.moldipedia_id", "==", moldipediaId)
+      .get();
+    if (querySnap.empty) {
+      return null;
+    }
+    return querySnap;
+  } catch (error) {
+    devLog(error);
+    return null;
+  }
+};
+
 export const findAllMoldCases = async (
   uid: string,
   limit: number,

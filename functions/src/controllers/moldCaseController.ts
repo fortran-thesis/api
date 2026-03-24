@@ -6,6 +6,7 @@ import {
   addMoldCaseToFirestore,
   retrieveAllMoldCasesByUser,
   retrieveAssignedMoldCases,
+  retrieveMoldCasesByMoldipediaId,
   retrieveMoldCaseByReportId,
   updateMoldCaseInFirestore,
   removeMoldCase,
@@ -24,6 +25,7 @@ import {StorageFolder, generateStoragePath} from "../configs/storage";
 import {Timestamp} from "firebase-admin/firestore";
 import {retrieveMoldReportById, updateMoldReportInFirestore} from "../services/moldReportService";
 import {performMoldLookup} from "../services/lookupService";
+import {retrieveAllMoldipedia} from "../services/moldipediaService";
 
 const getActorContext = (req: Request) => {
   const userId = req.user?.id;
@@ -2078,12 +2080,28 @@ export const finalizeVerdict = async (req: Request, res: Response) => {
     }
 
     // Update the mold case with final verdict
-    const verdict = {
+    let matchedWikiMold: any = null;
+    let matchedWikiMoldId: string | undefined;
+    try {
+      if (moldName && moldName.trim()) {
+        const moldipediaResponse = await retrieveAllMoldipedia(10, undefined, moldName.trim());
+        const candidates = moldipediaResponse?.snapshot || [];
+        if (Array.isArray(candidates) && candidates.length > 0) {
+          matchedWikiMold = candidates[0];
+          matchedWikiMoldId = (matchedWikiMold as any)?.id;
+        }
+      }
+    } catch (matchErr) {
+      devLog(`[finalizeVerdict] WikiMold lookup failed: ${matchErr}`);
+    }
+
+    const verdict: any = {
       moldId,
       moldName,
       confidence,
       verdict_timestamp: Timestamp.now(),
       ...(mycologistNotes !== undefined ? {mycologist_notes: mycologistNotes} : {}),
+      ...(matchedWikiMoldId ? {moldipedia_id: matchedWikiMoldId} : {}),
     };
 
     const updatedCase = await updateMoldCaseInFirestore(caseId, {
@@ -2133,9 +2151,59 @@ export const finalizeVerdict = async (req: Request, res: Response) => {
       case_name: moldCase.name ?? "",
       final_verdict: verdict,
       report_sync_warning: reportSyncWarning,
+      matched_wikimold: matchedWikiMold,
     });
   } catch (error) {
     devLog("[finalizeVerdict] Error:", String(error));
+    return defaultError(res);
+  }
+};
+
+export const getMoldCasesByMoldipediaId = async (req: Request, res: Response) => {
+  /**
+   * @swagger
+   * /api/v1/moldipedia/{id}/cases:
+   *   get:
+   *     summary: List mold cases linked to a moldipedia article
+   *     tags: [Moldipedia, MoldCases]
+   *     security:
+   *       - bearerAuth: []
+   *       - cookieAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Moldipedia article ID
+   *     responses:
+   *       200:
+   *         description: List of mold cases
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                 data:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/MoldCase'
+   *       404:
+   *         description: No cases found
+   *       500:
+   *         description: Server error
+   */
+  try {
+    const {id} = req.params;
+    const cases = await retrieveMoldCasesByMoldipediaId(id);
+    if (!cases) {
+      return sendError(res, "No cases found for this moldipedia article", 404);
+    }
+    return sendSuccess(res, cases);
+  } catch (error) {
+    devLog(error);
     return defaultError(res);
   }
 };
