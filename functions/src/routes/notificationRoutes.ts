@@ -11,6 +11,7 @@ import {
   validateParams,
   validateQuery,
 } from "../middlewares/validation";
+import {cacheGet, cacheInvalidate} from "../middlewares/cacheMiddleware";
 import {
   NotificationIdSchema,
   NotificationQuerySchema,
@@ -36,6 +37,7 @@ router.get(
   "/",
   verifyUser(),
   validateQuery(NotificationQuerySchema),
+  cacheGet("notifications"),
   async (req, res) => {
     await getNotifications(req, res);
   }
@@ -54,6 +56,7 @@ router.get(
 router.patch(
   "/read-all",
   verifyUser(),
+  cacheInvalidate("notifications", "update"),
   async (req, res) => {
     await markAllReadController(req, res);
   }
@@ -65,6 +68,7 @@ router.post(
   "/device-token",
   verifyUser(),
   validateBody(RegisterDeviceTokenSchema),
+  cacheInvalidate("notification-tokens", "create"),
   async (req, res) => {
     await registerDeviceToken(req, res);
   }
@@ -74,6 +78,7 @@ router.delete(
   "/device-token/:id",
   verifyUser(),
   validateParams(DeviceTokenIdSchema),
+  cacheInvalidate("notification-tokens", "delete"),
   async (req, res) => {
     await unregisterDeviceToken(req, res);
   }
@@ -94,6 +99,7 @@ router.patch(
   "/:id/read",
   verifyUser(),
   validateParams(NotificationIdSchema),
+  cacheInvalidate("notifications", "update"),
   async (req, res) => {
     await markRead(req, res);
   }
@@ -103,6 +109,7 @@ router.delete(
   "/:id",
   verifyUser(),
   validateParams(NotificationIdSchema),
+  cacheInvalidate("notifications", "delete"),
   async (req, res) => {
     await deleteNotification(req, res);
   }

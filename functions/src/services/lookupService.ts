@@ -21,7 +21,8 @@ export interface LookupResult {
 export async function performMoldLookup(
   reportedSymptoms: string[] = [],
   reportedSigns: string[] = [],
-  reportedCharacteristics: string[] = []
+  reportedCharacteristics: string[] = [],
+  reportedMoldNames: string[] = []
 ): Promise<LookupResult[]> {
   try {
     // 1. Fetch all molds from Firestore
@@ -50,17 +51,20 @@ export async function performMoldLookup(
     devLog(`[performMoldLookup] First mold: ${molds[0]?.name || "N/A"} with ${((molds[0] as any)?.symptoms || []).length} symptoms`);
 
     // 2. Normalize input (lowercase for case-insensitive matching)
-    const normalizedSymptoms = reportedSymptoms.map((s) => s.toLowerCase());
-    const normalizedSigns = reportedSigns.map((s) => s.toLowerCase());
+    const normalizedSymptoms = reportedSymptoms.map((s) => String(s).toLowerCase());
+    const normalizedSigns = reportedSigns.map((s) => String(s).toLowerCase());
     const normalizedCharacteristics = reportedCharacteristics.map((c) =>
-      c.toLowerCase()
+      String(c).toLowerCase()
     );
+    const normalizedMoldNames = reportedMoldNames.map((n) => String(n).toLowerCase());
+
     const totalReported =
       normalizedSymptoms.length +
       normalizedSigns.length +
-      normalizedCharacteristics.length;
+      normalizedCharacteristics.length +
+      normalizedMoldNames.length;
 
-    const inputStats = `symptoms: ${normalizedSymptoms.length}, signs: ${normalizedSigns.length}, characteristics: ${normalizedCharacteristics.length}`;
+    const inputStats = `symptoms: ${normalizedSymptoms.length}, signs: ${normalizedSigns.length}, characteristics: ${normalizedCharacteristics.length}, moldNames: ${normalizedMoldNames.length}`;
     console.log(`[performMoldLookup] Input: ${inputStats} (total: ${totalReported})`);
     devLog(`[performMoldLookup] Input: ${inputStats} (total: ${totalReported})`);
 
@@ -91,7 +95,24 @@ export async function performMoldLookup(
         moldCharacteristicSet.has(c)
       ).length;
 
-      const confidence = Math.round((matches / totalReported) * 100);
+      const moldNameNormalized = String(mold.name || "").toLowerCase();
+      let nameMatches = 0;
+
+      normalizedMoldNames.forEach((reportedName) => {
+        if (!reportedName.trim().length) return;
+        if (reportedName === moldNameNormalized) {
+          nameMatches += 1;
+        } else if (
+          moldNameNormalized.includes(reportedName) ||
+          reportedName.includes(moldNameNormalized)
+        ) {
+          nameMatches += 1;
+        }
+      });
+
+      matches += nameMatches;
+
+      const confidence = totalReported > 0 ? Math.round((matches / totalReported) * 100) : 0;
 
       return {
         moldId: mold.id,

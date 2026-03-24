@@ -32,6 +32,15 @@ jest.mock("../../../src/lib/auth", () => ({
   getAuthUsersByIds: (...args: any[]) => mockGetAuthUsersByIds(...args),
 }));
 jest.mock("../../../src/utils/dev");
+const mockFindAllCaseDetailsByReportId = jest.fn() as jest.MockedFunction<any>;
+
+jest.mock("../../../src/repositories/caseDetailRepository", () => ({
+  findAllCaseDetailsByReportId: (...args: any[]) =>
+    mockFindAllCaseDetailsByReportId(...args),
+  addCaseDetail: jest.fn(),
+  updateCaseDetail: jest.fn(),
+}));
+
 jest.mock("../../../src/services/moldCaseService", () => ({
   retrieveMoldCaseByReportId: jest.fn().mockResolvedValue(null),
   batchRetrieveMoldCasesByReportIds: jest.fn().mockResolvedValue(new Map()),
@@ -114,11 +123,35 @@ describe("moldReportService (unit)", () => {
         details: {displayName: "John Doe"},
         user: {first_name: "John", last_name: "Doe"},
       });
+      mockFindAllCaseDetailsByReportId.mockResolvedValue([]);
 
       const result = await moldReportService.retrieveMoldReportById("report123");
 
       expect(result).toBeTruthy();
       expect(result?.id).toBe("report123");
+    });
+  });
+
+  describe("getRawCaseCoverPhoto", () => {
+    it("should return first available raw GS path from case details", async () => {
+      mockFindAllCaseDetailsByReportId.mockResolvedValue([
+        {id: "detail1", data: () => ({cover_photo: ["gs://bucket/raw1.jpg"]})},
+        {id: "detail2", data: () => ({cover_photo: ["gs://bucket/raw2.jpg"]})},
+      ] as any);
+
+      const result = await moldReportService.getRawCaseCoverPhoto("report123");
+
+      expect(result).toBe("gs://bucket/raw2.jpg");
+    });
+
+    it("should return null when no valid photo is found", async () => {
+      mockFindAllCaseDetailsByReportId.mockResolvedValue([
+        {id: "detail1", data: () => ({cover_photo: []})},
+      ] as any);
+
+      const result = await moldReportService.getRawCaseCoverPhoto("report123");
+
+      expect(result).toBeNull();
     });
   });
 

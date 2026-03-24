@@ -95,6 +95,71 @@ describe("Moldipedia Integration Tests", () => {
       expect(res.body.data.cover_photo).toMatch(/^gs:\/\//);
       expect(res.body.data.cover_photo).toContain("moldipedia/");
     });
+
+    it("should create and return full moldipedia schema with findings and analysis fields", async () => {
+      const agent = getTestAgent();
+      const detailsPayload = {
+        title: "Schema Sync Article",
+        body: "Detailed body content",
+        mold_type: "Aspergillus",
+        affected_hosts: "Wheat, Maize",
+        symptoms: "Spotting, wilting",
+        disease_cycle: "Sporulation in humid conditions",
+        impact: "Yield reduction up to 35%",
+        prevention: "Improve ventilation and apply fungicides",
+        treatments: {
+          mechanical: "Remove affected tissue",
+          cultural: "Rotate crops",
+          biological: "Introduce antagonists",
+          physical: "Control humidity",
+          chemical: "Apply approved fungicide",
+        },
+        findings: [
+          { title: "Lab test", content: "Positive on PCR" },
+          { title: "Field test", content: "Visible symptoms" },
+        ],
+      };
+
+      const res = await agent
+        .post(apiPath("/v1/moldipedia"))
+        .set("Authorization", `Bearer ${curatorUser.token}`)
+        .field("details", JSON.stringify(detailsPayload))
+        .attach("cover_photo", Buffer.from("fake-image-bytes"), "cover2.jpg")
+        .expect("Content-Type", /json/);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      const record = res.body.data;
+      expect(record).toMatchObject({
+        title: "Schema Sync Article",
+        mold_type: "Aspergillus",
+        affected_hosts: "Wheat, Maize",
+        symptoms: "Spotting, wilting",
+        disease_cycle: "Sporulation in humid conditions",
+        impact: "Yield reduction up to 35%",
+        prevention: "Improve ventilation and apply fungicides",
+      });
+      expect(record.findings).toHaveLength(2);
+      expect(record.findings[0]).toEqual({ title: "Lab test", content: "Positive on PCR" });
+
+      // verify GET by ID returns the same shape
+      const getRes = await agent
+        .get(apiPath(`/v1/moldipedia/${record.id}`))
+        .expect("Content-Type", /json/);
+
+      expect(getRes.status).toBe(200);
+      expect(getRes.body.success).toBe(true);
+      expect(getRes.body.data).toMatchObject({
+        title: "Schema Sync Article",
+        mold_type: "Aspergillus",
+        affected_hosts: "Wheat, Maize",
+        symptoms: "Spotting, wilting",
+        disease_cycle: "Sporulation in humid conditions",
+        impact: "Yield reduction up to 35%",
+        prevention: "Improve ventilation and apply fungicides",
+      });
+      expect(getRes.body.data.findings).toHaveLength(2);
+    });
   });
 
   describe("GET /api/v1/moldipedia/:id", () => {

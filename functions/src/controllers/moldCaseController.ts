@@ -1034,7 +1034,7 @@ export const addCultivationLog = async (req: Request, res: Response) => {
  *     description: |
  *       Updates cultivation details on a mold case using deep-merge semantics.
  *
- *       Side effect: if the linked MoldReport contains `reported_symptoms`, `reported_signs`, or `reported_characteristics`, a background mold lookup is re-run after this update. Characteristics from `in_vivo_details.lesion_color` and `in_vitro_details.colony_color` are appended to the lookup inputs. On completion, `lookup_results` on the MoldReport is updated and `cultivation_details.microscopic_ai_snapshot` on this case is overwritten with the top lookup result.
+ *       Side effect: if the linked MoldReport contains `reported_symptoms`, `reported_signs`, or `reported_characteristics`, a background mold lookup is re-run after this update. Characteristics from `in_vivo_details.lesion_color` and `in_vitro_details.colony_color` and any available microscopic identification names from initial/in vivo/in vitro observations are appended to the lookup inputs. On completion, `lookup_results` on the MoldReport is updated and `cultivation_details.microscopic_ai_snapshot` on this case is overwritten with the top lookup result.
  *     parameters:
  *       - in: path
  *         name: id
@@ -1257,10 +1257,31 @@ export const updateCultivationDetails = async (req: Request, res: Response) => {
           );
         }
 
+        const reportedMoldNames: string[] = [];
+
+        if (initialMicroscopic) {
+          reportedMoldNames.push(initialMicroscopic);
+        }
+
+        const snapshotIdentified = (detailsPayload.microscopic_ai_snapshot as any)?.identified_mold;
+        if (typeof snapshotIdentified === "string" && snapshotIdentified.trim()) {
+          reportedMoldNames.push(snapshotIdentified.trim());
+        }
+
+        const inVivoIdentified = detailsPayload.in_vivo_details?.identified_mold;
+        if (typeof inVivoIdentified === "string" && inVivoIdentified.trim()) {
+          reportedMoldNames.push(inVivoIdentified.trim());
+        }
+
+        const inVitroIdentified = detailsPayload.in_vitro_details?.identified_mold;
+        if (typeof inVitroIdentified === "string" && inVitroIdentified.trim()) {
+          reportedMoldNames.push(inVitroIdentified.trim());
+        }
+
         const allCharacteristics = [...reportedCharacteristics, ...additionalCharacteristics];
 
         // Run lookup in background
-        performMoldLookup(reportedSymptoms, reportedSigns, allCharacteristics)
+        performMoldLookup(reportedSymptoms, reportedSigns, allCharacteristics, reportedMoldNames)
           .then(async (lookupResults) => {
             try {
               await updateMoldReportInFirestore(moldCase.mold_report_id, {

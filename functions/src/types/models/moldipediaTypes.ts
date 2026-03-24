@@ -7,6 +7,23 @@ export interface Moldipedia {
   cover_photo: string;
   tags: string[];
   is_archived: boolean;
+  mold_type?: string;
+  affected_hosts?: string;
+  symptoms?: string;
+  disease_cycle?: string;
+  impact?: string;
+  prevention?: string;
+  treatments?: {
+    mechanical?: string;
+    cultural?: string;
+    biological?: string;
+    physical?: string;
+    chemical?: string;
+  };
+  findings?: Array<{
+    title: string;
+    content: string;
+  }>;
   mycologist_id?: string | null;
   approved_at?: Timestamp | null;
 }

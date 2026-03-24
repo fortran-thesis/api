@@ -212,6 +212,21 @@ import {Mold, MoldDetails, PaginatedResult, WithId} from "../types/types";
  *                                     type: string
  *                                   description:
  *                                     type: string
+ *                     moldipedia_id:
+ *                       type: string
+ *                       nullable: true
+ *                     symptoms:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                     signs:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                     characteristics:
+ *                       type: array
+ *                       items:
+ *                         type: string
  *       400:
  *         description: Validation error
  *         content:
@@ -764,8 +779,34 @@ export const getMoldByPredictedClassName = async (req: Request, res: Response) =
  *                   type: boolean
  *                   example: true
  *                 data:
- *                   type: string
- *                   example: "Successfully updated mold."
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     name:
+ *                       type: string
+ *                     moldipedia_id:
+ *                       type: string
+ *                       nullable: true
+ *                     symptoms:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                     signs:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                     characteristics:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                     mold_details:
+ *                       type: object
+ *                       properties:
+ *                         info:
+ *                           type: object
+ *                         prevention:
+ *                           type: object
  *       400:
  *         description: Validation error
  *         content:

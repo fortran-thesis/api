@@ -36,6 +36,19 @@ import {
   markAllAsReadForRecipient,
 } from "../repositories/notificationRepository";
 import {
+  getCachedList,
+  cacheList,
+  getCachedItem,
+  cacheItem,
+  handlePostCache,
+  handlePatchCache,
+  handleDeleteCache,
+  invalidateAllLists,
+  invalidateAllCounts,
+  getCachedCount,
+  cacheCount,
+} from "../utils/cacheManager";
+import {
   addDeviceToken,
   getDeviceTokens,
   removeDeviceToken,
@@ -166,6 +179,9 @@ export const resolveTemplate = (
 /**
  * Creates a single notification document in Firestore and sends an FCM push.
  */
+const RESOURCE = "notifications";
+const DEVICE_RESOURCE = "notification-tokens";
+
 export const createNotification = async (
   recipientId: string,
   type: NotificationType,
@@ -277,7 +293,11 @@ export const getNotificationsForUser = async (
   pageToken?: string,
   filters?: {is_read?: boolean; type?: NotificationType}
 ): Promise<PaginatedResult<WithId<Notification>[]> | null> => {
+  const query = {userId, limit, pageToken, ...filters};
   try {
+    const cached = await getCachedList<PaginatedResult<WithId<Notification>[]>>(RESOURCE, query);
+    if (cached) return cached;
+
     const queryModifier = (q: Query): Query => {
       let modified = q;
       if (filters?.is_read !== undefined) {
@@ -299,10 +319,14 @@ export const getNotificationsForUser = async (
     if (!result) return null;
 
     const snapshot = result.snapshot as unknown as QuerySnapshot;
-    return {
+    const response = {
       snapshot: queryToJson<Notification>(snapshot),
       nextPageToken: result.nextPageToken,
     };
+
+    await cacheList(RESOURCE, response, query, {ttl: 120});
+
+    return response;
   } catch (error) {
     devLog(error, "getNotificationsForUser");
     return null;
@@ -314,11 +338,19 @@ export const getNotificationById = async (
   userId: string
 ): Promise<WithId<Notification> | null> => {
   try {
+    const cached = await getCachedItem<WithId<Notification>>(RESOURCE, id);
+    if (cached && cached.recipient_id === userId) {
+      return cached;
+    }
+
     const doc: DocumentSnapshot | null = await findNotificationById(id);
     if (!doc || !doc.exists) return null;
     const notif = documentToJson<Notification>(doc);
     // Ownership check
     if (notif.recipient_id !== userId) return null;
+
+    await cacheItem(RESOURCE, id, notif, {ttl: 120});
+
     return notif;
   } catch (error) {
     devLog(error, "getNotificationById");
@@ -327,8 +359,14 @@ export const getNotificationById = async (
 };
 
 export const getUnreadCount = async (userId: string): Promise<number> => {
+  const countCacheKey = `unread:${userId}`;
   try {
-    return await countUnreadNotifications(userId);
+    const cached = await getCachedCount(RESOURCE, countCacheKey);
+    if (cached !== null) return cached;
+
+    const count = await countUnreadNotifications(userId);
+    await cacheCount(RESOURCE, count, countCacheKey, {ttl: 120});
+    return count;
   } catch (error) {
     devLog(error, "getUnreadCount");
     return 0;
@@ -348,7 +386,14 @@ export const markNotificationRead = async (
     const existing = await getNotificationById(id, userId);
     if (!existing) return false;
     const result = await updateNotification(id, {is_read: true} as any);
-    return !!result;
+    if (!result) return false;
+
+    await Promise.all([
+      handlePatchCache(RESOURCE, id, true),
+      invalidateAllCounts(RESOURCE),
+    ]);
+
+    return true;
   } catch (error) {
     devLog(error, "markNotificationRead");
     return false;
@@ -357,7 +402,15 @@ export const markNotificationRead = async (
 
 export const markAllRead = async (userId: string): Promise<number> => {
   try {
-    return await markAllAsReadForRecipient(userId);
+    const count = await markAllAsReadForRecipient(userId);
+    if (count > 0) {
+      await Promise.all([
+        invalidateAllCounts(RESOURCE),
+        // list cache may contain user-specific queries and unread states.
+        invalidateAllLists(RESOURCE),
+      ]);
+    }
+    return count;
   } catch (error) {
     devLog(error, "markAllRead");
     return 0;
@@ -376,7 +429,14 @@ export const deleteNotificationForUser = async (
     const existing = await getNotificationById(id, userId);
     if (!existing) return false;
     const result = await softDeleteNotification(id);
-    return !!result;
+    if (!result) return false;
+
+    await Promise.all([
+      handleDeleteCache(RESOURCE, id),
+      invalidateAllCounts(RESOURCE),
+    ]);
+
+    return true;
   } catch (error) {
     devLog(error, "deleteNotificationForUser");
     return false;

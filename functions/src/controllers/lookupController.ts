@@ -38,7 +38,10 @@ import {performMoldLookup} from "../services/lookupService";
  *               reported_characteristics:
  *                 type: array
  *                 items: {type: string}
- *             description: At least one non-empty array among symptoms/signs/characteristics (or their reported_* aliases) is required.
+ *               reported_mold_names:
+                 type: array
+                 items: {type: string}
+             description: At least one non-empty array among symptoms/signs/characteristics (or their reported_* aliases) is required. reported_mold_names is optional; it adds mold identifiers from microscopic results to improve lookup confidence.
  *     responses:
  *       200:
  *         description: Lookup results
@@ -75,6 +78,7 @@ export const lookupMolds = async (req: Request, res: Response) => {
     const symptoms = req.body.symptoms || req.body.reported_symptoms || [];
     const signs = req.body.signs || req.body.reported_signs || [];
     const characteristics = req.body.characteristics || req.body.reported_characteristics || [];
+    const reportedMoldNames = req.body.reported_mold_names || [];
 
     devLog("[lookupMolds] Received lookup request");
     devLog(
@@ -103,7 +107,7 @@ export const lookupMolds = async (req: Request, res: Response) => {
     }
 
     // Call lookup service
-    const results = await performMoldLookup(symptoms, signs, characteristics);
+    const results = await performMoldLookup(symptoms, signs, characteristics, reportedMoldNames);
 
     devLog(`[lookupMolds] Returning ${results.length} results`);
     return sendSuccess(res, results);

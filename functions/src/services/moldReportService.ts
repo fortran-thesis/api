@@ -90,6 +90,28 @@ const transformCoverPhotos = async (
   );
 };
 
+export const getRawCaseCoverPhoto = async (
+  reportId: string
+): Promise<string | null> => {
+  try {
+    const detailDocs = await findAllCaseDetailsByReportId(reportId);
+    const caseDetails = detailDocs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    })) as Array<WithId<MoldReportDetails>>;
+
+    for (let i = caseDetails.length - 1; i >= 0; i--) {
+      const entry = caseDetails[i];
+      const cover = Array.isArray(entry?.cover_photo) ? entry.cover_photo : [];
+      const first = cover.find((url) => typeof url === "string" && url.trim().length > 0);
+      if (first) return first;
+    }
+  } catch (error) {
+    devLog(error, "GET_RAW_CASE_COVER_PHOTO");
+  }
+  return null;
+};
+
 // Helper: convert date_observed Timestamp to ISO string for client responses
 const normalizeDateObserved = <T>(obj: T): T => {
   if (!obj || typeof obj !== "object") return obj;

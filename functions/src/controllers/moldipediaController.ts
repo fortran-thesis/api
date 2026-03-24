@@ -464,6 +464,12 @@ export const patchMoldipedia = async (req: Request, res: Response) => {
  *                       format: date-time
  *                       nullable: true
  *                       description: Timestamp when the article was reviewed/approved
+ *                     is_archived:
+ *                       type: boolean
+ *                       example: false
+ *                     is_archived:
+ *                       type: boolean
+ *                       example: false
  *       400:
    *         description: Validation error
    *       404:

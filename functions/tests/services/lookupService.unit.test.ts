@@ -144,6 +144,30 @@ describe("lookupService.performMoldLookup (unit)", () => {
 
       expect(result).toEqual([]);
     });
+
+    it("should support reported mold names for direct identification", async () => {
+      mockDb.collection.mockReturnValue({
+        get: jest.fn().mockResolvedValue({
+          docs: [
+            {
+              id: "mold_11",
+              data: () => ({
+                name: "Aspergillus niger",
+                symptoms: [],
+                signs: [],
+                characteristics: [],
+              }),
+            },
+          ],
+        }),
+      });
+
+      const result = await performMoldLookup([], [], [], ["Aspergillus niger"]);
+
+      expect(result.length).toBe(1);
+      expect(result[0]?.confidence).toBe(100);
+      expect(result[0]?.moldName).toBe("Aspergillus niger");
+    });
   });
 
   describe("Case Insensitivity", () => {

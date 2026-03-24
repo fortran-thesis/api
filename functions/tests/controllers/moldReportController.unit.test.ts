@@ -2,6 +2,7 @@ import {describe, it, expect, jest, beforeEach} from "@jest/globals";
 import {Request, Response} from "express";
 import * as moldReportController from "../../src/controllers/moldReportController";
 import * as moldReportService from "../../src/services/moldReportService";
+import * as moldCaseService from "../../src/services/moldCaseService";
 import * as responseUtils from "../../src/utils/response";
 
 jest.mock("../../src/services/moldReportService");
@@ -66,6 +67,35 @@ describe("moldReportController transitions (unit)", () => {
       mockRes,
       "Cannot assign report with status 'resolved'",
       409
+    );
+  });
+
+  it("assignReport stores raw GS photo_url from subcollection case_details instead of signed report URL", async () => {
+    mockReq.body = {assigned_mycologist_id: "myc-1"};
+
+    mockMoldReportService.retrieveMoldReportById.mockResolvedValue({
+      id: "report-1",
+      status: "pending",
+      assigned_mycologist_id: null,
+      case_details: [{cover_photo: ["https://firebasestorage.googleapis.com/v0/b/test/o/image.jpg?alt=media&token=abc"]}],
+    } as any);
+
+    mockMoldReportService.updateMoldReportInFirestore.mockResolvedValue({
+      id: "report-1",
+      status: "in progress",
+      assigned_mycologist_id: "myc-1",
+      case_details: [{cover_photo: ["https://firebasestorage.googleapis.com/v0/b/test/o/image.jpg?alt=media&token=abc"]}],
+    } as any);
+
+    mockMoldReportService.getRawCaseCoverPhoto = jest.fn().mockResolvedValue("gs://test_bucket/uploads/image.jpg");
+    mockMoldReportService.retrieveMoldCaseByReportId = jest.fn().mockResolvedValue(null);
+
+    await moldReportController.assignReport(mockReq as Request, mockRes as Response);
+
+    expect(moldCaseService.addMoldCaseToFirestore).toHaveBeenCalledWith(
+      expect.objectContaining({
+        photo_url: "gs://test_bucket/uploads/image.jpg",
+      })
     );
   });
 

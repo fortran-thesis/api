@@ -72,12 +72,20 @@ describe("moldipediaService (unit)", () => {
       mockFirestoreLib.documentToJson.mockReturnValue({
         id: "mold-1",
         name: "Aspergillus",
+        affected_hosts: "Wheat",
+        symptoms: "spots",
+        disease_cycle: "repeat",
+        prevention: "clean",
+        findings: [{ title: "lab", content: "PCR" }],
       } as any);
 
       const result = await moldipediaService.retrieveMoldipediaById("mold-1");
 
       expect(result).toBeDefined();
       expect(result?.id).toBe("mold-1");
+      expect(result?.affected_hosts).toBe("Wheat");
+      expect(result?.findings).toBeDefined();
+      expect(result?.findings?.[0]).toEqual({ title: "lab", content: "PCR" });
     });
   });
 });

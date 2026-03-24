@@ -9,6 +9,7 @@ import {Role, AuditAction} from "../types/enums";
 import {auditLog} from "../middlewares/auditLogger";
 import {
   MoldipediaIdSchema,
+  MoldipediaCreateSchema,
   MoldipediaUpdateSchema,
   SearchMoldipediaQuerySchema,
 } from "../dto/moldipediaDTO";
@@ -36,6 +37,7 @@ router.post(
   verifyUser(Role.CURATOR),
   upload.single("cover_photo"),
   parseMultipartJson(["details"]),
+  validateBody(MoldipediaCreateSchema),
   auditLog(AuditAction.ADD_WIKIMOLD, "Created moldipedia article"),
   cacheInvalidate("moldipedia", "create"),
   async (req: Request, res: Response) => {

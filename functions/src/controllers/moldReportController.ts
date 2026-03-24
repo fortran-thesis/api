@@ -20,6 +20,7 @@ import {
   getAssignedReportsCount,
   searchAndFilterMoldReports,
   getMoldReportMonthlyTotals,
+  getRawCaseCoverPhoto,
 } from "../services/moldReportService";
 import {performMoldLookup} from "../services/lookupService";
 import {createLog} from "../utils/logging";
@@ -1296,7 +1297,10 @@ export const assignReport = async (req: Request, res: Response) => {
       status: normalizedStatus,
     });
     if (!updated) return sendError(res, "Failed to assign mycologist", 400);
-    const casePhotoUrl = extractCaseCoverPhoto(updated);
+
+    // Prefer raw GS path from case_details subcollection to avoid persisting signed URLs.
+    const casePhotoUrl =
+      (await getRawCaseCoverPhoto(id)) || extractCaseCoverPhoto(updated);
 
     // Auto-create a MoldCase linked to this report if one doesn't exist yet.
     // This ensures GET /mold-case/by-report/:id works as soon as a mycologist is assigned.
