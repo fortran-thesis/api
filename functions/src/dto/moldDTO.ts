@@ -15,6 +15,9 @@ export const MoldSchema = z.object({
   moldName: z
     .string({required_error: "Name is required. "})
     .nonempty({message: "Name is required "}),
+  symptoms: z.array(z.string()).optional(),
+  signs: z.array(z.string()).optional(),
+  characteristics: z.array(z.string()).optional(),
   details: z.object({
     info: z.object({
       description: z.string().optional(),
@@ -26,6 +29,12 @@ export const MoldSchema = z.object({
         family: z.string(),
         genus: z.string(),
       }),
+      overview: z.string().optional(),
+      health_risks: z.string().optional(),
+      affected_hosts: z.string().optional(),
+      symptoms_and_signs: z.string().optional(),
+      disease_cycle_spread_impact: z.string().optional(),
+      prevention_summary: z.string().optional(),
       additional_info: z.array(
         z.object({
           title: z.string(),

@@ -6,6 +6,7 @@ export interface Mold {
   symptoms?: string[];
   signs?: string[];
   characteristics?: string[];
+  moldipedia_id?: string;
 }
 
 export interface MoldDetails {
@@ -23,6 +24,13 @@ export interface MoldInfo {
     family: string;
     genus: string;
   };
+  // direct structured fields for moldipedia consistency
+  overview?: string;
+  health_risks?: string;
+  affected_hosts?: string;
+  symptoms_and_signs?: string;
+  disease_cycle_spread_impact?: string;
+  prevention_summary?: string;
   additional_info: Array<{
     title: string;
     description: string;
@@ -55,6 +63,7 @@ export interface MoldCase {
     moldId: string;
     moldName: string;
     confidence: number;
+    moldipedia_id?: string;
     mycologist_notes?: string;
     verdict_timestamp?: Timestamp;
   };

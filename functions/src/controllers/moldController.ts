@@ -37,6 +37,21 @@ import {Mold, MoldDetails, PaginatedResult, WithId} from "../types/types";
  *               moldName:
  *                 type: string
  *                 description: Name of the mold
+ *               symptoms:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Optional symptoms list for lookup matching
+ *               signs:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Optional signs list for lookup matching
+ *               characteristics:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Optional characteristics list for lookup matching
  *               details:
  *                 type: object
  *                 description: Mold details including info and prevention
@@ -70,6 +85,22 @@ import {Mold, MoldDetails, PaginatedResult, WithId} from "../types/types";
  *                               type: string
  *                             description:
  *                               type: string
+ *                       overview:
+ *                         type: string
+ *                       health_risks:
+ *                         type: string
+ *                       affected_hosts:
+ *                         type: string
+ *                       symptoms_and_signs:
+ *                         type: string
+ *                       disease_cycle_spread_impact:
+ *                         type: string
+ *                       prevention_summary:
+ *                         type: string
+ *                        predicted_class_id:
+ *                          type: number
+ *                        predicted_class_name:
+ *                          type: string
  *                   prevention:
  *                     type: object
  *                     properties:
@@ -191,11 +222,57 @@ import {Mold, MoldDetails, PaginatedResult, WithId} from "../types/types";
  *                 error:
  *                   type: string
  */
+const ENRICHED_MOLD_INFO_FIELDS = [
+  { key: "overview", title: "Overview" },
+  { key: "health_risks", title: "Health Risks" },
+  { key: "affected_hosts", title: "Affected Hosts" },
+  { key: "symptoms_and_signs", title: "Symptoms and Signs" },
+  { key: "disease_cycle_spread_impact", title: "Disease Cycle / Spread / Impact" },
+  { key: "prevention_summary", title: "Prevention Summary" },
+] as const;
+
+function enrichMoldInfo(info: MoldDetails["info"]): MoldDetails["info"] {
+  const entries = info.additional_info ? [...info.additional_info] : [];
+
+  for (const field of ENRICHED_MOLD_INFO_FIELDS) {
+    const value = (info as any)[field.key] as string | undefined;
+    if (value && !entries.some((item) => item.title === field.title)) {
+      entries.push({ title: field.title, description: value });
+    }
+  }
+
+  return {
+    ...info,
+    additional_info: entries,
+  };
+}
+
 export const createMold = async (req: Request, res: Response) => {
   try {
     const moldName: string = req.body.moldName;
     const details: MoldDetails = req.body.details;
-    const mold: WithId<Mold> | null = await addMoldToFirestore({name: moldName, mold_details: details});
+    const moldipediaId: string | undefined = req.body.moldipediaId || req.body.moldipedia_id;
+    const symptoms: string[] | undefined = req.body.symptoms;
+    const signs: string[] | undefined = req.body.signs;
+    const characteristics: string[] | undefined = req.body.characteristics;
+
+    const enrichedDetails: MoldDetails = details.info
+      ? {
+          ...details,
+          info: enrichMoldInfo(details.info),
+        }
+      : details;
+
+    const payload: Mold = {
+      name: moldName,
+      mold_details: enrichedDetails,
+      ...(moldipediaId ? { moldipedia_id: moldipediaId } : {}),
+      ...(symptoms ? { symptoms } : {}),
+      ...(signs ? { signs } : {}),
+      ...(characteristics ? { characteristics } : {}),
+    };
+
+    const mold: WithId<Mold> | null = await addMoldToFirestore(payload);
     if (!mold) return sendError(res, "Failed to retrieve mold", 404);
     req.auditTargetId = mold.id || "";
     return sendSuccess(res, mold);
@@ -568,19 +645,86 @@ export const getMoldByPredictedClassName = async (req: Request, res: Response) =
  *           schema:
  *             type: object
  *             properties:
+ *               moldName:
+ *                 type: string
+ *                 description: Optional new mold name
+ *               symptoms:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Optional symptom keywords for lookup matching
+ *               signs:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Optional sign keywords for lookup matching
+ *               characteristics:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Optional characteristics for lookup matching
  *               details:
  *                 type: object
  *                 description: Mold details to update (partial)
  *                 properties:
- *                   name:
- *                     type: string
- *                   mold_details:
+ *                   info:
  *                     type: object
  *                     properties:
- *                       info:
+ *                       description:
+ *                         type: string
+ *                       taxonomy:
  *                         type: object
- *                       prevention:
- *                         type: object
+ *                         properties:
+ *                           kingdom:
+ *                             type: string
+ *                           phylum:
+ *                             type: string
+ *                           class:
+ *                             type: string
+ *                           order:
+ *                             type: string
+ *                           family:
+ *                             type: string
+ *                           genus:
+ *                             type: string
+ *                       additional_info:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             title:
+ *                               type: string
+ *                             description:
+ *                               type: string
+ *                       overview:
+ *                         type: string
+ *                       health_risks:
+ *                         type: string
+ *                       affected_hosts:
+ *                         type: string
+ *                       symptoms_and_signs:
+ *                         type: string
+ *                       disease_cycle_spread_impact:
+ *                         type: string
+ *                       prevention_summary:
+ *                         type: string
+ *                       predicted_class_id:
+ *                         type: number
+ *                       predicted_class_name:
+ *                         type: string
+ *                   prevention:
+ *                     type: object
+ *                     properties:
+ *                       physicalControl:
+ *                         type: string
+ *                       mechanicalControl:
+ *                         type: string
+ *                       culturalControl:
+ *                         type: string
+ *                       biologicalControl:
+ *                         type: string
+ *                       chemicalControl:
+ *                         type: string
  *     responses:
  *       200:
  *         description: Successfully updated mold
@@ -636,15 +780,35 @@ export const patchMold = async (req: Request, res: Response) => {
   try {
     const id: string = req.params.id;
     const moldName: string | undefined = req.body.moldName;
-    const details: MoldDetails = req.body.details;
+    const details: MoldDetails | undefined = req.body.details;
+    const moldipediaId: string | undefined = req.body.moldipediaId || req.body.moldipedia_id;
+    const symptoms: string[] | undefined = req.body.symptoms;
+    const signs: string[] | undefined = req.body.signs;
+    const characteristics: string[] | undefined = req.body.characteristics;
 
-    // Transform request shape { moldName, details } into Mold shape { name, mold_details }
+    // Transform request shape { moldName, details, symptoms, signs, characteristics }
+    // into Mold shape { name, mold_details, symptoms, signs, characteristics }
     const moldPayload: Partial<Mold> = {};
     if (moldName) {
       moldPayload.name = moldName;
     }
     if (details) {
-      moldPayload.mold_details = details;
+      moldPayload.mold_details = {
+        ...details,
+        info: enrichMoldInfo(details.info),
+      };
+    }
+    if (moldipediaId) {
+      moldPayload.moldipedia_id = moldipediaId;
+    }
+    if (symptoms) {
+      moldPayload.symptoms = symptoms;
+    }
+    if (signs) {
+      moldPayload.signs = signs;
+    }
+    if (characteristics) {
+      moldPayload.characteristics = characteristics;
     }
 
     const mold = await updateMoldInFirestore(id, moldPayload);

@@ -96,6 +96,67 @@ describe("moldController (unit)", () => {
       );
     });
 
+    it("should enrich mold info fields into additional_info for creation", async () => {
+      const moldDetails = {
+        info: {
+          description: "A test mold",
+          taxonomy: {
+            kingdom: "Fungi",
+            phylum: "Ascomycota",
+            class: "Eurotiomycetes",
+            order: "Eurotiales",
+            family: "Testaceae",
+            genus: "Testus",
+          },
+          overview: "Overview text",
+          health_risks: "Health risks text",
+          affected_hosts: "Affected hosts text",
+          symptoms_and_signs: "Symptoms signs text",
+          disease_cycle_spread_impact: "Cycle spread impact text",
+          prevention_summary: "Prevention summary text",
+          additional_info: [],
+        },
+        prevention: {
+          physicalControl: "p",
+          mechanicalControl: "m",
+          culturalControl: "c",
+          biologicalControl: "b",
+          chemicalControl: "ch",
+        },
+      };
+
+      const mockCreatedMold = {
+        id: "test-mold-id",
+        name: "Test Mold",
+        mold_details: moldDetails,
+      };
+
+      mockReq.body = {moldName: "Test Mold", details: moldDetails};
+      mockMoldService.addMoldToFirestore.mockResolvedValue(mockCreatedMold as any);
+
+      await moldController.createMold(mockReq as Request, mockRes as Response);
+
+      expect(mockMoldService.addMoldToFirestore).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: "Test Mold",
+          mold_details: expect.objectContaining({
+            info: expect.objectContaining({
+              additional_info: expect.arrayContaining([
+                { title: "Overview", description: "Overview text" },
+                { title: "Health Risks", description: "Health risks text" },
+                { title: "Affected Hosts", description: "Affected hosts text" },
+                { title: "Symptoms and Signs", description: "Symptoms signs text" },
+                { title: "Disease Cycle / Spread / Impact", description: "Cycle spread impact text" },
+                { title: "Prevention Summary", description: "Prevention summary text" },
+              ]),
+            }),
+          }),
+        })
+      );
+
+      expect(mockResponseUtils.sendSuccess).toHaveBeenCalledWith(mockRes, mockCreatedMold);
+    });
+
     it("should handle mold creation failure", async () => {
       const moldDetails = {
         name: "Test Mold",
@@ -317,6 +378,67 @@ describe("moldController (unit)", () => {
         moldId,
         updateData
       );
+      expect(mockResponseUtils.sendSuccess).toHaveBeenCalledWith(
+        mockRes,
+        "Successfully updated mold."
+      );
+    });
+
+    it("should enrich and update additional_info when patching mold info fields", async () => {
+      const moldId = "test-mold-id";
+      const details = {
+        info: {
+          description: "A test mold",
+          taxonomy: {
+            kingdom: "Fungi",
+            phylum: "Ascomycota",
+            class: "Eurotiomycetes",
+            order: "Eurotiales",
+            family: "Testaceae",
+            genus: "Testus",
+          },
+          overview: "Overview text",
+          health_risks: "Health risk text",
+          affected_hosts: "Affected host text",
+          symptoms_and_signs: "Symptom/sign text",
+          disease_cycle_spread_impact: "Spread impact text",
+          prevention_summary: "Prevention summary text",
+          additional_info: [],
+        },
+        prevention: {
+          physicalControl: "p",
+          mechanicalControl: "m",
+          culturalControl: "c",
+          biologicalControl: "b",
+          chemicalControl: "ch",
+        },
+      };
+
+      mockReq.params = {id: moldId};
+      mockReq.body = {details};
+
+      mockMoldService.updateMoldInFirestore.mockResolvedValue({id: moldId} as any);
+
+      await moldController.patchMold(mockReq as Request, mockRes as Response);
+
+      expect(mockMoldService.updateMoldInFirestore).toHaveBeenCalledWith(
+        moldId,
+        expect.objectContaining({
+          mold_details: expect.objectContaining({
+            info: expect.objectContaining({
+              additional_info: expect.arrayContaining([
+                {title: "Overview", description: "Overview text"},
+                {title: "Health Risks", description: "Health risk text"},
+                {title: "Affected Hosts", description: "Affected host text"},
+                {title: "Symptoms and Signs", description: "Symptom/sign text"},
+                {title: "Disease Cycle / Spread / Impact", description: "Spread impact text"},
+                {title: "Prevention Summary", description: "Prevention summary text"},
+              ]),
+            }),
+          }),
+        })
+      );
+
       expect(mockResponseUtils.sendSuccess).toHaveBeenCalledWith(
         mockRes,
         "Successfully updated mold."
