@@ -64,7 +64,10 @@ export async function performMoldLookup(
       normalizedCharacteristics.length +
       normalizedMoldNames.length;
 
-    const inputStats = `symptoms: ${normalizedSymptoms.length}, signs: ${normalizedSigns.length}, characteristics: ${normalizedCharacteristics.length}, moldNames: ${normalizedMoldNames.length}`;
+    const inputStats = `symptoms: ${normalizedSymptoms.length}, 
+      signs: ${normalizedSigns.length}, 
+      characteristics: ${normalizedCharacteristics.length}, 
+      moldNames: ${normalizedMoldNames.length}`;
     console.log(`[performMoldLookup] Input: ${inputStats} (total: ${totalReported})`);
     devLog(`[performMoldLookup] Input: ${inputStats} (total: ${totalReported})`);
 
