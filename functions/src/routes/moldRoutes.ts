@@ -18,6 +18,7 @@ import {
   MoldUpdateSchema,
   NameParamSchema,
 } from "../dto/moldDTO";
+import {parseMultipartJson} from "../middlewares/parseMultipartJson";
 import {PaginationQuerySchema} from "../dto/paginationDTO";
 import {Role, AuditAction} from "../types/enums";
 import {auditLog} from "../middlewares/auditLogger";
@@ -32,6 +33,7 @@ router.post(
   sanitizeBody,
   validateBody(MoldSchema),
   upload.array("photos", 5),
+  parseMultipartJson(["details"]),
   auditLog(AuditAction.ADD_MOLD, "Created mold"),
   cacheInvalidate("molds", "create"),
   async (req: Request, res: Response) => {

@@ -54,7 +54,7 @@ import {Mold, MoldDetails, PaginatedResult, WithId} from "../types/types";
  *                 description: Optional characteristics list for lookup matching
  *               details:
  *                 type: object
- *                 description: Mold details including info and prevention
+ *                 description: Mold details including info and prevention. Contains nested mold biology, taxonomy and control recommendations. For multipart/form-data, details can be sent as a JSON string, and parseMultipartJson middleware will parse it to object.
  *                 properties:
  *                   info:
  *                     type: object
@@ -97,10 +97,10 @@ import {Mold, MoldDetails, PaginatedResult, WithId} from "../types/types";
  *                         type: string
  *                       prevention_summary:
  *                         type: string
- *                        predicted_class_id:
- *                          type: number
- *                        predicted_class_name:
- *                          type: string
+ *                       predicted_class_id:
+ *                         type: number
+ *                       predicted_class_name:
+ *                         type: string
  *                   prevention:
  *                     type: object
  *                     properties:
@@ -114,6 +114,33 @@ import {Mold, MoldDetails, PaginatedResult, WithId} from "../types/types";
  *                         type: string
  *                       chemicalControl:
  *                         type: string
+ *                 example:
+ *                   info:
+ *                     description: "Dry spores from a garage wall"
+ *                     taxonomy:
+ *                       kingdom: "Fungi"
+ *                       phylum: "Ascomycota"
+ *                       class: "Eurotiomycetes"
+ *                       order: "Eurotiales"
+ *                       family: "Trichocomaceae"
+ *                       genus: "Aspergillus"
+ *                     overview: "Common indoor mold species"
+ *                     health_risks: "Respiratory irritation"
+ *                     affected_hosts: "Human, animal"
+ *                     symptoms_and_signs: "Sneezing, coughing"
+ *                     disease_cycle_spread_impact: "High in damp conditions"
+ *                     prevention_summary: "Improve ventilation and reduce humidity"
+ *                     predicted_class_id: 1
+ *                     predicted_class_name: "Aspergillus"
+ *                     additional_info:
+ *                       - title: "Growth pattern"
+ *                         description: "Often forms powdery patches"
+ *                   prevention:
+ *                     physicalControl: "Keep dry"
+ *                     mechanicalControl: "Clean surfaces"
+ *                     culturalControl: "Ventilate rooms"
+ *                     biologicalControl: "Not applicable"
+ *                     chemicalControl: "Anti-fungal sprays"
  *               photos:
  *                 type: array
  *                 items:

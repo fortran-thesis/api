@@ -38,13 +38,25 @@ export const createMoldipedia = async (req: Request, res: Response) => {
    *               - cover_photo
    *             properties:
    *               details:
-   *                 type: string
-   *                 description: JSON-encoded object. Fields are promoted to root body by parseMultipartJson middleware.
-   *                 example: '{"title":"Understanding Aspergillus","body":"Aspergillus is a genus...","author_id":"user123"}'
+   *                 type: object
+   *                 description: Optional JSON object wrapper for article data. Supported properties are title/body/author_id. If provided as a JSON string (multipart/form-data), parseMultipartJson middleware promotes them to top-level body fields.
+   *                 properties:
+   *                   title:
+   *                     type: string
+   *                   body:
+   *                     type: string
+   *                   author_id:
+   *                     type: string
+   *                 example:
+   *                   title: "Understanding Aspergillus"
+   *                   body: "Aspergillus is a genus..."
+   *                   author_id: "user123"
    *               title:
    *                 type: string
+   *                 description: Top-level title is supported as alternative to details.title.
    *               body:
    *                 type: string
+   *                 description: Top-level body is supported as alternative to details.body.
    *               author_id:
    *                 type: string
    *                 description: Optional. If omitted, the authenticated user's ID is used.
@@ -387,12 +399,19 @@ export const patchMoldipedia = async (req: Request, res: Response) => {
  *             type: object
  *             properties:
  *               details:
- *                 type: string
- *                 description: JSON-encoded object containing `title` and/or `body`. Promoted to root body by parseMultipartJson.
+ *                 type: object
+ *                 description: Optional JSON object wrapper for update data. Supported properties are title/body. parseMultipartJson will promote nested fields to top-level.
+ *                 properties:
+ *                   title:
+ *                     type: string
+ *                   body:
+ *                     type: string
  *               title:
  *                 type: string
+ *                 description: Top-level title is supported as alternative to details.title.
  *               body:
  *                 type: string
+ *                 description: Top-level body is supported as alternative to details.body.
  *               cover_photo:
  *                 type: string
  *                 format: binary
