@@ -35,17 +35,23 @@ export const createMoldipedia = async (req: Request, res: Response) => {
    *           schema:
    *             type: object
    *             required:
-   *               - details
    *               - cover_photo
    *             properties:
    *               details:
    *                 type: string
-   *                 description: JSON string of Moldipedia object with properties - title (string), body (string), author_id (string)
+   *                 description: JSON-encoded object. Fields are promoted to root body by parseMultipartJson middleware.
    *                 example: '{"title":"Understanding Aspergillus","body":"Aspergillus is a genus...","author_id":"user123"}'
+   *               title:
+   *                 type: string
+   *               body:
+   *                 type: string
+   *               author_id:
+   *                 type: string
+   *                 description: Optional. If omitted, the authenticated user's ID is used.
    *               cover_photo:
    *                 type: string
    *                 format: binary
-   *                 description: Cover photo image file
+   *                 description: Required. JPEG or PNG only.
    *     responses:
    *       200:
    *         description: Successfully created moldipedia article
@@ -373,16 +379,32 @@ export const patchMoldipedia = async (req: Request, res: Response) => {
    *         schema:
    *           type: string
    *         description: Moldipedia article ID
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             properties:
-   *               details:
-   *                 type: object
-   *                 description: Moldipedia details to update
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               details:
+ *                 type: string
+ *                 description: JSON-encoded object containing `title` and/or `body`. Promoted to root body by parseMultipartJson.
+ *               title:
+ *                 type: string
+ *               body:
+ *                 type: string
+ *               cover_photo:
+ *                 type: string
+ *                 format: binary
+ *                 description: Optional. If provided, the existing cover photo is replaced. New signed URL is returned in the response.
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *               body:
+ *                 type: string
    *     responses:
    *       200:
  *         description: Successfully updated moldipedia article

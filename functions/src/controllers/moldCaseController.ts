@@ -904,25 +904,8 @@ export const getMoldCaseByReportId = async (req: Request, res: Response) => {
  *                 enum: [vivo, vitro]
  *                 description: Cultivation type (vivo for in vivo, vitro for in vitro)
  *               characteristics:
- *                 oneOf:
- *                   - type: object
- *                     description: For vivo cultivation
- *                     properties:
- *                       lesion_size:
- *                         type: number
- *                         description: Lesion size in millimeters
- *                       lesion_color:
- *                         type: string
- *                         description: Lesion color description
- *                   - type: object
- *                     description: For vitro cultivation
- *                     properties:
- *                       colony_diameter:
- *                         type: number
- *                         description: Colony diameter in millimeters
- *                       colony_color:
- *                         type: string
- *                         description: Colony color description
+ *                 type: string
+ *                 description: JSON-encoded string. Parsed by route middleware before schema validation. For `vivo`: `{"lesion_size": number, "lesion_color": string}`. For `vitro`: `{"colony_diameter": number, "colony_color": string}`.
  *               additional_info:
  *                 type: string
  *                 description: Additional observations about the cultivation
@@ -954,6 +937,7 @@ export const getMoldCaseByReportId = async (req: Request, res: Response) => {
  *                     image_url:
  *                       type: string
  *                       nullable: true
+ *                       description: Signed URL. Valid for 2 hours.
  *                     characteristics:
  *                       type: object
  *                     additional_info:
@@ -1034,7 +1018,10 @@ export const addCultivationLog = async (req: Request, res: Response) => {
  *     security:
  *       - bearerAuth: []
  *       - cookieAuth: []
- *     description: Update cultivation details (in_vivo and/or in_vitro) for a mold case. Requires authentication.
+ *     description: |
+ *       Updates cultivation details on a mold case using deep-merge semantics.
+ *
+ *       Side effect: if the linked MoldReport contains `reported_symptoms`, `reported_signs`, or `reported_characteristics`, a background mold lookup is re-run after this update. Characteristics from `in_vivo_details.lesion_color` and `in_vitro_details.colony_color` are appended to the lookup inputs. On completion, `lookup_results` on the MoldReport is updated and `cultivation_details.microscopic_ai_snapshot` on this case is overwritten with the top lookup result.
  *     parameters:
  *       - in: path
  *         name: id
@@ -1051,24 +1038,68 @@ export const addCultivationLog = async (req: Request, res: Response) => {
  *             properties:
  *               cultivation_details:
  *                 type: object
+ *                 description: Merged with existing cultivation_details in Firestore. Nested objects (in_vivo_details, in_vitro_details, initial_observations, microscopic_ai_snapshot) are deep-merged, not replaced.
  *                 properties:
  *                   growth_medium:
  *                     type: string
- *                     description: Growth medium used for cultivation
  *                   in_vivo_details:
  *                     type: object
- *                     description: In vivo cultivation details
  *                     properties:
  *                       environmental_temperature:
  *                         type: number
- *                         description: Environmental temperature in Celsius
  *                   in_vitro_details:
  *                     type: object
- *                     description: In vitro cultivation details
  *                     properties:
  *                       incubation_temperature:
  *                         type: number
- *                         description: Incubation temperature in Celsius
+ *                   specimen_types:
+ *                     type: array
+ *                     items:
+ *                       type: string
+ *                   specimen_quantities:
+ *                     type: array
+ *                     items:
+ *                       type: string
+ *                   initial_symptoms:
+ *                     type: array
+ *                     items:
+ *                       type: string
+ *                   initial_characteristics:
+ *                     type: array
+ *                     items:
+ *                       type: string
+ *                   location_gathered:
+ *                     type: string
+ *                   initial_microscopic:
+ *                     type: string
+ *                     description: If provided and `microscopic_ai_snapshot.identified_mold` is absent, this value is copied into the snapshot as a fallback.
+ *                   initial_macroscopic:
+ *                     type: string
+ *                   initial_microscopic_image_url:
+ *                     type: string
+ *                   initial_macroscopic_image_url:
+ *                     type: string
+ *                   date_observation:
+ *                     type: string
+ *                   microscopic_ai_snapshot:
+ *                     type: object
+ *                     description: AI-generated identification snapshot.
+ *                   scanned_microscopic_ids:
+ *                     type: array
+ *                     items:
+ *                       type: string
+ *                     description: Deduplicated on write.
+ *                   scanned_macroscopic_ids:
+ *                     type: array
+ *                     items:
+ *                       type: string
+ *                     description: Deduplicated on write.
+ *               start_date:
+ *                 type: string
+ *                 format: date-time
+ *               end_date:
+ *                 type: string
+ *                 format: date-time
  *     responses:
  *       200:
  *         description: Cultivation details updated successfully
@@ -2016,23 +2047,28 @@ export const removeCultivationLog = async (req: Request, res: Response) => {
  *             properties:
  *               moldId:
  *                 type: string
- *                 description: ID of the identified mold
+ *                 description: Also accepted as `mold_id`.
+ *               mold_id:
+ *                 type: string
+ *                 description: Alias for `moldId`.
  *               moldName:
  *                 type: string
- *                 description: Name of the identified mold
+ *                 description: Also accepted as `mold_name`.
+ *               mold_name:
+ *                 type: string
+ *                 description: Alias for `moldName`.
  *               confidence:
  *                 type: number
- *                 description: Confidence score (0-100)
+ *                 minimum: 0
+ *                 maximum: 100
  *               mycologist_notes:
  *                 type: string
- *                 description: Optional notes from the mycologist
  *             required:
- *               - moldId
- *               - moldName
  *               - confidence
+ *             description: At least one of `moldId`/`mold_id` and one of `moldName`/`mold_name` must be provided.
  *     responses:
  *       200:
- *         description: Verdict finalized successfully
+ *         description: Verdict finalized. The mold case is archived (`is_archived: true`) and the linked MoldReport status is set to `resolved`. If the report update fails (e.g., report not in `in progress` status), the verdict is still saved and `report_sync_warning` will contain a non-null description of the failure.
  *         content:
  *           application/json:
  *             schema:
@@ -2045,8 +2081,30 @@ export const removeCultivationLog = async (req: Request, res: Response) => {
  *                   properties:
  *                     moldCaseId:
  *                       type: string
+ *                     report_owner_id:
+ *                       type: string
+ *                       nullable: true
+ *                     case_name:
+ *                       type: string
  *                     final_verdict:
  *                       type: object
+ *                       properties:
+ *                         moldId:
+ *                           type: string
+ *                         moldName:
+ *                           type: string
+ *                         confidence:
+ *                           type: number
+ *                         mycologist_notes:
+ *                           type: string
+ *                           nullable: true
+ *                         verdict_timestamp:
+ *                           type: string
+ *                           format: date-time
+ *                     report_sync_warning:
+ *                       type: string
+ *                       nullable: true
+ *                       description: Non-null when the linked MoldReport could not be updated to `resolved` status. The verdict itself was still saved successfully.
  *       400:
  *         description: Validation error
  *       500:
