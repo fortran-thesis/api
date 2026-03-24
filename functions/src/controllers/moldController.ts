@@ -223,12 +223,12 @@ import {Mold, MoldDetails, PaginatedResult, WithId} from "../types/types";
  *                   type: string
  */
 const ENRICHED_MOLD_INFO_FIELDS = [
-  { key: "overview", title: "Overview" },
-  { key: "health_risks", title: "Health Risks" },
-  { key: "affected_hosts", title: "Affected Hosts" },
-  { key: "symptoms_and_signs", title: "Symptoms and Signs" },
-  { key: "disease_cycle_spread_impact", title: "Disease Cycle / Spread / Impact" },
-  { key: "prevention_summary", title: "Prevention Summary" },
+  {key: "overview", title: "Overview"},
+  {key: "health_risks", title: "Health Risks"},
+  {key: "affected_hosts", title: "Affected Hosts"},
+  {key: "symptoms_and_signs", title: "Symptoms and Signs"},
+  {key: "disease_cycle_spread_impact", title: "Disease Cycle / Spread / Impact"},
+  {key: "prevention_summary", title: "Prevention Summary"},
 ] as const;
 
 function enrichMoldInfo(info: MoldDetails["info"]): MoldDetails["info"] {
@@ -237,7 +237,7 @@ function enrichMoldInfo(info: MoldDetails["info"]): MoldDetails["info"] {
   for (const field of ENRICHED_MOLD_INFO_FIELDS) {
     const value = (info as any)[field.key] as string | undefined;
     if (value && !entries.some((item) => item.title === field.title)) {
-      entries.push({ title: field.title, description: value });
+      entries.push({title: field.title, description: value});
     }
   }
 
@@ -256,20 +256,20 @@ export const createMold = async (req: Request, res: Response) => {
     const signs: string[] | undefined = req.body.signs;
     const characteristics: string[] | undefined = req.body.characteristics;
 
-    const enrichedDetails: MoldDetails = details.info
-      ? {
-          ...details,
-          info: enrichMoldInfo(details.info),
-        }
-      : details;
+    const enrichedDetails: MoldDetails = details.info ?
+      {
+        ...details,
+        info: enrichMoldInfo(details.info),
+      } :
+      details;
 
     const payload: Mold = {
       name: moldName,
       mold_details: enrichedDetails,
-      ...(moldipediaId ? { moldipedia_id: moldipediaId } : {}),
-      ...(symptoms ? { symptoms } : {}),
-      ...(signs ? { signs } : {}),
-      ...(characteristics ? { characteristics } : {}),
+      ...(moldipediaId ? {moldipedia_id: moldipediaId} : {}),
+      ...(symptoms ? {symptoms} : {}),
+      ...(signs ? {signs} : {}),
+      ...(characteristics ? {characteristics} : {}),
     };
 
     const mold: WithId<Mold> | null = await addMoldToFirestore(payload);
