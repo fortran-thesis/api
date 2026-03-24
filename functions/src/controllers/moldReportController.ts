@@ -90,52 +90,47 @@ export const createMoldReport = async (req: Request, res: Response) => {
    *         multipart/form-data:
    *           schema:
    *             type: object
+   *             required:
+   *               - case_name
+   *               - host
+   *               - location
+   *               - date_observed
+   *               - description
    *             properties:
-   *               details:
-   *                 type: object
-   *                 properties:
-   *                   date_observed:
-   *                     type: string
-   *                     format: date-time
-   *                   case_name:
-   *                     type: string
-   *                   user_id:
-   *                     type: string
-   *                   host:
-   *                     type: string
-   *                   case_details:
-   *                     type: array
-   *                     items:
-   *                       type: object
-   *                       properties:
-   *                         cover_photo:
-   *                           type: array
-   *                           items:
-   *                             type: string
-   *                         description:
-   *                           type: string
-   *                   description:
-   *                     type: string
-   *                   status:
-   *                     type: string
-   *                 description: MoldReport DTO
+   *               case_name:
+   *                 type: string
+   *               host:
+   *                 type: string
+   *                 description: Crop or surface name (e.g., "rice", "drywall").
+   *               location:
+   *                 type: string
+   *                 description: City/province where mold was observed.
+   *               date_observed:
+   *                 type: string
+   *                 format: date-time
+   *                 description: ISO 8601 string. Converted to Firestore Timestamp.
+   *               description:
+   *                 type: string
+   *               reported_symptoms:
+   *                 type: array
+   *                 items:
+   *                   type: string
+   *                 description: Used for background mold lookup. Saved synchronously to Firestore, then lookup runs asynchronously and writes `lookup_results` to the report.
+   *               reported_signs:
+   *                 type: array
+   *                 items:
+   *                   type: string
+   *               reported_characteristics:
+   *                 type: array
+   *                 items:
+   *                   type: string
    *               cover_photo:
    *                 type: string
    *                 format: binary
-   *             required:
-   *               - details
-   *           details:
-   *             description: |
-   *               JSON object containing:
-   *               - case_name (required): string
-   *               - host (required): string
-   *               - location (required): string - City/Province location
-   *               - date_observed (required): ISO 8601 date-time string
-   *               - description (required): string - Problem description
-   *               - user_id (optional): string
+   *                 description: Optional. Uploaded asynchronously after the report document is created. The URL is written to the first case_detail subcollection document when the upload completes.
    *     responses:
    *       200:
-   *         description: Successfully created mold report
+   *         description: Mold report created. `case_details` in the response is the array provided in the request body — it is not stored in the parent Firestore document. Subsequent GETs hydrate `case_details` from the `mold_reports/{id}/case_details` subcollection. Photo upload (if any) runs in the background; the URL is not yet present in the response.
    *         content:
    *           application/json:
    *             schema:
@@ -174,6 +169,8 @@ export const createMoldReport = async (req: Request, res: Response) => {
    *                             type: array
    *                             items:
    *                               type: string
+   *       x-side-effects:
+   *         - If `reported_symptoms`, `reported_signs`, or `reported_characteristics` are non-empty, a keyword-based mold lookup runs in the background and writes `lookup_results` to the report document. The response will not contain `lookup_results`.
    *       400:
    *         description: Validation error - Missing or invalid required fields (case_name, host, location, date_observed, description)
    *       500:
@@ -449,6 +446,12 @@ export const getResolvedMoldReportsCountController = async (
  *     description: Retrieve all mold reports with pagination. Requires authentication.
  *     parameters:
  *       - in: query
+ *         name: scope
+ *         schema:
+ *           type: string
+ *           enum: [own, assigned, all]
+ *         description: Controls which reports are returned. `own` returns reports created by the authenticated user (default for farmers). `assigned` returns reports assigned to the authenticated mycologist (default for curators). `all` returns all reports (admin only; returns 403 for non-admin). If omitted, defaults based on the caller's role.
+ *       - in: query
  *         name: limit
  *         schema:
  *           type: integer
@@ -517,7 +520,9 @@ export const getResolvedMoldReportsCountController = async (
  *                     nextPageToken:
  *                       type: string
  *                       nullable: true
- *                       description: Token for fetching next page of results
+ *                       description: Opaque cursor token for fetching the next page. Pass as the `pageToken` query parameter in the next request. Null when no further pages exist. The internal format is base64-encoded JSON and must be treated as opaque.
+ *       403:
+ *         description: Non-admin caller requested `scope=all`.
  *       404:
  *         description: Failed to retrieve mold reports
  *       500:
@@ -1097,8 +1102,14 @@ export const getUnassignedMoldReports = async (req: Request, res: Response) => {
  *                       format: date-time
  *       400:
  *         description: Failed to add case detail
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
  *       404:
  *         description: Report not found
+ *       409:
+ *         description: Cannot add follow-up in the report's current status
  *       500:
  *         description: Server error
  */
@@ -1196,12 +1207,13 @@ export const postCaseDetail = async (req: Request, res: Response) => {
  *               assigned_mycologist_id:
  *                 type: string
  *                 description: ID of the mycologist to assign
- *               status:
+ *               end_date:
  *                 type: string
- *                 description: Optional status update (defaults to "in progress")
+ *                 format: date-time
+ *                 description: Optional expected end date. Written to the auto-created MoldCase document.
  *     responses:
  *       200:
- *         description: Mycologist assigned successfully
+ *         description: Mycologist assigned. Status set to `in progress`. A MoldCase is automatically created (or repaired if one already exists) and linked to this report. The response is the full updated report including enriched `reporter` object and `priority` from the linked MoldCase.
  *         content:
  *           application/json:
  *             schema:
@@ -1221,6 +1233,17 @@ export const postCaseDetail = async (req: Request, res: Response) => {
  *                       type: string
  *                     assigned_mycologist_id:
  *                       type: string
+ *                     reporter:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                         name:
+ *                           type: string
+ *                     priority:
+ *                       type: string
+ *                       enum: [low, medium, high]
+ *                       nullable: true
  *                     host:
  *                       type: string
  *                     location:
@@ -1244,6 +1267,8 @@ export const postCaseDetail = async (req: Request, res: Response) => {
  *                       format: date-time
  *       400:
  *         description: Failed to assign mycologist
+ *       409:
+ *         description: Report is already assigned to a mycologist, or the current status does not allow transition to `in progress` (e.g., status is `resolved` or `rejected`).
  *       500:
  *         description: Server error
  */
@@ -1335,6 +1360,19 @@ export const assignReport = async (req: Request, res: Response) => {
  *         schema:
  *           type: string
  *         description: Mold report ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - rejection_reason
+ *             properties:
+ *               rejection_reason:
+ *                 type: string
+ *                 minLength: 1
+ *                 description: Reason for rejection. Stored on the report and included in the notification sent to the report owner.
  *     responses:
  *       200:
  *         description: Report rejected successfully
@@ -1381,6 +1419,8 @@ export const assignReport = async (req: Request, res: Response) => {
  *                       format: date-time
  *       400:
  *         description: Failed to reject/close report
+ *       409:
+ *         description: Current report status does not permit a transition to `rejected`. Only `pending` and `in progress` reports can be rejected.
  *       500:
  *         description: Server error
  */
@@ -1667,6 +1707,8 @@ export const getAssignedReportsCountController = async (
  *                     updated_at:
  *                       type: string
  *                       format: date-time
+ *       403:
+ *         description: Forbidden
  *       404:
  *         description: Failed to retrieve mold report
  *       500:
@@ -1694,7 +1736,12 @@ export const getMoldReportById = async (req: Request, res: Response) => {
  *     security:
  *       - bearerAuth: []
  *       - cookieAuth: []
- *     description: Update a mold report's details by ID. Requires authentication.
+ *     description: |
+ *       Updates editable fields on a mold report.
+ *       Two fields are explicitly blocked:
+ *       - `assigned_mycologist_id` — use `PATCH /:id/assign` instead (returns 400).
+ *       - Status transitions to `in progress` or `rejected` — use `/:id/assign` or `/:id/reject` respectively (returns 400).
+ *       Only the `resolved` status transition is permitted through this endpoint (from `in progress`).
  *     parameters:
  *       - in: path
  *         name: id
@@ -1755,6 +1802,8 @@ export const getMoldReportById = async (req: Request, res: Response) => {
  *                       format: date-time
  *       404:
  *         description: Failed to update mold report
+ *       409:
+ *         description: Invalid status transition. The requested status cannot follow the current report status per the allowed transition rules: pending → in progress | rejected; in progress → resolved | rejected; resolved → rejected | pending; rejected → pending.
  *       500:
  *         description: Server error
  */
@@ -1829,6 +1878,10 @@ export const patchMoldReport = async (req: Request, res: Response) => {
  *               properties:
  *                 data:
  *                   type: string
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Mold report not found
  *       500:
  *         description: Server error
  */
@@ -1873,6 +1926,12 @@ export const deleteMoldReport = async (req: Request, res: Response) => {
  *               properties:
  *                 data:
  *                   type: string
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Mold report not found
+ *       409:
+ *         description: Invalid status transition for close operation
  *       500:
  *         description: Server error
  */
@@ -1904,9 +1963,9 @@ export const softDeleteMoldReport = async (req: Request, res: Response) => {
  *       - bearerAuth: []
  *       - cookieAuth: []
  *     description: |
- *       Search and filter mold reports by multiple criteria. All parameters are optional.
- *       Requires authentication. Admin users see all reports, regular users see only their own.
- *       When priority is specified, it filters reports that have associated mold cases with that priority.
+ *       Search and filter mold reports. When the caller is a mycologist (curator role), results are always filtered to reports assigned to that mycologist, regardless of the `scope` parameter. Admins see all reports. Farmers see only their own reports.
+ *
+ *       Note: when `priority` is specified, a lookup against the `mold_cases` collection is performed first to find matching report IDs. If no cases match the priority, an empty result is returned immediately without querying reports.
  *     parameters:
  *       - in: query
  *         name: search

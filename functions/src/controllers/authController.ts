@@ -128,6 +128,19 @@ export const createUser = async (req: Request, res: Response) => {
  *   post:
  *     summary: Login user
  *     tags: [Auth]
+ *     parameters:
+ *       - in: query
+ *         name: device
+ *         schema:
+ *           type: string
+ *           enum: [mobile, website]
+ *         description: Explicit device type override. If omitted, device is inferred from X-Device-Type header, then User-Agent. Farmers may only log in from `mobile`; admins and mycologists may only log in from `website`. Mismatched device/role returns 403.
+ *       - in: header
+ *         name: X-Device-Type
+ *         schema:
+ *           type: string
+ *           enum: [mobile, website]
+ *         description: Alternative to the `device` query param.
  *     requestBody:
  *       required: true
  *       content:
@@ -155,7 +168,7 @@ export const createUser = async (req: Request, res: Response) => {
  *             schema:
  *               $ref: '#/components/schemas/ApiResponseError'
  *       403:
- *         description: Role not permitted
+ *         description: Role is not permitted to access this application from the detected device type. Farmers must use `device=mobile`; admins and mycologists must use `device=website`.
  *         content:
  *           application/json:
  *             schema:
@@ -296,7 +309,7 @@ export const oAuth = async (req: Request, res: Response) => {
  * Logout user — clears the session cookie and revokes refresh tokens if possible
  *
  * @route POST /api/v1/auth/logout
- * @access Public (clears cookie even if user not authenticated)
+ * @access Public
  */
 /**
  * @swagger
@@ -304,7 +317,7 @@ export const oAuth = async (req: Request, res: Response) => {
  *   post:
  *     summary: Logout user
  *     tags: [Auth]
- *     description: Clears the session cookie and revokes refresh tokens if possible
+ *     description: Verifies the session cookie or Bearer token, revokes Firebase refresh tokens for the corresponding user, then clears the session cookie on the client. Returns 401 if neither credential is present.
  *     responses:
  *       200:
  *         description: Successfully logged out
@@ -319,6 +332,12 @@ export const oAuth = async (req: Request, res: Response) => {
  *                 data:
  *                   type: string
  *                   example: "Successfully logged out!"
+ *       401:
+ *         description: No session cookie or Bearer token provided.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponseError'
  *       500:
  *         description: Server error
  *         content:
@@ -535,7 +554,7 @@ export const checkVerificationCodeEmail = async (
  *                   type: string
  *                   example: "Successfully changed password!"
  *       400:
- *         description: Invalid token, validation error, or password change failed
+ *         description: Verification token is invalid, expired (30-minute TTL), or no user exists for the associated email. All cases return the message "Invalid code!".
  *         content:
  *           application/json:
  *             schema:
@@ -713,5 +732,4 @@ export const changeUserPassword = async (req: Request, res: Response) => {
     return defaultError(res);
   }
 };
-
 
