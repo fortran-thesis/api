@@ -390,7 +390,7 @@ export const getUsersByActiveController = async (req: Request, res: Response) =>
  *     security:
  *       - bearerAuth: []
  *       - cookieAuth: []
- *     description: Retrieve the count of disabled users. Requires admin role.
+ *     description: Counts active and disabled users by iterating all Firebase Auth records in pages of 1000. This is an unbounded scan — response time scales with total user count. Results are not cached. Restrict access accordingly.
  *     responses:
  *       200:
  *         description: Disabled user count retrieved successfully
@@ -490,15 +490,34 @@ export const patchUser = async (req: Request, res: Response) => {
  *             properties:
  *               details:
  *                 type: string
- *                 description: JSON stringified object containing profile fields
+ *                 description: JSON-encoded string containing any subset of the profile fields below. Promoted to root body by parseMultipartJson middleware.
  *                 example: '{"username":"johndoe","firstName":"John","lastName":"Doe","email":"john@example.com","displayName":"John Doe","address":"123 Main St","phoneNumber":"+1234567890"}'
+ *               username:
+ *                 type: string
+ *               firstName:
+ *                 type: string
+ *               lastName:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               displayName:
+ *                 type: string
+ *               address:
+ *                 type: string
+ *               phoneNumber:
+ *                 type: string
+ *                 description: Philippine numbers are normalized to E.164 (+63...) before storage. Pass any local format (09XX, 639XX, +639XX).
  *               photo:
  *                 type: string
  *                 format: binary
- *                 description: Optional profile photo file (image/jpeg, image/png, image/webp)
+ *                 description: Optional image file (JPEG or PNG). Uploaded to Firebase Storage and stored as photoURL in Firebase Auth only — NOT written to the Firestore user document.
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/UserProfileUpdateRequest'
  *     responses:
  *       200:
- *         description: Successfully updated profile, returns updated user data
+ *         description: Profile updated. `details.photo_url` is a signed URL with a 2-hour TTL derived from Firebase Auth's photoURL. It is not stored in Firestore.
  *         content:
  *           application/json:
  *             schema:
@@ -811,5 +830,4 @@ export const searchUsers = async (req: Request, res: Response) => {
     return defaultError(res);
   }
 };
-
 
