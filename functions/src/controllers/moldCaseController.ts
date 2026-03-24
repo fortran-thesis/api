@@ -85,8 +85,6 @@ export const createMoldCase = async (req: Request, res: Response) => {
    *               end_date:
    *                 type: string
    *                 format: date-time
-   *               is_archived:
-   *                 type: boolean
    *     responses:
    *       200:
    *         description: Successfully created mold folder
@@ -110,6 +108,7 @@ export const createMoldCase = async (req: Request, res: Response) => {
    *                     photo_url:
    *                       type: string
    *                       nullable: true
+   *                       description: Signed Google Cloud Storage URL. Valid for 2 hours from the time of the response. Do not cache this URL beyond that window.
    *                     priority:
    *                       type: string
    *                       enum: [low, medium, high]
@@ -247,6 +246,8 @@ export const getAllMoldCases = async (req: Request, res: Response) => {
    *                   example: false
    *                 error:
    *                   type: string
+   *       403:
+   *         description: Forbidden
    *       404:
    *         description: Not found
    *         content:
@@ -363,6 +364,8 @@ export const getAssignedMoldCases = async (req: Request, res: Response) => {
    *                   example: false
    *                 error:
    *                   type: string
+   *       403:
+   *         description: Forbidden
    *       404:
    *         description: Not found
    *         content:
@@ -482,6 +485,8 @@ export const getAllArchivedMoldCases = async (
    *                   example: false
    *                 error:
    *                   type: string
+   *       403:
+   *         description: Forbidden
    *       404:
    *         description: Not found
    *         content:
@@ -587,6 +592,7 @@ export const patchMoldCase = async (req: Request, res: Response) => {
    *                     photo_url:
    *                       type: string
    *                       nullable: true
+   *                       description: Signed Google Cloud Storage URL. Valid for 2 hours from the time of the response. Do not cache this URL beyond that window.
    *                     priority:
    *                       type: string
    *                       enum: [low, medium, high]
@@ -811,6 +817,7 @@ export const softDeleteMoldCase = async (req: Request, res: Response) => {
  *                     photo_url:
  *                       type: string
  *                       nullable: true
+ *                       description: Signed Google Cloud Storage URL. Valid for 2 hours from the time of the response. Do not cache this URL beyond that window.
  *                     priority:
  *                       type: string
  *                       enum: [low, medium, high]
@@ -834,6 +841,8 @@ export const softDeleteMoldCase = async (req: Request, res: Response) => {
  *                   example: false
  *                 error:
  *                   type: string
+ *       403:
+ *         description: Forbidden
  *       500:
  *         description: Server error
  *         content:
@@ -954,6 +963,10 @@ export const getMoldCaseByReportId = async (req: Request, res: Response) => {
  *                   example: false
  *                 error:
  *                   type: string
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Mold case not found
  *       500:
  *         description: Server error
  *         content:
@@ -1125,6 +1138,7 @@ export const addCultivationLog = async (req: Request, res: Response) => {
  *                     photo_url:
  *                       type: string
  *                       nullable: true
+ *                       description: Signed Google Cloud Storage URL. Valid for 2 hours from the time of the response. Do not cache this URL beyond that window.
  *                     priority:
  *                       type: string
  *                       enum: [low, medium, high]
@@ -1157,6 +1171,10 @@ export const addCultivationLog = async (req: Request, res: Response) => {
  *                   example: false
  *                 error:
  *                   type: string
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Mold case not found
  *       500:
  *         description: Server error
  *         content:
@@ -1605,6 +1623,7 @@ export const getMoldCaseById = async (req: Request, res: Response) => {
    *                     photo_url:
    *                       type: string
    *                       nullable: true
+   *                       description: Signed Google Cloud Storage URL. Valid for 2 hours from the time of the response. Do not cache this URL beyond that window.
    *                     priority:
    *                       type: string
    *                       enum: [low, medium, high]
@@ -1619,6 +1638,8 @@ export const getMoldCaseById = async (req: Request, res: Response) => {
    *                     cultivation_details:
    *                       type: object
    *                       nullable: true
+   *       403:
+   *         description: Forbidden
    *       404:
    *         description: Mold case not found
    *         content:
@@ -1863,19 +1884,22 @@ export const getCultivationLogs = async (req: Request, res: Response) => {
    *                           type:
    *                             type: string
    *                             enum: [vivo, vitro]
-   *                           image_url:
-   *                             type: string
-   *                             nullable: true
+ *                           image_url:
+ *                             type: string
+ *                             nullable: true
+ *                             description: Signed URL. Valid for 2 hours.
    *                           characteristics:
    *                             type: object
    *                           additional_info:
    *                             type: string
-   *                     nextPageToken:
-   *                       type: string
-   *                       nullable: true
-   *                       description: Token for fetching next page of results
-   *       404:
-   *         description: Mold case not found
+ *                     nextPageToken:
+ *                       type: string
+ *                       nullable: true
+ *                       description: Opaque cursor token for fetching the next page. Pass as the `pageToken` query parameter in the next request. Null when no further pages exist. The internal format is base64-encoded JSON and must be treated as opaque.
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Mold case not found
    *         content:
    *           application/json:
    *             schema:
@@ -1973,6 +1997,8 @@ export const removeCultivationLog = async (req: Request, res: Response) => {
    *                   example: false
    *                 error:
    *                   type: string
+   *       403:
+   *         description: Forbidden
    *       404:
    *         description: Mold case or log not found
    *         content:
@@ -2107,6 +2133,10 @@ export const removeCultivationLog = async (req: Request, res: Response) => {
  *                       description: Non-null when the linked MoldReport could not be updated to `resolved` status. The verdict itself was still saved successfully.
  *       400:
  *         description: Validation error
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Mold case not found
  *       500:
  *         description: Server error
  */

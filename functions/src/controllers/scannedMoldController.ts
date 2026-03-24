@@ -87,6 +87,10 @@ import {
  *                 data:
  *                   type: object
  *                   properties:
+ *                     image_url:
+ *                       type: string
+ *                       description: Signed Google Cloud Storage URL. Valid for 2 hours from the time of the response. Do not cache this URL beyond that window.
+ *                   properties:
  *                     id:
  *                       type: string
  *                     moldipedia_id:
@@ -223,7 +227,18 @@ export const createScannedMold = async (req: Request, res: Response) => {
  *         name: pageToken
  *         schema:
  *           type: string
- *         description: Cursor token for pagination
+ *         description: Opaque cursor token for fetching the next page. Pass as the `pageToken` query parameter in the next request. Null when no further pages exist. The internal format is base64-encoded JSON and must be treated as opaque.
+ *       - in: query
+ *         name: mold_case_id
+ *         schema:
+ *           type: string
+ *         description: Optional filter to return only scans linked to a specific mold case.
+ *       - in: query
+ *         name: scan_modality
+ *         schema:
+ *           type: string
+ *           enum: [microscopic, macroscopic]
+ *         description: Optional filter by scan modality.
  *     responses:
  *       200:
  *         description: List of scanned molds
@@ -251,6 +266,7 @@ export const createScannedMold = async (req: Request, res: Response) => {
  *                             type: string
  *                           image_url:
  *                             type: string
+ *                             description: Signed Google Cloud Storage URL. Valid for 2 hours from the time of the response. Do not cache this URL beyond that window.
  *                           is_active:
  *                             type: boolean
  *                           created_at:
@@ -259,6 +275,7 @@ export const createScannedMold = async (req: Request, res: Response) => {
  *                     nextPageToken:
  *                       type: string
  *                       nullable: true
+ *                       description: Opaque cursor token for fetching the next page. Pass as the `pageToken` query parameter in the next request. Null when no further pages exist. The internal format is base64-encoded JSON and must be treated as opaque.
  *       404:
  *         description: Not found
  *         content:
@@ -321,6 +338,10 @@ export const getAllScannedMolds = async (req: Request, res: Response) => {
  *               properties:
  *                 data:
  *                   type: object
+ *                   properties:
+ *                     image_url:
+ *                       type: string
+ *                       description: Signed Google Cloud Storage URL. Valid for 2 hours from the time of the response. Do not cache this URL beyond that window.
  *       404:
  *         description: Not found
  *       500:
@@ -476,5 +497,4 @@ export const softDeleteScannedMold = async (req: Request, res: Response) => {
     return defaultError(res);
   }
 };
-
 

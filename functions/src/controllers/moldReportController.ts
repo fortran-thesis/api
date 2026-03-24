@@ -1102,8 +1102,14 @@ export const getUnassignedMoldReports = async (req: Request, res: Response) => {
  *                       format: date-time
  *       400:
  *         description: Failed to add case detail
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
  *       404:
  *         description: Report not found
+ *       409:
+ *         description: Cannot add follow-up in the report's current status
  *       500:
  *         description: Server error
  */
@@ -1701,6 +1707,8 @@ export const getAssignedReportsCountController = async (
  *                     updated_at:
  *                       type: string
  *                       format: date-time
+ *       403:
+ *         description: Forbidden
  *       404:
  *         description: Failed to retrieve mold report
  *       500:
@@ -1870,6 +1878,10 @@ export const patchMoldReport = async (req: Request, res: Response) => {
  *               properties:
  *                 data:
  *                   type: string
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Mold report not found
  *       500:
  *         description: Server error
  */
@@ -1914,6 +1926,12 @@ export const deleteMoldReport = async (req: Request, res: Response) => {
  *               properties:
  *                 data:
  *                   type: string
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Mold report not found
+ *       409:
+ *         description: Invalid status transition for close operation
  *       500:
  *         description: Server error
  */

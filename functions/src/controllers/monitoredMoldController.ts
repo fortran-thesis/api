@@ -61,6 +61,7 @@ import {StorageFolder, generateStoragePath} from "../configs/storage";
  *                       type: string
  *                     image_url:
  *                       type: string
+ *                       description: Signed Google Cloud Storage URL. Valid for 2 hours from the time of the response. Do not cache this URL beyond that window.
  *                     notes:
  *                       type: string
  *                     is_active:
@@ -127,7 +128,7 @@ export const createMonitoredMold = async (req: Request, res: Response) => {
  *         name: pageToken
  *         schema:
  *           type: string
- *         description: Cursor token for pagination
+ *         description: Opaque cursor token for fetching the next page. Pass as the `pageToken` query parameter in the next request. Null when no further pages exist. The internal format is base64-encoded JSON and must be treated as opaque.
  *     responses:
  *       200:
  *         description: List of monitored molds
@@ -137,7 +138,16 @@ export const createMonitoredMold = async (req: Request, res: Response) => {
  *               type: object
  *               properties:
  *                 data:
- *                   type: array
+ *                   type: object
+ *                   properties:
+ *                     snapshot:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     nextPageToken:
+ *                       type: string
+ *                       nullable: true
+ *                       description: Opaque cursor token for fetching the next page. Pass as the `pageToken` query parameter in the next request. Null when no further pages exist. The internal format is base64-encoded JSON and must be treated as opaque.
  *       404:
  *         description: Failed to retrieve monitored molds
  *       500:
@@ -207,6 +217,7 @@ export const getAllMonitoredMoldsByFolderId = async (
  *                       type: string
  *                     image_url:
  *                       type: string
+ *                       description: Signed Google Cloud Storage URL. Valid for 2 hours from the time of the response. Do not cache this URL beyond that window.
  *                     notes:
  *                       type: string
  *                     is_active:
@@ -372,5 +383,4 @@ export const softDeleteMonitoredMold = async (req: Request, res: Response) => {
     return defaultError(res);
   }
 };
-
 
