@@ -37,6 +37,99 @@ const options = {
 
 export const swaggerSpec = swaggerJsdoc(options);
 
+type SwaggerSchema = {
+  type?: string;
+  format?: string;
+  description?: string;
+  properties?: Record<string, SwaggerSchema>;
+  items?: SwaggerSchema;
+  allOf?: SwaggerSchema[];
+  oneOf?: SwaggerSchema[];
+  anyOf?: SwaggerSchema[];
+  [key: string]: unknown;
+};
+
+const MULTIPART_JSON_NOTE = "Documentation view: this JSON shows the form-data " +
+  "shape. When calling this endpoint as multipart/form-data, send files as " +
+  "binary fields and stringify object/array values when needed.";
+
+const cloneSchema = <T>(value: T): T => JSON.parse(JSON.stringify(value));
+
+const normalizeMultipartSchemaForJsonView = (schema?: SwaggerSchema): SwaggerSchema | undefined => {
+  if (!schema) return undefined;
+
+  const next = cloneSchema(schema);
+
+  if (next.type === "string" && next.format === "binary") {
+    const descriptionPrefix = next.description ?
+      `${next.description} ` :
+      "";
+    next.format = undefined;
+    next.example = "<file>";
+    next.description = `${descriptionPrefix}(JSON docs view only) Use a file in multipart/form-data.`;
+  }
+
+  if (next.properties) {
+    for (const key of Object.keys(next.properties)) {
+      next.properties[key] = normalizeMultipartSchemaForJsonView(next.properties[key]) as SwaggerSchema;
+    }
+  }
+
+  if (next.items) {
+    next.items = normalizeMultipartSchemaForJsonView(next.items) as SwaggerSchema;
+  }
+
+  if (Array.isArray(next.allOf)) {
+    next.allOf = next.allOf
+      .map((part) => normalizeMultipartSchemaForJsonView(part) as SwaggerSchema);
+  }
+
+  if (Array.isArray(next.oneOf)) {
+    next.oneOf = next.oneOf
+      .map((part) => normalizeMultipartSchemaForJsonView(part) as SwaggerSchema);
+  }
+
+  if (Array.isArray(next.anyOf)) {
+    next.anyOf = next.anyOf
+      .map((part) => normalizeMultipartSchemaForJsonView(part) as SwaggerSchema);
+  }
+
+  return next;
+};
+
+const addJsonViewForMultipartRequestBodies = () => {
+  const paths = (swaggerSpec as any)?.paths;
+  if (!paths || typeof paths !== "object") return;
+
+  for (const pathItem of Object.values(paths) as Record<string, any>[]) {
+    if (!pathItem || typeof pathItem !== "object") continue;
+
+    for (const operation of Object.values(pathItem) as Record<string, any>[]) {
+      if (!operation || typeof operation !== "object") continue;
+
+      const content = operation?.requestBody?.content;
+      if (!content || typeof content !== "object") continue;
+
+      const multipart = content["multipart/form-data"];
+      if (!multipart || typeof multipart !== "object") continue;
+
+      const normalizedSchema = normalizeMultipartSchemaForJsonView(multipart.schema);
+      if (normalizedSchema) {
+        content["application/json"] = {
+          schema: normalizedSchema,
+          description: MULTIPART_JSON_NOTE,
+        };
+      }
+
+      if (!multipart.description) {
+        multipart.description = MULTIPART_JSON_NOTE;
+      }
+    }
+  }
+};
+
+addJsonViewForMultipartRequestBodies();
+
 /**
  * Determines if the application is running in Firebase emulators
  */
