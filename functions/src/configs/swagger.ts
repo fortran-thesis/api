@@ -52,8 +52,69 @@ type SwaggerSchema = {
 const MULTIPART_JSON_NOTE = "Documentation view: this JSON shows the form-data " +
   "shape. When calling this endpoint as multipart/form-data, send files as " +
   "binary fields and stringify object/array values when needed.";
+const MULTIPART_STRINGIFIED_NOTE = "Send this value as a JSON string in multipart/form-data.";
 
 const cloneSchema = <T>(value: T): T => JSON.parse(JSON.stringify(value));
+
+const appendDescriptionNote = (description: string | undefined, note: string): string => {
+  if (!description) return note;
+  if (description.includes(note)) return description;
+  return `${description} ${note}`;
+};
+
+const toMultipartStringSchema = (schema: SwaggerSchema): SwaggerSchema => {
+  const next = cloneSchema(schema);
+  const nextExample = next.example !== undefined ?
+    next.example :
+    next.default;
+  const stringifiedExample = nextExample !== undefined ?
+    JSON.stringify(nextExample) :
+    JSON.stringify({});
+
+  return {
+    type: "string",
+    description: appendDescriptionNote(next.description, MULTIPART_STRINGIFIED_NOTE),
+    example: stringifiedExample,
+  };
+};
+
+const normalizeMultipartSchemaForFormDataView = (schema?: SwaggerSchema): SwaggerSchema | undefined => {
+  if (!schema) return undefined;
+
+  const next = cloneSchema(schema);
+
+  if (next.type === "string" && next.format === "binary") {
+    return next;
+  }
+
+  if (next.type === "object") {
+    if (!next.properties || Object.keys(next.properties).length === 0) {
+      return toMultipartStringSchema(next);
+    }
+
+    for (const key of Object.keys(next.properties)) {
+      const property = next.properties[key];
+      if (property?.type === "string" && property?.format === "binary") {
+        continue;
+      }
+
+      if (property?.type === "object" || property?.type === "array") {
+        next.properties[key] = toMultipartStringSchema(property);
+        continue;
+      }
+
+      next.properties[key] = normalizeMultipartSchemaForFormDataView(property) as SwaggerSchema;
+    }
+
+    return next;
+  }
+
+  if (next.type === "array") {
+    return toMultipartStringSchema(next);
+  }
+
+  return next;
+};
 
 const normalizeMultipartSchemaForJsonView = (schema?: SwaggerSchema): SwaggerSchema | undefined => {
   if (!schema) return undefined;
@@ -113,7 +174,14 @@ const addJsonViewForMultipartRequestBodies = () => {
       const multipart = content["multipart/form-data"];
       if (!multipart || typeof multipart !== "object") continue;
 
-      const normalizedSchema = normalizeMultipartSchemaForJsonView(multipart.schema);
+      const originalMultipartSchema = cloneSchema(multipart.schema);
+      const normalizedSchema = normalizeMultipartSchemaForJsonView(originalMultipartSchema);
+      const formDataSchema = normalizeMultipartSchemaForFormDataView(originalMultipartSchema);
+
+      if (formDataSchema) {
+        multipart.schema = formDataSchema;
+      }
+
       if (normalizedSchema) {
         content["application/json"] = {
           schema: normalizedSchema,
