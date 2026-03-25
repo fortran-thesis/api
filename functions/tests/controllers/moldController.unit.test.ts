@@ -114,7 +114,14 @@ describe("moldController (unit)", () => {
           symptoms_and_signs: "Symptoms signs text",
           disease_cycle_spread_impact: "Cycle spread impact text",
           prevention_summary: "Prevention summary text",
-          additional_info: [],
+          additional_info: [
+            { title: "Overview", description: "Overview text" },
+            { title: "Health Risks", description: "Health risks text" },
+            { title: "Affected Hosts", description: "Affected hosts text" },
+            { title: "Symptoms and Signs", description: "Symptoms signs text" },
+            { title: "Disease Cycle / Spread / Impact", description: "Cycle spread impact text" },
+            { title: "Prevention Summary", description: "Prevention summary text" },
+          ],
         },
         prevention: {
           physicalControl: "p",
