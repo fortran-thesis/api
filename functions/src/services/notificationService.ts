@@ -40,7 +40,6 @@ import {
   cacheList,
   getCachedItem,
   cacheItem,
-  handlePostCache,
   handlePatchCache,
   handleDeleteCache,
   invalidateAllLists,
@@ -180,7 +179,6 @@ export const resolveTemplate = (
  * Creates a single notification document in Firestore and sends an FCM push.
  */
 const RESOURCE = "notifications";
-const DEVICE_RESOURCE = "notification-tokens";
 
 export const createNotification = async (
   recipientId: string,
