@@ -14,8 +14,8 @@ const MoldipediaTreatmentsSchema = z.object({
 }).optional();
 
 const MoldipediaFindingSchema = z.object({
-  title: z.string().min(1, {message: "Finding title cannot be empty."}),
-  content: z.string().min(1, {message: "Finding content cannot be empty."}),
+  title: z.string(),
+  content: z.string(),
 });
 
 export const MoldipediaCreateSchema = z.object({

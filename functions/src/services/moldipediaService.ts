@@ -31,8 +31,18 @@ export const addMoldipediaToFirestore = async (
   details: Moldipedia
 ): Promise<WithId<Moldipedia> | null> => {
   try {
-    const detailsWithMetadata: WithMetadata<Moldipedia> = {
+    // Filter out empty findings before saving
+    const cleanedDetails = {
       ...details,
+      ...(details.findings && {
+        findings: details.findings.filter(
+          (f: any) => f.title?.trim() && f.content?.trim()
+        ),
+      }),
+    };
+
+    const detailsWithMetadata: WithMetadata<Moldipedia> = {
+      ...cleanedDetails,
       is_archived: false,
       metadata: {
         created_at: Timestamp.now(),
@@ -152,7 +162,17 @@ export const updateMoldipediaInFirestore = async (
   details: Partial<Moldipedia>
 ): Promise<MoldipediaResponse | null> => {
   try {
-    const result: WriteResult | null = await updateMoldipedia(id, details);
+    // Filter out empty findings before saving
+    const cleanedDetails = {
+      ...details,
+      ...(details.findings && {
+        findings: details.findings.filter(
+          (f: any) => f.title?.trim() && f.content?.trim()
+        ),
+      }),
+    };
+
+    const result: WriteResult | null = await updateMoldipedia(id, cleanedDetails);
     if (!result) throw new Error("Failed to update moldipedia.");
     const updated = await retrieveMoldipediaById(id);
     return updated;
