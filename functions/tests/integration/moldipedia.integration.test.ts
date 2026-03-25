@@ -86,6 +86,7 @@ describe("Moldipedia Integration Tests", () => {
         .field("details", JSON.stringify({
           title: "Storage URL article",
           body: "Ensures upload stores private URL",
+          author_id: curatorUser.uid,
         }))
         .attach("cover_photo", Buffer.from("fake-image-bytes"), "cover.jpg")
         .expect("Content-Type", /json/);
@@ -101,6 +102,7 @@ describe("Moldipedia Integration Tests", () => {
       const detailsPayload = {
         title: "Schema Sync Article",
         body: "Detailed body content",
+        author_id: curatorUser.uid,
         mold_type: "Aspergillus",
         affected_hosts: "Wheat, Maize",
         symptoms: "Spotting, wilting",
