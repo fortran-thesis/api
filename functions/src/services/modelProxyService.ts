@@ -80,6 +80,19 @@ const buildModelUrl = (path: string, params?: Record<string, string>): string =>
   return `${joined}${sep}${query.toString()}`;
 };
 
+/** Redact sensitive query values before logging upstream URLs. */
+const sanitizeUrlForLog = (url: string): string => {
+  try {
+    const parsed = new URL(url);
+    if (parsed.searchParams.has("internal_key")) {
+      parsed.searchParams.set("internal_key", "[REDACTED]");
+    }
+    return parsed.toString();
+  } catch {
+    return url;
+  }
+};
+
 /**
  * Merges a `_model_source` tag into the response body.
  * If the body is not a plain object the tag is dropped silently.
@@ -116,7 +129,9 @@ const buildPathCandidates = (endpointPath: string): string[] => {
   const withoutApi = normalized.startsWith("api/") ? normalized.slice(4) : normalized;
   const withDoubleApi = normalized.startsWith("api/") ? `api/${normalized}` : `api/${normalized}`;
 
-  return Array.from(new Set([normalized, withDoubleApi, withoutApi]));
+  // Prefer the route without the /api prefix first; this is the most stable
+  // path across Lambda + Flask blueprint wiring.
+  return Array.from(new Set([withoutApi, normalized, withDoubleApi]));
 };
 
 // ---------------------------------------------------------------------------
@@ -152,6 +167,7 @@ export const proxyJsonPredict = async (
     for (let index = 0; index < pathCandidates.length; index += 1) {
       const path = pathCandidates[index];
       const url = buildModelUrl(path, withInternalKeyFallback(queryParams));
+      const loggedUrl = sanitizeUrlForLog(url);
       const startedAt = Date.now();
       const res = await fetch(url, {
         method: "POST",
@@ -170,22 +186,22 @@ export const proxyJsonPredict = async (
           resolvedPath: path,
           status: res.status,
           latencyMs,
-          url,
+          url: loggedUrl,
           attempt: index + 1,
         },
         "Upstream model request completed"
       );
 
       if (res.status === 404 && index < pathCandidates.length - 1) {
-        logger.warn(
+        logger.info(
           {
             ctx: "modelProxy",
             endpoint: "api/v3/predict",
             resolvedPath: path,
-            url,
+            url: loggedUrl,
             attempt: index + 1,
           },
-          "Upstream returned 404 for endpoint path; trying next path candidate"
+          "Upstream returned 404 for preferred endpoint path; trying fallback candidate"
         );
         continue;
       }
@@ -248,6 +264,7 @@ export const proxyMultipartPredict = async (
     for (let index = 0; index < pathCandidates.length; index += 1) {
       const path = pathCandidates[index];
       const url = buildModelUrl(path, withInternalKeyFallback(queryParams));
+      const loggedUrl = sanitizeUrlForLog(url);
       const startedAt = Date.now();
       const res = await fetch(url, {
         method: "POST",
@@ -266,22 +283,22 @@ export const proxyMultipartPredict = async (
           resolvedPath: path,
           status: res.status,
           latencyMs,
-          url,
+          url: loggedUrl,
           attempt: index + 1,
         },
         "Upstream model request completed"
       );
 
       if (res.status === 404 && index < pathCandidates.length - 1) {
-        logger.warn(
+        logger.info(
           {
             ctx: "modelProxy",
             endpoint: "api/v3/predict-multipart",
             resolvedPath: path,
-            url,
+            url: loggedUrl,
             attempt: index + 1,
           },
-          "Upstream returned 404 for endpoint path; trying next path candidate"
+          "Upstream returned 404 for preferred endpoint path; trying fallback candidate"
         );
         continue;
       }
