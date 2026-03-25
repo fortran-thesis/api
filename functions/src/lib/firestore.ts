@@ -164,7 +164,7 @@ export const softDeleteDocument = async (
 export const getDocumentsByField = async (
   collection: string,
   documentField: string,
-  documentContent: string
+  documentContent: string | number
 ): Promise<FirebaseFirestore.QuerySnapshot | null> => {
   try {
     const querySnap = await callFirebase(collection)
@@ -188,7 +188,7 @@ export const getDocumentsByField = async (
 export const getDocumentIdByField = async (
   collection: string,
   field: string,
-  value: string
+  value: string | number
 ): Promise<string | null> => {
   try {
     const querySnap = await callFirebase(collection)
@@ -213,7 +213,7 @@ export const getDocumentIdByField = async (
 export const getDocumentByFieldId = async (
   collection: string,
   field: string,
-  value: string
+  value: string | number
 ): Promise<FirebaseFirestore.DocumentSnapshot | null> => {
   try {
     const querySnap = await callFirebase(collection)

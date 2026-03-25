@@ -21,6 +21,8 @@ export const findMoldByName = async (name: string) =>
   getDocumentsByField(collection, "name", name);
 export const findMoldByPredictedClassName = async (predictedClassName: string) =>
   getDocumentsByField(collection, "mold_details.info.predicted_class_name", predictedClassName);
+export const findMoldByPredictedClassId = async (predictedClassId: number) =>
+  getDocumentsByField(collection, "mold_details.info.predicted_class_id", predictedClassId);
 export const findAllMolds = async (
   limit: number,
   token?: string,
