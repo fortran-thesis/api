@@ -326,7 +326,11 @@ function enrichMoldInfo(info: MoldDetails["info"]): MoldDetails["info"] {
 export const createMold = async (req: Request, res: Response) => {
   try {
     const moldName: string = req.body.moldName;
-    const details: MoldDetails = req.body.details;
+    // Details may be promoted to root by parseMultipartJson middleware
+    const details: MoldDetails = req.body.details || {
+      info: req.body.info,
+      prevention: req.body.prevention,
+    };
     const moldipediaId: string | undefined = req.body.moldipediaId || req.body.moldipedia_id;
     const symptoms: string[] | undefined = req.body.symptoms;
     const signs: string[] | undefined = req.body.signs;
