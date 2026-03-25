@@ -329,12 +329,20 @@ export const getAssignedMoldCases = async (req: Request, res: Response) => {
    *                       items:
    *                         type: object
    *                         properties:
+   *                           id:
+   *                             type: string
    *                           mycologist_id:
    *                             type: string
    *                           name:
    *                             type: string
    *                           mold_report_id:
    *                             type: string
+   *                           user_id:
+   *                             type: string
+   *                             nullable: true
+   *                           user_name:
+   *                             type: string
+   *                             nullable: true
    *                           photo_url:
    *                             type: string
    *                             nullable: true
@@ -349,6 +357,12 @@ export const getAssignedMoldCases = async (req: Request, res: Response) => {
    *                             format: date-time
    *                           is_archived:
    *                             type: boolean
+   *                           cultivation_details:
+   *                             type: object
+   *                             nullable: true
+   *                           final_verdict:
+   *                             type: object
+   *                             nullable: true
    *                     nextPageToken:
    *                       type: string
    *                       nullable: true
@@ -814,6 +828,14 @@ export const softDeleteMoldCase = async (req: Request, res: Response) => {
  *                       type: string
  *                     mold_report_id:
  *                       type: string
+ *                     user_id:
+ *                       type: string
+ *                       nullable: true
+ *                       description: ID of the farmer/user who created the mold report
+ *                     user_name:
+ *                       type: string
+ *                       nullable: true
+ *                       description: Display name of the farmer/user
  *                     photo_url:
  *                       type: string
  *                       nullable: true
@@ -829,6 +851,105 @@ export const softDeleteMoldCase = async (req: Request, res: Response) => {
  *                       format: date-time
  *                     is_archived:
  *                       type: boolean
+ *                     cultivation_details:
+ *                       type: object
+ *                       nullable: true
+ *                       description: Detailed cultivation information including growth conditions and observations
+ *                       properties:
+ *                         growth_medium:
+ *                           type: string
+ *                         in_vivo_details:
+ *                           type: object
+ *                           properties:
+ *                             environmental_temperature:
+ *                               type: number
+ *                         in_vitro_details:
+ *                           type: object
+ *                           properties:
+ *                             incubation_temperature:
+ *                               type: number
+ *                         specimen_types:
+ *                           type: array
+ *                           items:
+ *                             type: string
+ *                         specimen_quantities:
+ *                           type: array
+ *                           items:
+ *                             type: string
+ *                         initial_symptoms:
+ *                           type: array
+ *                           items:
+ *                             type: string
+ *                         initial_characteristics:
+ *                           type: array
+ *                           items:
+ *                             type: string
+ *                         location_gathered:
+ *                           type: string
+ *                         initial_microscopic:
+ *                           type: string
+ *                         initial_macroscopic:
+ *                           type: string
+ *                         initial_microscopic_color:
+ *                           type: string
+ *                         initial_microscopic_texture:
+ *                           type: string
+ *                         initial_macroscopic_color:
+ *                           type: string
+ *                         initial_macroscopic_texture:
+ *                           type: string
+ *                         initial_macroscopic_symptoms:
+ *                           type: string
+ *                         initial_macroscopic_characteristics:
+ *                           type: string
+ *                         initial_microscopic_image_url:
+ *                           type: string
+ *                           nullable: true
+ *                           description: Signed URL for microscopic image. Valid for 2 hours.
+ *                         initial_macroscopic_image_url:
+ *                           type: string
+ *                           nullable: true
+ *                           description: Signed URL for macroscopic image. Valid for 2 hours.
+ *                         date_observation:
+ *                           type: string
+ *                         microscopic_ai_snapshot:
+ *                           type: object
+ *                           description: AI-generated identification snapshot
+ *                         scanned_microscopic_ids:
+ *                           type: array
+ *                           items:
+ *                             type: string
+ *                         scanned_macroscopic_ids:
+ *                           type: array
+ *                           items:
+ *                             type: string
+ *                     final_verdict:
+ *                       type: object
+ *                       nullable: true
+ *                       description: Final identification verdict by mycologist
+ *                       properties:
+ *                         moldId:
+ *                           type: string
+ *                           description: ID of the identified mold
+ *                         moldName:
+ *                           type: string
+ *                           description: Name of the identified mold
+ *                         confidence:
+ *                           type: number
+ *                           description: Confidence score of the identification
+ *                         moldipedia_id:
+ *                           type: string
+ *                           nullable: true
+ *                           description: Link to moldipedia article if available
+ *                         mycologist_notes:
+ *                           type: string
+ *                           nullable: true
+ *                           description: Additional notes from the reviewing mycologist
+ *                         verdict_timestamp:
+ *                           type: string
+ *                           format: date-time
+ *                           nullable: true
+ *                           description: Timestamp when verdict was finalized
  *       404:
  *         description: No mold case found for this report
  *         content:
@@ -2167,9 +2288,8 @@ export const finalizeVerdict = async (req: Request, res: Response) => {
     const {moldId, moldName, confidence, mycologist_notes: mycologistNotes} = req.body;
 
     // Validate required fields
-    if (!moldId || !moldId.trim()) {
-      return sendError(res, "moldId is required", 400);
-    }
+    // moldId is now optional to support verdicts for predicted classes not in the database
+    // moldId will be null when verdict is for a mold not in the database (fallback to predicted_class_name)
     if (!moldName || !moldName.trim()) {
       return sendError(res, "moldName is required", 400);
     }
@@ -2204,8 +2324,9 @@ export const finalizeVerdict = async (req: Request, res: Response) => {
       devLog(`[finalizeVerdict] WikiMold lookup failed: ${matchErr}`);
     }
 
+    // moldId may be null for verdicts from predicted classes not in the database
     const verdict: any = {
-      moldId,
+      moldId: moldId ?? null,
       moldName,
       confidence,
       verdict_timestamp: Timestamp.now(),

@@ -159,6 +159,35 @@ export const createMoldReport = async (req: Request, res: Response) => {
    *                     status:
    *                       type: string
    *                       enum: [pending, "in progress", resolved, rejected]
+   *                     priority:
+   *                       type: string
+   *                       enum: [low, medium, high]
+   *                       nullable: true
+   *                     reviewed_mycologist_id:
+   *                       type: string
+   *                       nullable: true
+   *                     reviewed_at:
+   *                       type: string
+   *                       format: date-time
+   *                       nullable: true
+   *                     reported_symptoms:
+   *                       type: array
+   *                       items:
+   *                         type: string
+   *                       nullable: true
+   *                     reported_signs:
+   *                       type: array
+   *                       items:
+   *                         type: string
+   *                       nullable: true
+   *                     reported_characteristics:
+   *                       type: array
+   *                       items:
+   *                         type: string
+   *                       nullable: true
+   *                     rejection_reason:
+   *                       type: string
+   *                       nullable: true
    *                     case_details:
    *                       type: array
    *                       items:
@@ -497,6 +526,70 @@ export const getResolvedMoldReportsCountController = async (
  *                           status:
  *                             type: string
  *                             enum: [pending, "in progress", resolved, rejected]
+ *                           priority:
+ *                             type: string
+ *                             enum: [low, medium, high]
+ *                             nullable: true
+ *                           reviewed_mycologist_id:
+ *                             type: string
+ *                             nullable: true
+ *                             description: ID of the mycologist who reviewed this report
+ *                           reviewed_at:
+ *                             type: string
+ *                             format: date-time
+ *                             nullable: true
+ *                             description: Timestamp when the report was reviewed
+ *                           reported_symptoms:
+ *                             type: array
+ *                             items:
+ *                               type: string
+ *                             nullable: true
+ *                             description: Symptoms reported by the user
+ *                           reported_signs:
+ *                             type: array
+ *                             items:
+ *                               type: string
+ *                             nullable: true
+ *                             description: Signs reported by the user
+ *                           reported_characteristics:
+ *                             type: array
+ *                             items:
+ *                               type: string
+ *                             nullable: true
+ *                             description: Characteristics reported by the user
+ *                           lookup_results:
+ *                             type: array
+ *                             nullable: true
+ *                             description: Results from background mold lookup. May be updated asynchronously after report creation.
+ *                             items:
+ *                               type: object
+ *                               properties:
+ *                                 moldId:
+ *                                   type: string
+ *                                 moldName:
+ *                                   type: string
+ *                                 confidence:
+ *                                   type: number
+ *                                 timestamp:
+ *                                   type: string
+ *                                   format: date-time
+ *                                   nullable: true
+ *                           rejection_reason:
+ *                             type: string
+ *                             nullable: true
+ *                             description: Reason for rejection if status is rejected
+ *                           case_details:
+ *                             type: array
+ *                             nullable: true
+ *                             items:
+ *                               type: object
+ *                               properties:
+ *                                 description:
+ *                                   type: string
+ *                                 cover_photo:
+ *                                   type: array
+ *                                   items:
+ *                                     type: string
  *                           reporter:
  *                             type: object
  *                             properties:

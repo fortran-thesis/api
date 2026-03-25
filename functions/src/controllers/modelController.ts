@@ -184,7 +184,7 @@ export const predictWithDetails = async (req: Request, res: Response) => {
       .sort((a, b) => (b.probability || 0) - (a.probability || 0))
       .slice(0, 5); // Top 5 probable classes
 
-    const probableMolds: Array<{mold_detail: any; confidence: number}> = [];
+    const probableMolds: Array<{mold_detail: any; confidence: number; class_name?: string}> = [];
 
     for (const prob of sortedProbs) {
       const className = prob.class_name || prob.predicted_class_name;
@@ -193,7 +193,16 @@ export const predictWithDetails = async (req: Request, res: Response) => {
       if (className) {
         const mold = await retrieveMoldByPredictedClassName(className);
         if (mold) {
+          // Mold found in database - include full details
           probableMolds.push({mold_detail: mold, confidence});
+        } else {
+          // Mold not found in database - include model result only
+          // This allows users to save verdicts for unknown molds (predicted_class_name as fallback)
+          probableMolds.push({
+            mold_detail: null,
+            confidence,
+            class_name: className, // Preserve predicted class name for frontend fallback
+          });
         }
       }
     }

@@ -106,18 +106,18 @@ export const CultivationDetailsSchema = z.object({
 
 export const FinalizeVerdictSchema = z.object({
   // Accept both formats to keep older clients working while standardizing on camelCase.
+  // moldId is now optional to support verdicts for molds not in the database (predicted_class_name fallback)
   moldId: z.string().trim().min(1).optional(),
   moldName: z.string().trim().min(1).optional(),
   mold_id: z.string().trim().min(1).optional(),
   mold_name: z.string().trim().min(1).optional(),
   confidence: z.number().min(0).max(100),
   mycologist_notes: z.string().optional(),
-}).refine((payload) => !!(payload.moldId || payload.mold_id), {
-  message: "moldId is required",
 }).refine((payload) => !!(payload.moldName || payload.mold_name), {
   message: "moldName is required",
 }).transform((payload) => ({
-  moldId: payload.moldId ?? payload.mold_id ?? "",
+  // moldId is nullable to allow verdicts for predicted classes not in the database
+  moldId: payload.moldId ?? payload.mold_id ?? null,
   moldName: payload.moldName ?? payload.mold_name ?? "",
   confidence: payload.confidence,
   mycologist_notes: payload.mycologist_notes,

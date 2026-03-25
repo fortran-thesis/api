@@ -196,22 +196,56 @@ import {Mold, MoldDetails, PaginatedResult, WithId} from "../types/types";
  *                                     type: string
  *                                   description:
  *                                     type: string
+ *                             overview:
+ *                               type: string
+ *                               nullable: true
+ *                               description: General overview of the mold
+ *                             health_risks:
+ *                               type: string
+ *                               nullable: true
+ *                               description: Health risks associated with the mold
+ *                             affected_hosts:
+ *                               type: string
+ *                               nullable: true
+ *                               description: Hosts/organisms affected by the mold
+ *                             symptoms_and_signs:
+ *                               type: string
+ *                               nullable: true
+ *                               description: Symptoms and signs of infection
+ *                             disease_cycle_spread_impact:
+ *                               type: string
+ *                               nullable: true
+ *                               description: Disease cycle, spread mechanisms, and impact
+ *                             prevention_summary:
+ *                               type: string
+ *                               nullable: true
+ *                               description: Summary of prevention recommendations
+ *                             predicted_class_id:
+ *                               type: number
+ *                               nullable: true
+ *                               description: ML model predicted class ID
+ *                             predicted_class_name:
+ *                               type: string
+ *                               nullable: true
+ *                               description: ML model predicted class name
  *                         prevention:
  *                           type: object
  *                           properties:
- *                             fungicide:
- *                               type: array
- *                               items:
- *                                 type: string
- *                             additional_info:
- *                               type: array
- *                               items:
- *                                 type: object
- *                                 properties:
- *                                   title:
- *                                     type: string
- *                                   description:
- *                                     type: string
+ *                             physicalControl:
+ *                               type: string
+ *                               description: Physical control methods
+ *                             mechanicalControl:
+ *                               type: string
+ *                               description: Mechanical control methods
+ *                             culturalControl:
+ *                               type: string
+ *                               description: Cultural control methods
+ *                             biologicalControl:
+ *                               type: string
+ *                               description: Biological control methods
+ *                             chemicalControl:
+ *                               type: string
+ *                               description: Chemical control methods
  *                     moldipedia_id:
  *                       type: string
  *                       nullable: true
@@ -380,8 +414,70 @@ export const createMold = async (req: Request, res: Response) => {
  *                             properties:
  *                               info:
  *                                 type: object
+ *                                 properties:
+ *                                   description:
+ *                                     type: string
+ *                                   taxonomy:
+ *                                     type: object
+ *                                     properties:
+ *                                       kingdom:
+ *                                         type: string
+ *                                       phylum:
+ *                                         type: string
+ *                                       class:
+ *                                         type: string
+ *                                       order:
+ *                                         type: string
+ *                                       family:
+ *                                         type: string
+ *                                       genus:
+ *                                         type: string
+ *                                   additional_info:
+ *                                     type: array
+ *                                     items:
+ *                                       type: object
+ *                                       properties:
+ *                                         title:
+ *                                           type: string
+ *                                         description:
+ *                                           type: string
+ *                                   overview:
+ *                                     type: string
+ *                                     nullable: true
+ *                                   health_risks:
+ *                                     type: string
+ *                                     nullable: true
+ *                                   affected_hosts:
+ *                                     type: string
+ *                                     nullable: true
+ *                                   symptoms_and_signs:
+ *                                     type: string
+ *                                     nullable: true
+ *                                   disease_cycle_spread_impact:
+ *                                     type: string
+ *                                     nullable: true
+ *                                   prevention_summary:
+ *                                     type: string
+ *                                     nullable: true
+ *                                   predicted_class_id:
+ *                                     type: number
+ *                                     nullable: true
+ *                                   predicted_class_name:
+ *                                     type: string
+ *                                     nullable: true
  *                               prevention:
  *                                 type: object
+ *                                 properties:
+ *                                   physicalControl:
+ *                                     type: string
+ *                                   mechanicalControl:
+ *                                     type: string
+ *                                   culturalControl:
+ *                                     type: string
+ *                                   biologicalControl:
+ *                                     type: string
+ *                                   chemicalControl:
+ *                                     type: string
  *                     nextPageToken:
  *                       type: string
  *                       nullable: true
@@ -468,21 +564,65 @@ export const getAllMolds = async (req: Request, res: Response) => {
  *                               type: string
  *                             taxonomy:
  *                               type: object
+ *                               properties:
+ *                                 kingdom:
+ *                                   type: string
+ *                                 phylum:
+ *                                   type: string
+ *                                 class:
+ *                                   type: string
+ *                                 order:
+ *                                   type: string
+ *                                 family:
+ *                                   type: string
+ *                                 genus:
+ *                                   type: string
  *                             additional_info:
  *                               type: array
  *                               items:
  *                                 type: object
+ *                                 properties:
+ *                                   title:
+ *                                     type: string
+ *                                   description:
+ *                                     type: string
+ *                             overview:
+ *                               type: string
+ *                               nullable: true
+ *                             health_risks:
+ *                               type: string
+ *                               nullable: true
+ *                             affected_hosts:
+ *                               type: string
+ *                               nullable: true
+ *                             symptoms_and_signs:
+ *                               type: string
+ *                               nullable: true
+ *                             disease_cycle_spread_impact:
+ *                               type: string
+ *                               nullable: true
+ *                             prevention_summary:
+ *                               type: string
+ *                               nullable: true
+ *                             predicted_class_id:
+ *                               type: number
+ *                               nullable: true
+ *                             predicted_class_name:
+ *                               type: string
+ *                               nullable: true
  *                         prevention:
  *                           type: object
  *                           properties:
- *                             fungicide:
- *                               type: array
- *                               items:
- *                                 type: string
- *                             additional_info:
- *                               type: array
- *                               items:
- *                                 type: object
+ *                             physicalControl:
+ *                               type: string
+ *                             mechanicalControl:
+ *                               type: string
+ *                             culturalControl:
+ *                               type: string
+ *                             biologicalControl:
+ *                               type: string
+ *                             chemicalControl:
+ *                               type: string
  *       404:
  *         description: Mold not found
  *         content:
