@@ -33,6 +33,7 @@ const SEED_USERS = [
     role: Role.USER,
     address: "789 Farm Road",
     username: "Farmer",
+    occupation: "Rice Farmer",
   },
 ];
 
@@ -81,6 +82,7 @@ export const seedTestUsers = async () => {
           role: seedUser.role,
           address: seedUser.address,
           is_banned: false,
+          ...(seedUser.occupation && {occupation: seedUser.occupation}),
           metadata: {
             created_at: Timestamp.now(),
             updated_at: null,

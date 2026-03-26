@@ -40,7 +40,8 @@ export const registerUser = async (
   lastName: string,
   address: string,
   phoneNumber?: string,
-  role: Role = Role.USER
+  role: Role = Role.USER,
+  occupation?: string
 ): Promise<ApiResponse<string>> => {
   try {
     // Normalize Philippine phone numbers to E.164 (+63...) expected by Firebase
@@ -88,6 +89,7 @@ export const registerUser = async (
       address: address,
       role: role,
       is_banned: false,
+      ...(occupation && {occupation}),
       metadata: {
         created_at: Timestamp.now(),
         updated_at: null,
