@@ -128,6 +128,8 @@ export const FinalizeVerdictSchema = z.object({
   moldName: z.string().trim().min(1).optional(),
   mold_id: z.string().trim().min(1).optional(),
   mold_name: z.string().trim().min(1).optional(),
+  moldipedia_id: z.string().trim().min(1).optional(),
+  moldipediaId: z.string().trim().min(1).optional(),
   confidence: z.number().min(0).max(100),
   mycologist_notes: z.string().optional(),
 }).refine((payload) => !!(payload.moldName || payload.mold_name), {
@@ -136,6 +138,7 @@ export const FinalizeVerdictSchema = z.object({
   // moldId is nullable to allow verdicts for predicted classes not in the database
   moldId: payload.moldId ?? payload.mold_id ?? null,
   moldName: payload.moldName ?? payload.mold_name ?? "",
+  moldipedia_id: payload.moldipedia_id ?? payload.moldipediaId,
   confidence: payload.confidence,
   mycologist_notes: payload.mycologist_notes,
 }));
