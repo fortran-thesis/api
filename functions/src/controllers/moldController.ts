@@ -8,6 +8,7 @@ import {
   retrieveMoldById,
   retrieveMoldByName,
   retrieveMoldByPredictedClassName,
+  retrieveMoldByPredictedClassId,
   softRemoveMold,
   updateMoldInFirestore,
 } from "../services/moldService";
@@ -905,6 +906,57 @@ export const getMoldByPredictedClassName = async (req: Request, res: Response) =
   try {
     const classname: string = req.params.classname;
     const mold: Mold | null = await retrieveMoldByPredictedClassName(classname);
+    if (!mold) return sendError(res, "Failed to retrieve mold", 404);
+    return sendSuccess(res, normalizeMoldCompatibility(mold));
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
+/**
+ * @swagger
+ * /api/v1/mold/predicted-class-id/{classid}:
+ *   get:
+ *     summary: Get mold by predicted class ID (numeric index from ML model)
+ *     tags: [Molds]
+ *     security:
+ *       - bearerAuth: []
+ *       - cookieAuth: []
+ *     description: Retrieve a specific mold by its predicted_class_id (e.g., 0 for Alternaria_spp). Requires authentication.
+ *     parameters:
+ *       - in: path
+ *         name: classid
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Predicted class ID from ML model (0-5)
+ *     responses:
+ *       200:
+ *         description: Mold retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *       404:
+ *         description: Mold not found
+ *       500:
+ *         description: Server error
+ */
+export const getMoldByPredictedClassId = async (req: Request, res: Response) => {
+  try {
+    const classId: string = req.params.classid;
+    const classIdNum = parseInt(classId, 10);
+    if (isNaN(classIdNum)) {
+      return sendError(res, "Invalid predicted class ID: must be an integer", 400);
+    }
+
+    const mold: Mold | null = await retrieveMoldByPredictedClassId(classIdNum);
     if (!mold) return sendError(res, "Failed to retrieve mold", 404);
     return sendSuccess(res, normalizeMoldCompatibility(mold));
   } catch (error) {
