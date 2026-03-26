@@ -1,5 +1,6 @@
 import {z} from "zod";
 import {zTimestamp} from "./shared";
+import {MoldStatus} from "../types/models/moldTypes";
 
 const ID_REGEX = /^[A-Za-z0-9_-]+$/;
 
@@ -18,17 +19,18 @@ export const MoldSchema = z.object({
   symptoms: z.array(z.string()).optional(),
   signs: z.array(z.string()).optional(),
   characteristics: z.array(z.string()).optional(),
+  status: z.nativeEnum(MoldStatus).optional(),
   details: z.object({
     info: z.object({
       description: z.string().optional(),
       taxonomy: z.object({
-        kingdom: z.string(),
-        phylum: z.string(),
-        class: z.string(),
-        order: z.string(),
-        family: z.string(),
-        genus: z.string(),
-      }),
+        kingdom: z.string().optional().default(''),
+        phylum: z.string().optional().default(''),
+        class: z.string().optional().default(''),
+        order: z.string().optional().default(''),
+        family: z.string().optional().default(''),
+        genus: z.string().optional().default(''),
+      }).optional().default({}),
       overview: z.string().optional(),
       health_risks: z.string().optional(),
       affected_hosts: z.string().optional(),
@@ -43,15 +45,15 @@ export const MoldSchema = z.object({
       ).optional(),
       predicted_class_id: z.number().optional(),
       predicted_class_name: z.string().optional(),
-    }),
+    }).optional(),
     prevention: z.object({
       physicalControl: z.string().optional(),
       mechanicalControl: z.string().optional(),
       culturalControl: z.string().optional(),
       biologicalControl: z.string().optional(),
       chemicalControl: z.string().optional(),
-    }),
-  }),
+    }).optional(),
+  }).optional(),
 });
 
 export const NameParamSchema = z.object({
