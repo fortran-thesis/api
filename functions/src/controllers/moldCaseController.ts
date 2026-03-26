@@ -2285,7 +2285,13 @@ export const removeCultivationLog = async (req: Request, res: Response) => {
 export const finalizeVerdict = async (req: Request, res: Response) => {
   try {
     const caseId = req.params.id;
-    const {moldId, moldName, confidence, mycologist_notes: mycologistNotes} = req.body;
+    const {
+      moldId,
+      moldName,
+      moldipedia_id: providedMoldipediaId,
+      confidence,
+      mycologist_notes: mycologistNotes,
+    } = req.body;
 
     // Validate required fields
     // moldId is now optional to support verdicts for predicted classes not in the database
@@ -2310,9 +2316,12 @@ export const finalizeVerdict = async (req: Request, res: Response) => {
 
     // Update the mold case with final verdict
     let matchedWikiMold: any = null;
-    let matchedWikiMoldId: string | undefined;
+    let matchedWikiMoldId: string | undefined =
+      typeof providedMoldipediaId === "string" && providedMoldipediaId.trim()
+        ? providedMoldipediaId.trim()
+        : undefined;
     try {
-      if (moldName && moldName.trim()) {
+      if (!matchedWikiMoldId && moldName && moldName.trim()) {
         const moldipediaResponse = await retrieveAllMoldipedia(10, undefined, moldName.trim());
         const candidates = moldipediaResponse?.snapshot || [];
         if (Array.isArray(candidates) && candidates.length > 0) {
