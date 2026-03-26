@@ -1,5 +1,10 @@
 import {Timestamp} from "firebase-admin/firestore";
 
+export enum MoldStatus {
+  Draft    = 'draft',
+  Reviewed = 'reviewed',
+}
+
 export interface Mold {
   name: string;
   mold_details: MoldDetails;
@@ -7,6 +12,7 @@ export interface Mold {
   signs?: string[];
   characteristics?: string[];
   moldipedia_id?: string;
+  status?: MoldStatus;
 }
 
 export interface MoldDetails {
