@@ -7,6 +7,7 @@ export interface User {
   last_name: string;
   address: string;
   is_banned: boolean;
+  occupation?: string;
 }
 
 export interface UserDetails {

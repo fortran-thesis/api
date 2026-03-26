@@ -87,6 +87,7 @@ export const createUser = async (req: Request, res: Response) => {
       lastName,
       address,
       phoneNumber,
+      occupation,
     }: {
       username: string;
       email: string;
@@ -95,6 +96,7 @@ export const createUser = async (req: Request, res: Response) => {
       lastName: string;
       address: string;
       phoneNumber?: string;
+      occupation?: string;
     } = req.body;
     const process: ApiResponse<string> = await registerUser(
       username,
@@ -103,7 +105,9 @@ export const createUser = async (req: Request, res: Response) => {
       firstName,
       lastName,
       address,
-      phoneNumber
+      phoneNumber,
+      undefined,
+      occupation
     );
     if (!process.success) {
       devLog(process, "REGISTER_USER");
