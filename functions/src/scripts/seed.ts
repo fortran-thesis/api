@@ -24,6 +24,27 @@ const SEED_USERS = [
     role: Role.CURATOR,
     address: "456 Lab Ave",
     username: "Myco",
+    occupation: "Mycologist",
+  },
+  {
+    email: "mycologist2@test.local",
+    password: "Test[]1234",
+    firstName: "Dr. Fungal",
+    lastName: "Specialist",
+    role: Role.CURATOR,
+    address: "789 Research Blvd",
+    username: "Fungal",
+    occupation: "Senior Mycologist",
+  },
+  {
+    email: "mycologist3@test.local",
+    password: "Test[]1234",
+    firstName: "Dr. Pathogen",
+    lastName: "Expert",
+    role: Role.CURATOR,
+    address: "321 Diagnostic Lane",
+    username: "Pathogen",
+    occupation: "Pathologist Mycologist",
   },
   {
     email: "farmer@test.local",
@@ -110,16 +131,32 @@ export const seedTestUsers = async () => {
     console.log("│ Role: admin                                     │");
     console.log("└─────────────────────────────────────────────────┘");
 
-    console.log("\n┌─ MYCOLOGIST ────────────────────────────────────┐");
+    console.log("\n┌─ MYCOLOGIST 1 ──────────────────────────────────┐");
     console.log(`│ Username: ${SEED_USERS[1].username}                         │`);
     console.log("│ Password: Test[]1234                              │");
     console.log("│ Role: mycologist (curator)                      │");
+    console.log(`│ Occupation: ${SEED_USERS[1].occupation}                     │`);
+    console.log("└─────────────────────────────────────────────────┘");
+
+    console.log("\n┌─ MYCOLOGIST 2 ──────────────────────────────────┐");
+    console.log(`│ Username: ${SEED_USERS[2].username}                       │`);
+    console.log("│ Password: Test[]1234                              │");
+    console.log("│ Role: mycologist (curator)                      │");
+    console.log(`│ Occupation: ${SEED_USERS[2].occupation}              │`);
+    console.log("└─────────────────────────────────────────────────┘");
+
+    console.log("\n┌─ MYCOLOGIST 3 ──────────────────────────────────┐");
+    console.log(`│ Username: ${SEED_USERS[3].username}                     │`);
+    console.log("│ Password: Test[]1234                              │");
+    console.log("│ Role: mycologist (curator)                      │");
+    console.log(`│ Occupation: ${SEED_USERS[3].occupation}        │`);
     console.log("└─────────────────────────────────────────────────┘");
 
     console.log("\n┌─ FARMER ────────────────────────────────────────┐");
-    console.log(`│ Username: ${SEED_USERS[2].username}                         │`);
+    console.log(`│ Username: ${SEED_USERS[4].username}                         │`);
     console.log("│ Password: Test[]1234                            │");
     console.log("│ Role: farmer (user)                             │");
+    console.log(`│ Occupation: ${SEED_USERS[4].occupation}                    │`);
     console.log("└─────────────────────────────────────────────────┘\n");
 
     console.log("✨ Seed completed successfully!\n");
@@ -752,17 +789,26 @@ if (require.main === module) {
   seedTestUsers()
     .then(async (users) => {
       const farmer = users.find((u) => u.role === Role.USER);
-      const mycologist = users.find((u) => u.role === Role.CURATOR);
+      const mycologists = users.filter((u) => u.role === Role.CURATOR);
       const admin = users.find((u) => u.role === Role.ADMIN);
 
-      if (farmer) {
-        await seedMoldReports(farmer.uid, mycologist?.uid);
+      if (farmer && mycologists.length > 0) {
+        // Distribute in-progress cases among all mycologists
+        // Randomly assign to one of the available mycologists
+        const assignedMycologist = mycologists[Math.floor(Math.random() * mycologists.length)];
+
+        // Seed mold reports with randomly selected mycologist
+        await seedMoldReports(farmer.uid, assignedMycologist.uid);
+
+        console.log(`\n✅ In-progress cases assigned to mycologist: ${assignedMycologist.uid}`);
+        console.log(`   Total available mycologists: ${mycologists.length} (Myco, Fungal, Pathogen)`);
       } else {
-        console.warn("⚠️  No farmer user found — skipping mold reports seed.");
+        console.warn("⚠️  No farmer or mycologist users found — skipping mold reports seed.");
       }
 
-      if (mycologist) {
-        await seedMoldipedia(mycologist.uid);
+      if (mycologists.length > 0) {
+        // Seed Moldipedia with the first mycologist
+        await seedMoldipedia(mycologists[0].uid);
       } else {
         console.warn("⚠️  No mycologist user found — skipping Moldipedia seed.");
       }
