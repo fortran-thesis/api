@@ -424,8 +424,10 @@ export const getMoldReportCountsController = async (
   res: Response
 ) => {
   try {
-    // If user is admin, show all counts. Otherwise, filter by userId
-    const userId = req.user?.user.role === "admin" ? undefined : req.user?.id;
+    // Show all counts for admins and mycologists (they need system-wide visibility)
+    // Farmers only see their own reports
+    const userRole = req.user?.user.role?.toLowerCase() || "";
+    const userId = userRole === "admin" || userRole === "mycologist" ? undefined : req.user?.id;
 
     const counts = await getMoldReportStatusCounts(userId);
     if (!counts) {
@@ -1395,6 +1397,7 @@ export const assignReport = async (req: Request, res: Response) => {
 
     // Check if this is a reassignment (already in progress) or new assignment (pending)
     const isReassignment = current.status === "in progress" && !!current.assigned_mycologist_id;
+    const previousMycologistId = current.assigned_mycologist_id;
 
     // For new assignments, check status transition
     if (!isReassignment && !canTransitionStatus(current.status, "in progress")) {
@@ -1458,6 +1461,18 @@ export const assignReport = async (req: Request, res: Response) => {
         } as Partial<MoldCase>);
         devLog(`[assignReport] ${isReassignment ? "Reassigned" : "Repaired"} MoldCase ownership/assignee for report=${id}`);
       }
+    }
+
+    // Send unassignment notification to the previous mycologist if reassigning
+    if (isReassignment && previousMycologistId && previousMycologistId !== details.assigned_mycologist_id) {
+      await createBatchNotifications(
+        [{recipientId: previousMycologistId}],
+        NotificationType.MOLD_REPORT_UNASSIGNED,
+        {case_name: updated.case_name ?? ""},
+        id,
+        "mold_report"
+      );
+      devLog(`[assignReport] Sent unassignment notification to previous mycologist ${previousMycologistId}`);
     }
 
     return sendSuccess(res, updated);

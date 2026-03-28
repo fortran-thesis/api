@@ -2436,11 +2436,127 @@ export const getMoldCasesByMoldipediaId = async (req: Request, res: Response) =>
    */
   try {
     const {id} = req.params;
+    const includeEvidence = ["1", "true", "yes", "on"].includes(
+      String(req.query.includeEvidence || "").toLowerCase()
+    );
+
     const cases = await retrieveMoldCasesByMoldipediaId(id);
     if (!cases) {
       return sendError(res, "No cases found for this moldipedia article", 404);
     }
-    return sendSuccess(res, cases);
+
+    const toMillis = (value: any): number => {
+      if (!value) return 0;
+      if (value instanceof Timestamp) return value.toDate().getTime();
+      if (typeof value === "object" && typeof value.toDate === "function") {
+        return value.toDate().getTime();
+      }
+      if (typeof value === "object" && typeof value._seconds === "number") {
+        return value._seconds * 1000;
+      }
+      if (typeof value === "string" || typeof value === "number") {
+        const d = new Date(value);
+        return isNaN(d.getTime()) ? 0 : d.getTime();
+      }
+      return 0;
+    };
+
+    const normalizeLogType = (value: unknown): string =>
+      String(value || "")
+        .toLowerCase()
+        .replace(/[\s_-]+/g, "");
+
+    const toTextList = (value: unknown): string[] => {
+      if (Array.isArray(value)) {
+        return value
+          .map((item) => String(item || "").trim())
+          .filter((item) => item.length > 0);
+      }
+
+      const text = String(value || "").trim();
+      return text.length > 0 ? [text] : [];
+    };
+
+    const sortedCases = [...cases].sort((a: any, b: any) => {
+      const aVerdict = toMillis(a?.final_verdict?.verdict_timestamp);
+      const bVerdict = toMillis(b?.final_verdict?.verdict_timestamp);
+      if (aVerdict !== bVerdict) return bVerdict - aVerdict;
+
+      const aCreated = toMillis(a?.metadata?.created_at);
+      const bCreated = toMillis(b?.metadata?.created_at);
+      return bCreated - aCreated;
+    });
+
+    if (!includeEvidence) {
+      return sendSuccess(res, sortedCases);
+    }
+
+    const enrichedCases = await Promise.all(
+      sortedCases.map(async (entry: any) => {
+        const caseId = String(entry?.id || "").trim();
+
+        let logs: any[] = [];
+        if (caseId.length > 0) {
+          const logsResult = await getCultivationLogsFromCase(caseId, 50);
+          logs = Array.isArray(logsResult?.snapshot) ? logsResult!.snapshot : [];
+        }
+
+        const latestByType = (type: "vivo" | "vitro") => {
+          const matches = logs
+            .filter((log: any) => {
+              const normalized = normalizeLogType(log?.type);
+              if (type === "vivo") return normalized === "vivo" || normalized === "invivo";
+              return normalized === "vitro" || normalized === "invitro";
+            })
+            .sort((a: any, b: any) => {
+              const aTs = toMillis(a?.created_at ?? a?.metadata?.created_at);
+              const bTs = toMillis(b?.created_at ?? b?.metadata?.created_at);
+              return bTs - aTs;
+            });
+
+          return matches.length > 0 ? matches[0] : null;
+        };
+
+        const initial = (entry?.cultivation_details && typeof entry.cultivation_details === "object")
+          ? entry.cultivation_details
+          : {};
+
+        const initialSummary = {
+          symptoms: toTextList(initial.initial_symptoms || initial.initial_macroscopic_symptoms),
+          characteristics: toTextList(initial.initial_characteristics || initial.initial_macroscopic_characteristics),
+          microscopic: String(initial.initial_microscopic || "").trim(),
+          macroscopic: String(initial.initial_macroscopic || "").trim(),
+        };
+
+        const vivo = latestByType("vivo");
+        const vitro = latestByType("vitro");
+
+        const evidenceSummary = {
+          initial: initialSummary,
+          in_vivo: {
+            characteristics: (vivo?.characteristics && typeof vivo.characteristics === "object") ? vivo.characteristics : {},
+            observed_at: vivo?.created_at ?? vivo?.metadata?.created_at ?? null,
+          },
+          in_vitro: {
+            characteristics: (vitro?.characteristics && typeof vitro.characteristics === "object") ? vitro.characteristics : {},
+            observed_at: vitro?.created_at ?? vitro?.metadata?.created_at ?? null,
+          },
+          rationale_notes: String(entry?.final_verdict?.mycologist_notes || "").trim() || null,
+          threshold: {
+            type: "global",
+            value: 70,
+          },
+        };
+
+        return {
+          ...entry,
+          cultivation_logs: logs,
+          evidence_summary: evidenceSummary,
+        };
+      })
+    );
+
+    return sendSuccess(res, enrichedCases);
   } catch (error) {
     devLog(error);
     return defaultError(res);

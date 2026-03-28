@@ -22,7 +22,7 @@ services:
       - THESIS_FIREBASE_CLIENT_API=http://firebase-emulator:9099/identitytoolkit.googleapis.com/v1/accounts
       - MAIN_PROJECT_API_KEY=fake-dev-key
       # Override .env.dev value — inside Docker, reach the model-api service by its name
-      - MODEL_LAMBDA_URL=http://model-api:8080
+      - MODEL_LAMBDA_URL=http://model-api:8080/
     depends_on:
       - firebase-emulator
       - redis
