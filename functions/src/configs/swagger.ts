@@ -28,11 +28,10 @@ const options = {
       schemas: swaggerSchemas,
     },
   },
-  apis: [
-    process.env.NODE_ENV === "production" ?
-      "./lib/controllers/*.js" :
-      "./src/controllers/*.ts",
-  ], // Path to your API files
+  apis: process.env.NODE_ENV === "production" ?
+    ["./lib/swagger/*.js", "./lib/controllers/*.js"] :
+    ["./src/swagger/*.ts", "./src/controllers/*.ts"],
+  // Path to your API files
 };
 
 export const swaggerSpec = swaggerJsdoc(options);

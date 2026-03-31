@@ -62,7 +62,7 @@ export const AssignMoldReportSchema = z.object({
     // Must be at least 3 working days from today
     const MIN_WORKING_DAYS = 3;
     let workingDaysFromNow = 0;
-    let checkDate = new Date(today);
+    const checkDate = new Date(today);
 
     while (workingDaysFromNow < MIN_WORKING_DAYS) {
       checkDate.setDate(checkDate.getDate() + 1);

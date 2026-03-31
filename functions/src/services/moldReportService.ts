@@ -152,7 +152,7 @@ export const addMoldReportToFirestore = async (
     const {case_details: _omitted, ...parentFields} = details;
     const detailsWithMetadata: WithMetadata<Omit<MoldReport, "case_details">> = {
       ...parentFields,
-      case_name: caseName,  // Use the auto-generated or provided case_name
+      case_name: caseName, // Use the auto-generated or provided case_name
       date_observed: dateObservedTimestamp,
       metadata: {
         created_at: Timestamp.now(),
