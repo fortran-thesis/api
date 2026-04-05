@@ -86,7 +86,9 @@ describe("authController (unit)", () => {
         userData.firstName,
         userData.lastName,
         userData.address,
-        userData.phoneNumber
+        userData.phoneNumber,
+        undefined,
+        undefined
       );
       expect(mockResponseUtils.sendSuccess).toHaveBeenCalledWith(
         mockRes,
@@ -122,7 +124,9 @@ describe("authController (unit)", () => {
         userData.firstName,
         userData.lastName,
         userData.address,
-        userData.phoneNumber
+        userData.phoneNumber,
+        undefined,
+        undefined
       );
       expect(mockResponseUtils.sendError).toHaveBeenCalledWith(
         mockRes,

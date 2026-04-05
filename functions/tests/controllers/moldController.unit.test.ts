@@ -84,10 +84,12 @@ describe("moldController (unit)", () => {
       expect(mockMoldService.addMoldToFirestore).toHaveBeenCalledWith({
         name: "Test Mold",
         mold_details: moldDetails,
+        status: "draft",
       });
       expect(mockMoldService.addMoldToFirestore).toHaveBeenCalledWith({
         name: "Test Mold",
         mold_details: moldDetails,
+        status: "draft",
       });
       // Audit logging handled by middleware, not checked here
       expect(mockResponseUtils.sendSuccess).toHaveBeenCalledWith(
@@ -383,7 +385,10 @@ describe("moldController (unit)", () => {
 
       expect(mockMoldService.updateMoldInFirestore).toHaveBeenCalledWith(
         moldId,
-        updateData
+        {
+          ...updateData,
+          status: "draft",
+        }
       );
       expect(mockResponseUtils.sendSuccess).toHaveBeenCalledWith(
         mockRes,
@@ -464,7 +469,10 @@ describe("moldController (unit)", () => {
 
       expect(mockMoldService.updateMoldInFirestore).toHaveBeenCalledWith(
         moldId,
-        updateData
+        {
+          ...updateData,
+          status: "draft",
+        }
       );
       expect(mockResponseUtils.sendError).toHaveBeenCalledWith(
         mockRes,

@@ -12,6 +12,8 @@ const mockDocumentToJson = jest.fn() as jest.MockedFunction<any>;
 const mockQueryToJson = jest.fn() as jest.MockedFunction<any>;
 const mockGetAuthUserById = jest.fn() as jest.MockedFunction<any>;
 const mockGetAuthUsersByIds = jest.fn() as jest.MockedFunction<any>;
+const mockGenerateNextDailyCaseName = jest.fn() as jest.MockedFunction<any>;
+const mockInvalidateAllLists = jest.fn() as jest.MockedFunction<any>;
 
 jest.mock("../../../src/repositories/moldReportRepository", () => ({
   addMoldReport: (...args: any[]) => mockAddMoldReport(...args),
@@ -22,6 +24,7 @@ jest.mock("../../../src/repositories/moldReportRepository", () => ({
   countReportsByStatuses: (...args: any[]) =>
     mockCountReportsByStatuses(...args),
   countTotalReports: () => mockCountTotalReports(),
+  generateNextDailyCaseName: (...args: any[]) => mockGenerateNextDailyCaseName(...args),
 }));
 jest.mock("../../../src/lib/firestore", () => ({
   documentToJson: (...args: any[]) => mockDocumentToJson(...args),
@@ -30,6 +33,13 @@ jest.mock("../../../src/lib/firestore", () => ({
 jest.mock("../../../src/lib/auth", () => ({
   getAuthUserById: (...args: any[]) => mockGetAuthUserById(...args),
   getAuthUsersByIds: (...args: any[]) => mockGetAuthUsersByIds(...args),
+}));
+jest.mock("../../../src/utils/cacheManager", () => ({
+  invalidateAllLists: (...args: any[]) => mockInvalidateAllLists(...args),
+  cacheItem: jest.fn(),
+  getCachedItem: jest.fn(),
+  cacheList: jest.fn(),
+  getCachedList: jest.fn(),
 }));
 jest.mock("../../../src/utils/dev");
 const mockFindAllCaseDetailsByReportId = jest.fn() as jest.MockedFunction<any>;
@@ -53,6 +63,8 @@ jest.mock("../../../src/configs/redis", () => ({
 describe("moldReportService (unit)", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockGenerateNextDailyCaseName.mockResolvedValue("CASE-2026-001");
+    mockInvalidateAllLists.mockResolvedValue(undefined);
   });
 
   describe("addMoldReportToFirestore", () => {

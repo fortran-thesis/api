@@ -236,6 +236,7 @@ export const createMoldReport = async (req: Request, res: Response) => {
             "mold_report"
           );
         }
+        return undefined;
       })
       .catch((err) => {
         devLog(`[createMoldReport] ⚠️ Failed to notify admins: ${err}`);

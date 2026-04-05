@@ -907,7 +907,7 @@ export const getMoldReportMonthlyTotals = async (year?: number): Promise<Array<{
       const endTimestamp = Timestamp.fromDate(endDate);
 
       return countReportsByDateRange(startTimestamp, endTimestamp).then((count) => ({
-        month: startDate.toLocaleString("default", {month: "long", year: "numeric"}),
+        month: startDate.toLocaleString("en-US", {month: "long", year: "numeric"}),
         total: count ?? 0,
       }));
     });
