@@ -11,6 +11,8 @@
  * - DELETE /api/v1/moldipedia/soft/:id (Admin)
  */
 import {describe, it, expect, beforeAll, afterAll} from "@jest/globals";
+import {getFirestore} from "firebase-admin/firestore";
+import {firebase} from "../../src/configs/firebase";
 import {
   getTestAgent,
   apiPath,
@@ -180,6 +182,96 @@ describe("Moldipedia Integration Tests", () => {
       const res = await agent.get(apiPath("/v1/moldipedia/nonexistent1234567"));
 
       expect(res.body.success).toBe(false);
+    });
+  });
+
+  describe("GET /api/v1/moldipedia/:id/cases", () => {
+    let linkedCaseId: string;
+
+    beforeAll(async () => {
+      linkedCaseId = await seedDocument("mold_cases", {
+        user_id: regularUser.uid,
+        mycologist_id: curatorUser.uid,
+        name: "Linked Evidence Case",
+        mold_report_id: "report-linked-evidence",
+        priority: "medium",
+        start_date: new Date(),
+        end_date: new Date(),
+        is_archived: true,
+        cultivation_details: {
+          growth_medium: "PDA",
+          initial_symptoms: ["Leaf spots"],
+          initial_characteristics: ["Powdery surface"],
+          initial_microscopic: "Septate hyphae observed",
+          initial_macroscopic: "Dark olive colonies",
+        },
+        final_verdict: {
+          moldId: "mold-123",
+          moldName: "Alternaria",
+          confidence: 82,
+          moldipedia_id: seededArticleId,
+          mycologist_notes: "Matched by morphology and growth pattern",
+          verdict_timestamp: new Date(),
+        },
+      });
+
+      const db = getFirestore(firebase);
+      await db
+        .collection("mold_cases")
+        .doc(linkedCaseId)
+        .collection("cultivation_logs")
+        .add({
+          type: "vivo",
+          image_url: "",
+          characteristics: {
+            lesion_color: "brown",
+            lesion_size: 2,
+            symptoms: ["Necrotic margins"],
+          },
+          additional_info: "Progressive lesion growth",
+          metadata: {
+            created_at: new Date(),
+            updated_at: null,
+            deleted_at: null,
+          },
+        });
+    });
+
+    it("should include evidence_summary and cultivation logs when includeEvidence=true", async () => {
+      const agent = getTestAgent();
+      const res = await agent
+        .get(apiPath(`/v1/moldipedia/${seededArticleId}/cases`))
+        .set("Authorization", `Bearer ${regularUser.token}`)
+        .query({includeEvidence: "true"})
+        .expect("Content-Type", /json/);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(Array.isArray(res.body.data)).toBe(true);
+
+      const matched = res.body.data.find((entry: any) => entry.id === linkedCaseId);
+      expect(matched).toBeDefined();
+      expect(matched.evidence_summary).toBeDefined();
+      expect(matched.evidence_summary.threshold.value).toBe(70);
+      expect(matched.evidence_summary.initial.microscopic).toBe("Septate hyphae observed");
+      expect(Array.isArray(matched.cultivation_logs)).toBe(true);
+      expect(matched.cultivation_logs.length).toBeGreaterThan(0);
+    });
+
+    it("should keep backward-compatible shape without evidence_summary by default", async () => {
+      const agent = getTestAgent();
+      const res = await agent
+        .get(apiPath(`/v1/moldipedia/${seededArticleId}/cases`))
+        .set("Authorization", `Bearer ${regularUser.token}`)
+        .expect("Content-Type", /json/);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(Array.isArray(res.body.data)).toBe(true);
+
+      const matched = res.body.data.find((entry: any) => entry.id === linkedCaseId);
+      expect(matched).toBeDefined();
+      expect(matched.evidence_summary).toBeUndefined();
     });
   });
 

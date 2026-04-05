@@ -36,6 +36,8 @@ export const envOptions = {
   projectApiKey: process.env.MAIN_PROJECT_API_KEY,
   maxSessionAge: 60 * 60 * 24 * 5 * 1000, // 5 days
   // Model proxy (Lambda inference API)
-  lambdaUrl: process.env.MODEL_LAMBDA_URL || "",
+  lambdaUrl:
+    process.env.MODEL_LAMBDA_URL ||
+    (process.env.NODE_ENV === "development" ? "http://model-api:8080" : ""),
   modelInternalKey: process.env.MODEL_INTERNAL_KEY || "",
 };

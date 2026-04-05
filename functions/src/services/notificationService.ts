@@ -94,6 +94,11 @@ const NOTIFICATION_TEMPLATES: Record<NotificationType, TemplateResolver> = {
     };
   },
 
+  [NotificationType.MOLD_REPORT_UNASSIGNED]: (ctx) => ({
+    title: "Case Reassigned",
+    body: `The mold report "${ctx.case_name ?? "Untitled"}" has been reassigned to another mycologist.`,
+  }),
+
   [NotificationType.MOLD_REPORT_REJECTED]: (ctx) => ({
     title: "Report Rejected",
     body: ctx.rejection_reason ?

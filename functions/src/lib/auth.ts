@@ -55,6 +55,7 @@ export const getAuthUserById = async (uid: string): Promise<WithId<APIUser> | nu
         address: firestoreUser.address,
         role: normalizeRole(firestoreUser.role),
         is_banned: firestoreUser.is_banned,
+        occupation: firestoreUser.occupation,
       },
       details: {
         email: user.email,
@@ -141,6 +142,7 @@ export const getAuthUsersByIds = async (
           address: firestoreUser.address,
           role: normalizeRole(firestoreUser.role),
           is_banned: firestoreUser.is_banned,
+          occupation: firestoreUser.occupation,
         },
         details: {
           email: authUser.email,

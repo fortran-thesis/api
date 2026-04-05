@@ -305,3 +305,67 @@ export const countReportsByDateRange = async (
     return null;
   }
 };
+
+/**
+ * Count all mold reports created today (by UTC date).
+ * Used for auto-generating daily sequential case names like MR-YYYY-MM-DD-{n}.
+ * Counts ALL reports regardless of status (no status filter).
+ */
+export const countAllReportsForToday = async (): Promise<number> => {
+  try {
+    const db = getFirestore(firebase);
+    // Get today's midnight UTC boundaries
+    const now = new Date();
+    const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));
+    const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
+
+    const snapshot = await db
+      .collection(collection)
+      .where("metadata.created_at", ">=", Timestamp.fromDate(todayStart))
+      .where("metadata.created_at", "<", Timestamp.fromDate(todayEnd))
+      .count()
+      .get();
+    return snapshot.data().count;
+  } catch (err) {
+    devLog(err);
+    return 0;
+  }
+};
+
+/**
+ * Generate the next daily case name atomically using a Firestore transaction.
+ * Format: MR-YYYY-MM-DD-#### (UTC date basis)
+ */
+export const generateNextDailyCaseName = async (): Promise<string> => {
+  const db = getFirestore(firebase);
+  const now = new Date();
+  const yyyy = now.getUTCFullYear();
+  const mm = String(now.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(now.getUTCDate()).padStart(2, "0");
+
+  const counterDocId = `daily_counter_${yyyy}_${mm}_${dd}`;
+  const counterRef = db.collection("meta").doc(counterDocId);
+
+  const nextCount = await db.runTransaction(async (transaction) => {
+    const counterSnap = await transaction.get(counterRef);
+    const currentCount = counterSnap.exists ? Number(counterSnap.data()?.count || 0) : 0;
+    const incrementedCount = currentCount + 1;
+
+    transaction.set(
+      counterRef,
+      {
+        count: incrementedCount,
+        date_key: `${yyyy}-${mm}-${dd}`,
+        metadata: {
+          updated_at: Timestamp.now(),
+          created_at: counterSnap.exists ? (counterSnap.data()?.metadata?.created_at || Timestamp.now()) : Timestamp.now(),
+        },
+      },
+      {merge: true}
+    );
+
+    return incrementedCount;
+  });
+
+  return `MR-${yyyy}-${mm}-${dd}-${String(nextCount).padStart(4, "0")}`;
+};

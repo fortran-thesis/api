@@ -13,6 +13,7 @@ import {
   updateMoldInFirestore,
 } from "../services/moldService";
 import {Mold, MoldDetails, PaginatedResult, WithId} from "../types/types";
+import {MoldStatus} from "../types/models/moldTypes";
 
 /**
  * @swagger
@@ -421,16 +422,33 @@ export const createMold = async (req: Request, res: Response) => {
     const signs: string[] | undefined = req.body.signs;
     const characteristics: string[] | undefined = req.body.characteristics;
 
-    const enrichedDetails: MoldDetails = details.info ?
+    const rawDetails = req.body.details;
+    const defaultDetails: MoldDetails = {
+      info: {
+        description: '',
+        taxonomy: { kingdom: '', phylum: '', class: '', order: '', family: '', genus: '' },
+        additional_info: [],
+      },
+      prevention: {
+        physicalControl: '', mechanicalControl: '', culturalControl: '',
+        biologicalControl: '', chemicalControl: '',
+      },
+    };
+    const detailsToUse: MoldDetails = rawDetails ?? defaultDetails;
+
+    const enrichedDetails: MoldDetails = detailsToUse.info ?
       {
-        ...details,
-        info: enrichMoldInfo(details.info),
+        ...detailsToUse,
+        info: enrichMoldInfo(detailsToUse.info),
       } :
-      details;
+      detailsToUse;
+
+    const status: MoldStatus = req.body.status ?? MoldStatus.Draft;
 
     const payload: Mold = {
       name: moldName,
       mold_details: enrichedDetails,
+      status,
       ...(moldipediaId ? {moldipedia_id: moldipediaId} : {}),
       ...(symptoms ? {symptoms} : {}),
       ...(signs ? {signs} : {}),
@@ -1137,6 +1155,7 @@ export const patchMold = async (req: Request, res: Response) => {
     const symptoms: string[] | undefined = req.body.symptoms;
     const signs: string[] | undefined = req.body.signs;
     const characteristics: string[] | undefined = req.body.characteristics;
+    const status: MoldStatus | undefined = req.body.status;
 
     // Transform request shape { moldName, details, symptoms, signs, characteristics }
     // into Mold shape { name, mold_details, symptoms, signs, characteristics }
@@ -1161,6 +1180,14 @@ export const patchMold = async (req: Request, res: Response) => {
     }
     if (characteristics) {
       moldPayload.characteristics = characteristics;
+    }
+
+    // Auto-reset status to Draft when content changes (invalidates reviewed state)
+    // Only preserve explicit status updates if no content is changing
+    if (moldName !== undefined || details !== undefined) {
+      moldPayload.status = MoldStatus.Draft;
+    } else if (status !== undefined) {
+      moldPayload.status = status;
     }
 
     const mold = await updateMoldInFirestore(id, moldPayload);

@@ -26,6 +26,9 @@ import {performMoldLookup} from "../services/lookupService";
 import {createLog} from "../utils/logging";
 import {AuditAction, Role} from "../types/enums";
 import {getCombinedTotalCounts, getMoldCasePriorityBreakdown, addMoldCaseToFirestore, retrieveMoldCaseByReportId, updateMoldCaseInFirestore} from "../services/moldCaseService";
+import {createBatchNotifications} from "../services/notificationService";
+import {getAdminUserIds} from "../services/userService";
+import {NotificationType} from "../types/models/notificationTypes";
 import {Timestamp} from "firebase-admin/firestore";
 
 type MoldReportLifecycleStatus = MoldReport["status"];
@@ -224,12 +227,9 @@ export const createMoldReport = async (req: Request, res: Response) => {
 
     devLog("[createMoldReport] After destructure - details.location:", details.location);
     devLog("[createMoldReport] Extracted user_id from auth:", userId);
-    devLog(`[createMoldReport] Received ${photos?.length || 0} photos, case_name=${details.case_name}`);
+    devLog(`[createMoldReport] Received ${photos?.length || 0} photos`);
 
     // Validate required fields
-    if (!details.case_name || !details.case_name.trim()) {
-      return sendError(res, "case_name is required", 400);
-    }
     if (!details.host || !details.host.trim()) {
       return sendError(res, "host (crop name) is required", 400);
     }
@@ -354,6 +354,24 @@ export const createMoldReport = async (req: Request, res: Response) => {
     }
 
     req.auditTargetId = (moldReport as any).id || "";
+
+    // Fire-and-forget: notify all admins of the new mold report
+    getAdminUserIds()
+      .then((adminIds) => {
+        if (adminIds.length > 0) {
+          return createBatchNotifications(
+            adminIds.map((id) => ({recipientId: id})),
+            NotificationType.MOLD_REPORT_CREATED,
+            {case_name: (moldReport as any).case_name},
+            (moldReport as any).id,
+            "mold_report"
+          );
+        }
+      })
+      .catch((err) => {
+        devLog(`[createMoldReport] ⚠️ Failed to notify admins: ${err}`);
+      });
+
     return sendSuccess(res, moldReport);
   } catch (error) {
     devLog("[createMoldReport] ❌ Error: " + error);
@@ -406,8 +424,10 @@ export const getMoldReportCountsController = async (
   res: Response
 ) => {
   try {
-    // If user is admin, show all counts. Otherwise, filter by userId
-    const userId = req.user?.user.role === "admin" ? undefined : req.user?.id;
+    // Show all counts for admins and mycologists (they need system-wide visibility)
+    // Farmers only see their own reports
+    const userRole = req.user?.user.role?.toLowerCase() || "";
+    const userId = userRole === "admin" || userRole === "mycologist" ? undefined : req.user?.id;
 
     const counts = await getMoldReportStatusCounts(userId);
     if (!counts) {
@@ -1374,14 +1394,23 @@ export const assignReport = async (req: Request, res: Response) => {
 
     const current = await retrieveMoldReportById(id);
     if (!current) return sendError(res, "Mold report not found", 404);
-    if (!canTransitionStatus(current.status, "in progress")) {
+
+    // Check if this is a reassignment (already in progress) or new assignment (pending)
+    const isReassignment = current.status === "in progress" && !!current.assigned_mycologist_id;
+    const previousMycologistId = current.assigned_mycologist_id;
+
+    // For new assignments, check status transition
+    if (!isReassignment && !canTransitionStatus(current.status, "in progress")) {
       return sendError(res, `Cannot assign report with status '${current.status}'`, 409);
     }
-    if (current.assigned_mycologist_id) {
-      return sendError(res, "Report is already assigned", 409);
+
+    // Check capacity: mycologist must have fewer than 3 active cases
+    const currentCount = await getAssignedReportsCount(details.assigned_mycologist_id);
+    if (currentCount !== null && currentCount >= 3) {
+      return sendError(res, "Mycologist has reached maximum case capacity (3)", 409);
     }
 
-    const normalizedStatus: MoldReport["status"] = "in progress";
+    const normalizedStatus: MoldReport["status"] = isReassignment ? current.status : "in progress";
 
     const casePriority = ((current as any).priority as "low" | "medium" | "high" | undefined) ?? "low";
 
@@ -1422,15 +1451,28 @@ export const assignReport = async (req: Request, res: Response) => {
       const needsMycologistRepair = existingCase.mycologist_id !== details.assigned_mycologist_id;
       const needsEndDateRepair = !!details.end_date && !existingCase.end_date;
       const needsPhotoRepair = !!casePhotoUrl && !existingCase.photo_url;
-      if (needsOwnerRepair || needsMycologistRepair || needsEndDateRepair || needsPhotoRepair) {
+      // For reassignments, always update mycologist_id even if it was already set
+      if (needsOwnerRepair || needsMycologistRepair || needsEndDateRepair || needsPhotoRepair || isReassignment) {
         await updateMoldCaseInFirestore(existingCaseId, {
           user_id: reportOwnerId,
           mycologist_id: details.assigned_mycologist_id,
           end_date: details.end_date,
           ...(needsPhotoRepair ? {photo_url: casePhotoUrl} : {}),
         } as Partial<MoldCase>);
-        devLog(`[assignReport] Repaired MoldCase ownership/assignee for report=${id}`);
+        devLog(`[assignReport] ${isReassignment ? "Reassigned" : "Repaired"} MoldCase ownership/assignee for report=${id}`);
       }
+    }
+
+    // Send unassignment notification to the previous mycologist if reassigning
+    if (isReassignment && previousMycologistId && previousMycologistId !== details.assigned_mycologist_id) {
+      await createBatchNotifications(
+        [{recipientId: previousMycologistId}],
+        NotificationType.MOLD_REPORT_UNASSIGNED,
+        {case_name: updated.case_name ?? ""},
+        id,
+        "mold_report"
+      );
+      devLog(`[assignReport] Sent unassignment notification to previous mycologist ${previousMycologistId}`);
     }
 
     return sendSuccess(res, updated);

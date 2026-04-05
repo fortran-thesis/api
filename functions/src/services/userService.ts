@@ -59,6 +59,7 @@ export const retrieveAllUsers = async (
           address: firestoreUser.address,
           role: normalizeRole(firestoreUser.role),
           is_banned: firestoreUser.is_banned,
+          occupation: firestoreUser.occupation,
         },
         details: {
           email: authUser?.email ?? "",
@@ -126,6 +127,7 @@ export const retrieveUsersByRole = async (
           address: firestoreUser.address,
           role: normalizeRole(firestoreUser.role),
           is_banned: firestoreUser.is_banned,
+          occupation: firestoreUser.occupation,
         },
         details: {
           email: authUser?.email ?? "",
@@ -351,6 +353,7 @@ export const searchAndFilterUsers = async (
           address: firestoreUser.address,
           role: normalizeRole(firestoreUser.role),
           is_banned: firestoreUser.is_banned,
+          occupation: firestoreUser.occupation,
         },
         details: {
           email: authUser?.email ?? "",
@@ -408,5 +411,21 @@ export const searchAndFilterUsers = async (
   } catch (error) {
     devLog(error);
     return null;
+  }
+};
+
+/**
+ * Fetch all admin user IDs for notification purposes.
+ * @returns Array of admin user IDs
+ */
+export const getAdminUserIds = async (): Promise<string[]> => {
+  try {
+    const result = await findUsersByRole(Role.ADMIN, 500); // 500 is a safe ceiling for admin count
+    if (!result || !result.snapshot) return [];
+    const firestoreList: WithId<User>[] = queryToJson<User>(result.snapshot);
+    return firestoreList.map((user) => user.id);
+  } catch (error) {
+    devLog(error);
+    return [];
   }
 };

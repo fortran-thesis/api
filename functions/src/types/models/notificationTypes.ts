@@ -9,6 +9,7 @@ export enum NotificationType {
   // Mold report lifecycle
   MOLD_REPORT_CREATED = "mold_report_created",
   MOLD_REPORT_ASSIGNED = "mold_report_assigned",
+  MOLD_REPORT_UNASSIGNED = "mold_report_unassigned",
   MOLD_REPORT_REJECTED = "mold_report_rejected",
   MOLD_REPORT_RESOLVED = "mold_report_resolved",
   CASE_DETAIL_ADDED = "case_detail_added",

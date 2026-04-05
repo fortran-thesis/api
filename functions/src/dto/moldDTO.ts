@@ -1,5 +1,6 @@
 import {z} from "zod";
 import {zTimestamp} from "./shared";
+import {MoldStatus} from "../types/models/moldTypes";
 
 const ID_REGEX = /^[A-Za-z0-9_-]+$/;
 
@@ -18,17 +19,18 @@ export const MoldSchema = z.object({
   symptoms: z.array(z.string()).optional(),
   signs: z.array(z.string()).optional(),
   characteristics: z.array(z.string()).optional(),
+  status: z.nativeEnum(MoldStatus).optional(),
   details: z.object({
     info: z.object({
       description: z.string().optional(),
       taxonomy: z.object({
-        kingdom: z.string(),
-        phylum: z.string(),
-        class: z.string(),
-        order: z.string(),
-        family: z.string(),
-        genus: z.string(),
-      }),
+        kingdom: z.string().optional().default(''),
+        phylum: z.string().optional().default(''),
+        class: z.string().optional().default(''),
+        order: z.string().optional().default(''),
+        family: z.string().optional().default(''),
+        genus: z.string().optional().default(''),
+      }).optional().default({}),
       overview: z.string().optional(),
       health_risks: z.string().optional(),
       affected_hosts: z.string().optional(),
@@ -43,15 +45,15 @@ export const MoldSchema = z.object({
       ).optional(),
       predicted_class_id: z.number().optional(),
       predicted_class_name: z.string().optional(),
-    }),
+    }).optional(),
     prevention: z.object({
       physicalControl: z.string().optional(),
       mechanicalControl: z.string().optional(),
       culturalControl: z.string().optional(),
       biologicalControl: z.string().optional(),
       chemicalControl: z.string().optional(),
-    }),
-  }),
+    }).optional(),
+  }).optional(),
 });
 
 export const NameParamSchema = z.object({
@@ -95,14 +97,29 @@ export const CultivationDetailsSchema = z.object({
     initial_macroscopic_characteristics: z.string().optional(),
     initial_microscopic_image_url: z.string().optional(),
     initial_macroscopic_image_url: z.string().optional(),
-    date_observation: z.string().optional(),
+    date_observation: zTimestamp.optional(),
     microscopic_ai_snapshot: z.record(z.any()).optional(),
     scanned_microscopic_ids: z.array(z.string()).optional(),
     scanned_macroscopic_ids: z.array(z.string()).optional(),
   }).optional(),
   start_date: zTimestamp.optional(),
   end_date: zTimestamp.optional(),
-});
+}).refine(
+  (data) => {
+    // If both start_date and end_date are provided, start_date must be before end_date
+    if (data.start_date && data.end_date) {
+      const startMs = data.start_date.toMillis?.() || (data.start_date as any).seconds * 1000;
+      const endMs = data.end_date.toMillis?.() || (data.end_date as any).seconds * 1000;
+      return startMs < endMs;
+    }
+    // If only one or neither is provided, validation passes
+    return true;
+  },
+  {
+    message: "start_date must be before end_date",
+    path: ["end_date"],
+  }
+);
 
 export const FinalizeVerdictSchema = z.object({
   // Accept both formats to keep older clients working while standardizing on camelCase.
@@ -111,6 +128,8 @@ export const FinalizeVerdictSchema = z.object({
   moldName: z.string().trim().min(1).optional(),
   mold_id: z.string().trim().min(1).optional(),
   mold_name: z.string().trim().min(1).optional(),
+  moldipedia_id: z.string().trim().min(1).optional(),
+  moldipediaId: z.string().trim().min(1).optional(),
   confidence: z.number().min(0).max(100),
   mycologist_notes: z.string().optional(),
 }).refine((payload) => !!(payload.moldName || payload.mold_name), {
@@ -119,6 +138,7 @@ export const FinalizeVerdictSchema = z.object({
   // moldId is nullable to allow verdicts for predicted classes not in the database
   moldId: payload.moldId ?? payload.mold_id ?? null,
   moldName: payload.moldName ?? payload.mold_name ?? "",
+  moldipedia_id: payload.moldipedia_id ?? payload.moldipediaId,
   confidence: payload.confidence,
   mycologist_notes: payload.mycologist_notes,
 }));

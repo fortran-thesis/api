@@ -22,6 +22,7 @@ import {
   countReportsByAssignedMycologist,
   findMoldReportsBySearch,
   countReportsByDateRange,
+  generateNextDailyCaseName,
 } from "../repositories/moldReportRepository";
 import {
   addCaseDetail as addCaseDetailToSubcollection,
@@ -122,7 +123,14 @@ export const addMoldReportToFirestore = async (
   details: MoldReport
 ): Promise<(MoldReport & {_caseDetailIds?: string[]}) | null> => {
   try {
-    devLog(`addMoldReportToFirestore: Creating report with case_name="${details.case_name}"`);
+    // Auto-generate case_name if not provided
+    let caseName = details.case_name;
+    if (!caseName || caseName.trim() === "") {
+      caseName = await generateNextDailyCaseName();
+      devLog(`addMoldReportToFirestore: Auto-generated case_name="${caseName}"`);
+    } else {
+      devLog(`addMoldReportToFirestore: Creating report with case_name="${caseName}"`);
+    }
 
     // Extract case_details — they will be written to subcollection, not embedded
     const caseDetailsArray = Array.isArray(details.case_details) ?
@@ -144,6 +152,7 @@ export const addMoldReportToFirestore = async (
     const {case_details: _omitted, ...parentFields} = details;
     const detailsWithMetadata: WithMetadata<Omit<MoldReport, "case_details">> = {
       ...parentFields,
+      case_name: caseName,  // Use the auto-generated or provided case_name
       date_observed: dateObservedTimestamp,
       metadata: {
         created_at: Timestamp.now(),
