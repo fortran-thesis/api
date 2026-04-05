@@ -1,8 +1,8 @@
 import {Timestamp} from "firebase-admin/firestore";
 
 export enum MoldStatus {
-  Draft    = 'draft',
-  Reviewed = 'reviewed',
+  Draft = "draft",
+  Reviewed = "reviewed",
 }
 
 export interface Mold {

@@ -24,12 +24,12 @@ export const MoldSchema = z.object({
     info: z.object({
       description: z.string().optional(),
       taxonomy: z.object({
-        kingdom: z.string().optional().default(''),
-        phylum: z.string().optional().default(''),
-        class: z.string().optional().default(''),
-        order: z.string().optional().default(''),
-        family: z.string().optional().default(''),
-        genus: z.string().optional().default(''),
+        kingdom: z.string().optional().default(""),
+        phylum: z.string().optional().default(""),
+        class: z.string().optional().default(""),
+        order: z.string().optional().default(""),
+        family: z.string().optional().default(""),
+        genus: z.string().optional().default(""),
       }).optional().default({}),
       overview: z.string().optional(),
       health_risks: z.string().optional(),
