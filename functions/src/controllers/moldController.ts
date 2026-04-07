@@ -133,6 +133,16 @@ export const createMold = async (req: Request, res: Response) => {
     const characteristics: string[] | undefined = req.body.characteristics;
 
     const rawDetails = req.body.details;
+    // parseMultipartJson can promote details.info/prevention to root and remove
+    // details. Support both payload shapes so create doesn't lose user-entered fields.
+    const promotedDetails: MoldDetails | undefined =
+      (req.body.info && typeof req.body.info === "object") ||
+      (req.body.prevention && typeof req.body.prevention === "object") ?
+        {
+          ...(req.body.info && typeof req.body.info === "object" ? {info: req.body.info} : {}),
+          ...(req.body.prevention && typeof req.body.prevention === "object" ? {prevention: req.body.prevention} : {}),
+        } as MoldDetails :
+        undefined;
     const defaultDetails: MoldDetails = {
       info: {
         description: "",
@@ -144,7 +154,7 @@ export const createMold = async (req: Request, res: Response) => {
         biologicalControl: "", chemicalControl: "",
       },
     };
-    const detailsToUse: MoldDetails = rawDetails ?? defaultDetails;
+    const detailsToUse: MoldDetails = rawDetails ?? promotedDetails ?? defaultDetails;
 
     const enrichedDetails: MoldDetails = detailsToUse.info ?
       {

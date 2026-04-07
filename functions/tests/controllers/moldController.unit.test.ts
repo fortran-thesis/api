@@ -166,6 +166,71 @@ describe("moldController (unit)", () => {
       expect(mockResponseUtils.sendSuccess).toHaveBeenCalledWith(mockRes, mockCreatedMold);
     });
 
+    it("should preserve promoted root info/prevention payloads", async () => {
+      const promotedInfo = {
+        description: "Promoted description",
+        overview: "Promoted overview",
+      };
+      const promotedPrevention = {
+        physicalControl: "Improve airflow",
+        chemicalControl: "Use approved fungicide",
+      };
+
+      const mockCreatedMold = {
+        id: "promoted-mold-id",
+        name: "Promoted Mold",
+        mold_details: {
+          info: promotedInfo,
+          prevention: promotedPrevention,
+        },
+      };
+
+      mockReq.body = {
+        moldName: "Promoted Mold",
+        info: promotedInfo,
+        prevention: promotedPrevention,
+      };
+
+      mockMoldService.addMoldToFirestore.mockResolvedValue(mockCreatedMold as any);
+
+      await moldController.createMold(mockReq as Request, mockRes as Response);
+
+      expect(mockMoldService.addMoldToFirestore).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: "Promoted Mold",
+          mold_details: expect.objectContaining({
+            info: expect.objectContaining({
+              description: "Promoted description",
+              overview: "Promoted overview",
+            }),
+            prevention: expect.objectContaining({
+              physicalControl: "Improve airflow",
+              chemicalControl: "Use approved fungicide",
+            }),
+          }),
+          status: "draft",
+        })
+      );
+
+      expect(mockResponseUtils.sendSuccess).toHaveBeenCalledWith(
+        mockRes,
+        expect.objectContaining({
+          id: "promoted-mold-id",
+          name: "Promoted Mold",
+          mold_details: expect.objectContaining({
+            info: expect.objectContaining({
+              description: "Promoted description",
+              overview: "Promoted overview",
+            }),
+            prevention: expect.objectContaining({
+              physicalControl: "Improve airflow",
+              chemicalControl: "Use approved fungicide",
+            }),
+          }),
+        })
+      );
+    });
+
     it("should handle mold creation failure", async () => {
       const moldDetails = {
         name: "Test Mold",

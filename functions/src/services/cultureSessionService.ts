@@ -60,12 +60,17 @@ const evaluateStatus = (session: CultureSession): CultureSessionStatus => {
   return "incubating";
 };
 
+const isAvailableForLogs = (status: CultureSessionStatus): boolean => {
+  // Ended-early sessions are intentionally completed and must be selectable for logs.
+  return status === "available" || status === "ended_early";
+};
+
 const toSessionItem = (raw: WithId<CultureSession>): CultureSessionItem => {
   const status = evaluateStatus(raw);
   return {
     ...raw,
     status,
-    is_available_for_logs: status === "available",
+    is_available_for_logs: isAvailableForLogs(status),
   };
 };
 

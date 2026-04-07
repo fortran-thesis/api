@@ -50,3 +50,33 @@ export const finalActionLimiter: Partial<Options> = {
   message: "Too many sensitive actions. Please try again later.",
   keyGenerator: genericKeyGenerator,
 };
+
+// Account creation throttling to reduce signup abuse bursts.
+export const registerLimiter: Partial<Options> = {
+  windowMs: 60 * 60 * 1000,
+  max: 15,
+  message: "Too many registration attempts. Please try again later.",
+  keyGenerator: genericKeyGenerator,
+};
+
+// ML prediction endpoints are compute-heavy; apply tighter per-IP limits.
+export const modelPredictionLimiter: Partial<Options> = {
+  windowMs: 10 * 60 * 1000,
+  max: 60,
+  message: "Too many prediction requests. Please try again later.",
+  keyGenerator: genericKeyGenerator,
+};
+
+export const reportCreateLimiter: Partial<Options> = {
+  windowMs: 60 * 60 * 1000,
+  max: 20,
+  message: "Too many reports submitted. Please try again later.",
+  keyGenerator: genericKeyGenerator,
+};
+
+export const flagReportCreateLimiter: Partial<Options> = {
+  windowMs: 60 * 60 * 1000,
+  max: 20,
+  message: "Too many flag reports submitted. Please try again later.",
+  keyGenerator: genericKeyGenerator,
+};

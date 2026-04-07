@@ -499,12 +499,14 @@ export const retrieveUnassignedMoldReports = async (
 export const retrieveAssignedMoldReports = async (
   mycologistId: string,
   limit: number,
-  token?: string
+  token?: string,
+  includeHistory: boolean = false,
 ): Promise<PaginatedResult<MoldReport[]> | null> => {
   try {
     // Build cache key (INCLUDE token for pagination)
     const cacheQuery = {
       mycologistId,
+      includeHistory,
       limit,
       token: token || null,
     };
@@ -517,7 +519,12 @@ export const retrieveAssignedMoldReports = async (
     }
 
     const docs: PaginatedResult<QuerySnapshot> | null =
-      await findReportsByAssignedMycologist(mycologistId, limit, token);
+      await findReportsByAssignedMycologist(
+        mycologistId,
+        limit,
+        includeHistory,
+        token,
+      );
     if (!docs) throw new Error("No mold reports found.");
     const raw = queryToJson<MoldReport>(docs.snapshot);
 

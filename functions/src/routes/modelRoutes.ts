@@ -6,9 +6,11 @@
  * Phase B: adds Firebase Auth ID-token requirement.
  */
 import {Request, Response, Router} from "express";
+import {rateLimit} from "express-rate-limit";
 import {verifyUser} from "../middlewares/verification";
 import {upload} from "../middlewares/upload";
 import {predictJson, predictMultipart, predictWithDetails} from "../controllers/modelController";
+import {modelPredictionLimiter} from "../configs/limit";
 
 const router = Router();
 
@@ -19,6 +21,7 @@ const router = Router();
  */
 router.post(
   "/predict",
+  rateLimit(modelPredictionLimiter),
   verifyUser(),
   async (req: Request, res: Response): Promise<void> => {
     await predictJson(req, res);
@@ -32,6 +35,7 @@ router.post(
  */
 router.post(
   "/predict/multipart",
+  rateLimit(modelPredictionLimiter),
   verifyUser(),
   upload.single("image"),
   async (req: Request, res: Response): Promise<void> => {
@@ -46,6 +50,7 @@ router.post(
  */
 router.post(
   "/predict-with-details",
+  rateLimit(modelPredictionLimiter),
   verifyUser(),
   async (req: Request, res: Response): Promise<void> => {
     await predictWithDetails(req, res);

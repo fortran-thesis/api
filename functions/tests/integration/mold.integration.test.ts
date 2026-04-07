@@ -14,6 +14,7 @@ import {
   createCuratorUser,
   createTestUser,
   seedDocument,
+  getDocument,
   TestUser,
 } from "./helpers";
 
@@ -92,6 +93,55 @@ describe("Mold Catalogue Integration Tests", () => {
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
+    });
+  });
+
+  describe("POST /api/v1/mold", () => {
+    it("should persist nested details fields on create", async () => {
+      const payload = {
+        moldName: "Integration Created Mold",
+        details: {
+          info: {
+            description: "Integration description",
+            overview: "Integration overview",
+          },
+          prevention: {
+            physicalControl: "Dry surfaces",
+            chemicalControl: "Apply treatment",
+          },
+        },
+      };
+
+      const agent = getTestAgent();
+      const res = await agent
+        .post(apiPath("/v1/mold"))
+        .set("Authorization", `Bearer ${adminUser.token}`)
+        .send(payload)
+        .expect("Content-Type", /json/);
+
+      expect([200, 201]).toContain(res.status);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data?.name).toBe(payload.moldName);
+      expect(res.body.data?.mold_details?.info?.description).toBe(
+        payload.details.info.description
+      );
+      expect(res.body.data?.mold_details?.prevention?.physicalControl).toBe(
+        payload.details.prevention.physicalControl
+      );
+
+      const createdId = res.body.data?.id;
+      expect(typeof createdId).toBe("string");
+      expect(createdId.length).toBeGreaterThan(0);
+
+      const storedDoc = await getDocument("molds", createdId);
+      expect(storedDoc.exists).toBe(true);
+      const storedData = storedDoc.data() as any;
+      expect(storedData?.mold_details?.info?.description).toBe(
+        payload.details.info.description
+      );
+      expect(storedData?.mold_details?.prevention?.physicalControl).toBe(
+        payload.details.prevention.physicalControl
+      );
     });
   });
 });

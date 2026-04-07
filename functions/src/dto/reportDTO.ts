@@ -34,7 +34,7 @@ export const MoldReportSchema = z.object({
 });
 
 export const MoldReportUpdateSchema = MoldReportSchema.partial().extend({
-  status: z.enum(["pending", "in progress", "resolved", "rejected"]).optional(),
+  status: z.enum(["pending", "in progress", "resolved", "rejected", "closed"]).optional(),
 });
 
 export const CaseDetailSchema = z.object({
@@ -107,7 +107,7 @@ export const RejectMoldReportSchema = z.object({
 
 export const SearchMoldReportsQuerySchema = z.object({
   search: z.string().optional(),
-  status: z.enum(["pending", "in progress", "resolved", "rejected"]).optional(),
+  status: z.enum(["pending", "in progress", "resolved", "rejected", "closed"]).optional(),
   scope: z.enum(["own", "assigned", "all"]).optional(),
   priority: z.enum(["low", "medium", "high"]).optional(),
   limit: z.string().regex(/^\d+$/).optional(),

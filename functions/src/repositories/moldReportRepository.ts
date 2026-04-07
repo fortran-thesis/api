@@ -15,7 +15,8 @@ import {
 } from "../types/models/firestoreCollections";
 
 const collection = getCollectionName(FirestoreCollection.MOLD_REPORTS);
-const CLOSED_STATUSES = ["rejected"];
+const CLOSED_STATUSES = ["rejected", "closed"];
+const HISTORY_STATUSES = ["resolved", "rejected", "closed"];
 const OPEN_STATUSES = ["pending", "in progress", "resolved"];
 
 export const addMoldReport = async (data: MoldReport) =>
@@ -34,7 +35,7 @@ export const findAllMoldReports = async (
     const queryModifier = (q: FirebaseFirestore.Query) => {
       switch (statusFilter) {
       case "closed":
-        return q.where("status", "==", "rejected");
+        return q.where("status", "in", HISTORY_STATUSES);
       case "rejected":
         return q.where("status", "==", "rejected");
       case "all":
@@ -92,7 +93,7 @@ export const findAllMoldReportsByUser = async (
     const queryModifier = (q: FirebaseFirestore.Query) => {
       let query = q.where("user_id", "==", uid);
       query = isArchived ?
-        query.where("status", "in", CLOSED_STATUSES) :
+        query.where("status", "in", HISTORY_STATUSES) :
         query.where("status", "in", OPEN_STATUSES);
       return query;
     };
@@ -142,16 +143,20 @@ export const findUnassignedMoldReports = async (
 export const findReportsByAssignedMycologist = async (
   mycologistId: string,
   limit: number,
+  includeHistory: boolean = false,
   token?: string
 ): Promise<{
   snapshot: FirebaseFirestore.QuerySnapshot;
   nextPageToken: string | null;
 } | null> => {
   try {
-    const queryModifier = (q: FirebaseFirestore.Query) =>
-      q
-        .where("assigned_mycologist_id", "==", mycologistId)
-        .where("status", "not-in", CLOSED_STATUSES);
+    const queryModifier = (q: FirebaseFirestore.Query) => {
+      var query = q.where("assigned_mycologist_id", "==", mycologistId);
+      query = includeHistory
+        ? query.where("status", "in", HISTORY_STATUSES)
+        : query.where("status", "not-in", CLOSED_STATUSES);
+      return query;
+    };
 
     const paged = await getPaginatedDocuments(
       collection,
@@ -177,7 +182,7 @@ export const deleteMoldReport = async (id: string) =>
   deleteDocument(collection, id);
 export const softDeleteMoldReport = async (id: string) =>
   updateDocument(collection, id, {
-    status: "rejected",
+    status: "closed",
   } as any);
 
 export const findMoldReportsBySearch = async (

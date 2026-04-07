@@ -211,7 +211,7 @@ const MOLD_REPORT_SEED: Array<{
   host: string;
   location: string;
   date_observed: Timestamp;
-  status: "pending" | "in progress" | "resolved" | "rejected";
+  status: "pending" | "in progress" | "resolved" | "rejected" | "closed";
   descriptionIndices: number[];
 }> = [
   {

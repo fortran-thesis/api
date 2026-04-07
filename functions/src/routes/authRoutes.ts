@@ -24,6 +24,7 @@ import {
 import {sanitizeBody} from "../middlewares/sanitation";
 import {
   finalActionLimiter,
+  registerLimiter,
   sendCodeLimiter,
   verifyCodeLimiter,
 } from "../configs/limit";
@@ -36,6 +37,7 @@ const router = Router();
 
 router.post(
   "/register",
+  rateLimit(registerLimiter),
   sanitizeBody,
   validateBody(RegisterSchema),
   cacheInvalidate("users", "create"),

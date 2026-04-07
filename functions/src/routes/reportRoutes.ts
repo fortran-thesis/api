@@ -1,4 +1,5 @@
 import {Router, Request, Response} from "express";
+import {rateLimit} from "express-rate-limit";
 import {verifyUser} from "../middlewares/verification";
 import {
   validateBody,
@@ -18,12 +19,14 @@ import {
   deleteReport,
   softDeleteReport,
 } from "../controllers/reportController";
+import {reportCreateLimiter} from "../configs/limit";
 
 const router = Router();
 
 // Create report
 router.post(
   "/",
+  rateLimit(reportCreateLimiter),
   verifyUser(),
   validateBody(ReportCreateSchema),
   auditLog(AuditAction.CREATE_REPORT, "Reported user"),

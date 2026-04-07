@@ -34,10 +34,11 @@ import {Timestamp} from "firebase-admin/firestore";
 type MoldReportLifecycleStatus = MoldReport["status"];
 
 const ALLOWED_STATUS_TRANSITIONS: Record<MoldReportLifecycleStatus, MoldReportLifecycleStatus[]> = {
-  "pending": ["in progress", "rejected"],
-  "in progress": ["resolved", "rejected"],
-  "resolved": ["rejected", "pending"],
+  "pending": ["in progress", "rejected", "closed"],
+  "in progress": ["resolved", "rejected", "closed"],
+  "resolved": ["rejected", "pending", "closed"],
   "rejected": ["pending"],
+  "closed": ["pending"],
 };
 
 const normalizeStatus = (status: string): MoldReportLifecycleStatus | null => {
@@ -46,6 +47,7 @@ const normalizeStatus = (status: string): MoldReportLifecycleStatus | null => {
   if (trimmed === "pending") return "pending";
   if (trimmed === "resolved") return "resolved";
   if (trimmed === "rejected") return "rejected";
+  if (trimmed === "closed") return "closed";
   return null;
 };
 
@@ -392,10 +394,15 @@ export const getAllClosedMoldReports = async (
     const actor = req.user;
     if (!actor || !uid) return sendError(res, "Unauthorized", 401);
 
-    const result: PaginatedResult<MoldReport[]> | PaginatedResult<Omit<MoldReport, "user_id">[]> | null =
-      actor.user.role === Role.ADMIN ?
-        await retrieveAllMoldReports(limit, true, pageToken) :
-        await retrieveAllMoldReportsByUser(uid, limit, true, pageToken);
+    let result: PaginatedResult<MoldReport[]> | PaginatedResult<Omit<MoldReport, "user_id">[]> | null = null;
+
+    if (actor.user.role === Role.ADMIN) {
+      result = await retrieveAllMoldReports(limit, true, pageToken);
+    } else if (actor.user.role === Role.CURATOR) {
+      result = await retrieveAssignedMoldReports(uid, limit, pageToken, true);
+    } else {
+      result = await retrieveAllMoldReportsByUser(uid, limit, true, pageToken);
+    }
 
     if (!result) return sendError(res, "Failed to retrieve mold reports", 404);
     return sendSuccess(res, result);
@@ -798,7 +805,7 @@ export const softDeleteMoldReport = async (req: Request, res: Response) => {
     const current = await retrieveMoldReportById(id);
     if (!current) return sendError(res, "Mold report not found", 404);
     if (!canAccessReport(req.user, current)) return sendError(res, "Forbidden", 403);
-    if (!canTransitionStatus(current.status, "rejected")) {
+    if (!canTransitionStatus(current.status, "closed")) {
       return sendError(res, `Cannot close report with status '${current.status}'`, 409);
     }
 

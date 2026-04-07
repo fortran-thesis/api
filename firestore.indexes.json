@@ -1,6 +1,15 @@
 {
   "indexes": [
     {
+      "collectionGroup": "culture_sessions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "metadata.deleted_at", "order": "ASCENDING"},
+        {"fieldPath": "metadata.created_at", "order": "DESCENDING"},
+        {"fieldPath": "__name__", "order": "DESCENDING"}
+      ]
+    },
+    {
       "collectionGroup": "mold_reports",
       "queryScope": "COLLECTION",
       "fields": [

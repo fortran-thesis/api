@@ -30,7 +30,7 @@ export interface MoldReport {
   host: string
   location: string
   priority?: "low" | "medium" | "high"
-  status: "pending" | "in progress" | "resolved" | "rejected"
+  status: "pending" | "in progress" | "resolved" | "rejected" | "closed"
   reported_symptoms?: string[];
   reported_signs?: string[];
   reported_characteristics?: string[];

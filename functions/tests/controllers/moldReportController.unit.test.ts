@@ -176,4 +176,73 @@ describe("moldReportController transitions (unit)", () => {
       409
     );
   });
+
+  describe("getAllClosedMoldReports", () => {
+    it("returns both rejected and closed statuses for regular users", async () => {
+      mockReq.user = {
+        id: "farmer-1",
+        user: {
+          role: "farmer",
+        },
+      } as any;
+
+      const payload = {
+        snapshot: [
+          {id: "r-1", status: "rejected", user_id: "farmer-1"},
+          {id: "r-2", status: "closed", user_id: "farmer-1"},
+        ],
+        nextPageToken: null,
+      };
+
+      mockMoldReportService.retrieveAllMoldReportsByUser.mockResolvedValue(payload as any);
+
+      await moldReportController.getAllClosedMoldReports(
+        mockReq as Request,
+        mockRes as Response
+      );
+
+      expect(mockMoldReportService.retrieveAllMoldReportsByUser).toHaveBeenCalledWith(
+        "farmer-1",
+        10,
+        true,
+        undefined
+      );
+      expect(mockResponseUtils.sendSuccess).toHaveBeenCalledWith(mockRes, payload);
+      const statuses = payload.snapshot.map((item) => item.status).sort();
+      expect(statuses).toEqual(["closed", "rejected"]);
+    });
+
+    it("returns closed endpoint payload for admins", async () => {
+      mockReq.user = {
+        id: "admin-1",
+        user: {
+          role: "admin",
+        },
+      } as any;
+
+      const payload = {
+        snapshot: [
+          {id: "r-1", status: "rejected", user_id: "u-1"},
+          {id: "r-2", status: "closed", user_id: "u-2"},
+        ],
+        nextPageToken: null,
+      };
+
+      mockMoldReportService.retrieveAllMoldReports.mockResolvedValue(payload as any);
+
+      await moldReportController.getAllClosedMoldReports(
+        mockReq as Request,
+        mockRes as Response
+      );
+
+      expect(mockMoldReportService.retrieveAllMoldReports).toHaveBeenCalledWith(
+        10,
+        true,
+        undefined
+      );
+      expect(mockResponseUtils.sendSuccess).toHaveBeenCalledWith(mockRes, payload);
+      const statuses = payload.snapshot.map((item) => item.status).sort();
+      expect(statuses).toEqual(["closed", "rejected"]);
+    });
+  });
 });

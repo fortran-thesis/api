@@ -1,4 +1,5 @@
 import {Router} from "express";
+import {rateLimit} from "express-rate-limit";
 import {
   createFlagReport,
   getAllFlagReports,
@@ -20,6 +21,7 @@ import {
 import {PaginationQuerySchema} from "../dto/paginationDTO";
 import {CreateFlagReportSchema, FlagReportIdSchema, UpdateFlagReportSchema} from "../dto/flagReportDTO";
 import {cacheGet, cacheInvalidate} from "../middlewares/cacheMiddleware";
+import {flagReportCreateLimiter} from "../configs/limit";
 
 const router = Router();
 
@@ -27,6 +29,7 @@ const router = Router();
 // Create flag report
 router.post(
   "/",
+  rateLimit(flagReportCreateLimiter),
   verifyUser(),
   validateBody(CreateFlagReportSchema),
   auditLog(AuditAction.CREATE_FLAG_REPORT, "Flagged content"),
