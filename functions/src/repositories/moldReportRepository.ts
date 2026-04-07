@@ -143,7 +143,7 @@ export const findUnassignedMoldReports = async (
 export const findReportsByAssignedMycologist = async (
   mycologistId: string,
   limit: number,
-  includeHistory: boolean = false,
+  includeHistory = false,
   token?: string
 ): Promise<{
   snapshot: FirebaseFirestore.QuerySnapshot;
@@ -151,10 +151,10 @@ export const findReportsByAssignedMycologist = async (
 } | null> => {
   try {
     const queryModifier = (q: FirebaseFirestore.Query) => {
-      var query = q.where("assigned_mycologist_id", "==", mycologistId);
-      query = includeHistory
-        ? query.where("status", "in", HISTORY_STATUSES)
-        : query.where("status", "not-in", CLOSED_STATUSES);
+      let query = q.where("assigned_mycologist_id", "==", mycologistId);
+      query = includeHistory ?
+        query.where("status", "in", HISTORY_STATUSES) :
+        query.where("status", "not-in", CLOSED_STATUSES);
       return query;
     };
 

@@ -500,7 +500,7 @@ export const retrieveAssignedMoldReports = async (
   mycologistId: string,
   limit: number,
   token?: string,
-  includeHistory: boolean = false,
+  includeHistory = false,
 ): Promise<PaginatedResult<MoldReport[]> | null> => {
   try {
     // Build cache key (INCLUDE token for pagination)
