@@ -1,5 +1,10 @@
 import {describe, it, expect} from "@jest/globals";
-import {CultivationDetailsSchema} from "../../../src/dto/moldDTO";
+import {
+  CultivationDetailsSchema,
+  CultureSessionCreateSchema,
+  CultureSessionIdSchema,
+  CultureSessionReassignSchema,
+} from "../../../src/dto/moldDTO";
 
 describe("CultivationDetailsSchema (DTO validation)", () => {
   describe("cultivation_details fields", () => {
@@ -60,6 +65,27 @@ describe("CultivationDetailsSchema (DTO validation)", () => {
         ]);
         expect(result.data.cultivation_details?.initial_characteristics).toEqual(
           ["Cottony", "Powdery"]
+        );
+      }
+    });
+
+    it("should accept initial_signs and initial_signs_csv", () => {
+      const payload = {
+        cultivation_details: {
+          initial_signs: ["Dark sporulation", "Powdery residue"],
+          initial_signs_csv: "Dark sporulation,Powdery residue",
+        },
+      };
+
+      const result = CultivationDetailsSchema.safeParse(payload);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.cultivation_details?.initial_signs).toEqual([
+          "Dark sporulation",
+          "Powdery residue",
+        ]);
+        expect(result.data.cultivation_details?.initial_signs_csv).toBe(
+          "Dark sporulation,Powdery residue"
         );
       }
     });
@@ -160,6 +186,42 @@ describe("CultivationDetailsSchema (DTO validation)", () => {
 
       const result = CultivationDetailsSchema.safeParse(payload);
       expect(result.success).toBe(true);
+    });
+  });
+
+  describe("culture session schemas", () => {
+    it("should accept culture session create payload", () => {
+      const payload = {
+        name: "Culture A",
+        target_at: new Date(Date.now() + 86400000).toISOString(),
+      };
+
+      const result = CultureSessionCreateSchema.safeParse(payload);
+      expect(result.success).toBe(true);
+    });
+
+    it("should reject empty culture session name", () => {
+      const payload = {
+        name: "   ",
+        target_at: new Date(Date.now() + 86400000).toISOString(),
+      };
+
+      const result = CultureSessionCreateSchema.safeParse(payload);
+      expect(result.success).toBe(false);
+    });
+
+    it("should accept reassign payload and culture session params", () => {
+      const reassignPayload = {
+        target_at: new Date(Date.now() + 172800000).toISOString(),
+      };
+
+      const paramsPayload = {
+        id: "abc123_DEF-456",
+        cultureId: "culture_001",
+      };
+
+      expect(CultureSessionReassignSchema.safeParse(reassignPayload).success).toBe(true);
+      expect(CultureSessionIdSchema.safeParse(paramsPayload).success).toBe(true);
     });
   });
 });

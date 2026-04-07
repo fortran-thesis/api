@@ -1760,3 +1760,195 @@
   *       500:
   *         description: Server error
   */
+
+/**
+  * @swagger
+  * /api/v1/mold-case/{id}/culture-sessions:
+  *   get:
+  *     summary: List culture sessions for a mold case
+  *     tags: [MoldCases]
+  *     security:
+  *       - bearerAuth: []
+  *       - cookieAuth: []
+  *     parameters:
+  *       - in: path
+  *         name: id
+  *         required: true
+  *         schema:
+  *           type: string
+  *         description: Mold case ID
+  *       - in: query
+  *         name: limit
+  *         schema:
+  *           type: integer
+  *       - in: query
+  *         name: pageToken
+  *         schema:
+  *           type: string
+  *     responses:
+  *       200:
+  *         description: Culture sessions retrieved successfully
+  *       403:
+  *         description: Forbidden
+  *       404:
+  *         description: Mold case not found
+  *   post:
+  *     summary: Create a culture session for a mold case
+  *     tags: [MoldCases]
+  *     security:
+  *       - bearerAuth: []
+  *       - cookieAuth: []
+  *     parameters:
+  *       - in: path
+  *         name: id
+  *         required: true
+  *         schema:
+  *           type: string
+  *         description: Mold case ID
+  *     requestBody:
+  *       required: true
+  *       content:
+  *         application/json:
+  *           schema:
+  *             type: object
+  *             required:
+  *               - name
+  *               - target_at
+  *             properties:
+  *               name:
+  *                 type: string
+  *               target_at:
+  *                 type: string
+  *                 format: date-time
+  *     responses:
+  *       200:
+  *         description: Culture session created successfully
+  *       403:
+  *         description: Forbidden
+  *       404:
+  *         description: Mold case not found
+  */
+
+/**
+  * @swagger
+  * /api/v1/mold-case/{id}/culture-sessions/available:
+  *   get:
+  *     summary: List only available culture sessions for log assignment
+  *     tags: [MoldCases]
+  *     security:
+  *       - bearerAuth: []
+  *       - cookieAuth: []
+  *     parameters:
+  *       - in: path
+  *         name: id
+  *         required: true
+  *         schema:
+  *           type: string
+  *         description: Mold case ID
+  *     responses:
+  *       200:
+  *         description: Available culture sessions retrieved successfully
+  *       403:
+  *         description: Forbidden
+  *       404:
+  *         description: Mold case not found
+  */
+
+/**
+  * @swagger
+  * /api/v1/mold-case/{id}/culture-sessions/{cultureId}/end-early:
+  *   patch:
+  *     summary: End a culture session early
+  *     tags: [MoldCases]
+  *     security:
+  *       - bearerAuth: []
+  *       - cookieAuth: []
+  *     parameters:
+  *       - in: path
+  *         name: id
+  *         required: true
+  *         schema:
+  *           type: string
+  *       - in: path
+  *         name: cultureId
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       200:
+  *         description: Culture session ended early
+  *       403:
+  *         description: Forbidden
+  *       404:
+  *         description: Mold case or culture session not found
+  */
+
+/**
+  * @swagger
+  * /api/v1/mold-case/{id}/culture-sessions/{cultureId}/reassign:
+  *   patch:
+  *     summary: Reassign culture session target date
+  *     tags: [MoldCases]
+  *     security:
+  *       - bearerAuth: []
+  *       - cookieAuth: []
+  *     parameters:
+  *       - in: path
+  *         name: id
+  *         required: true
+  *         schema:
+  *           type: string
+  *       - in: path
+  *         name: cultureId
+  *         required: true
+  *         schema:
+  *           type: string
+  *     requestBody:
+  *       required: true
+  *       content:
+  *         application/json:
+  *           schema:
+  *             type: object
+  *             required:
+  *               - target_at
+  *             properties:
+  *               target_at:
+  *                 type: string
+  *                 format: date-time
+  *     responses:
+  *       200:
+  *         description: Culture session timer reassigned
+  *       403:
+  *         description: Forbidden
+  *       404:
+  *         description: Mold case or culture session not found
+  */
+
+/**
+  * @swagger
+  * /api/v1/mold-case/{id}/culture-sessions/{cultureId}:
+  *   delete:
+  *     summary: Soft delete a culture session
+  *     tags: [MoldCases]
+  *     security:
+  *       - bearerAuth: []
+  *       - cookieAuth: []
+  *     parameters:
+  *       - in: path
+  *         name: id
+  *         required: true
+  *         schema:
+  *           type: string
+  *       - in: path
+  *         name: cultureId
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       200:
+  *         description: Culture session deleted
+  *       403:
+  *         description: Forbidden
+  *       404:
+  *         description: Mold case or culture session not found
+  */

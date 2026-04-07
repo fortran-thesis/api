@@ -12,6 +12,9 @@ import {
   SearchMoldCasesQuerySchema,
   FinalizeVerdictSchema,
   MoldCaseCreateSchema,
+  CultureSessionCreateSchema,
+  CultureSessionIdSchema,
+  CultureSessionReassignSchema,
 } from "../dto/moldDTO";
 import {ReportIdSchema} from "../dto/reportDTO";
 import {AuditAction, Role} from "../types/enums";
@@ -40,6 +43,12 @@ import {
   getCultivationLogs,
   removeCultivationLog,
   finalizeVerdict,
+  listCultureSessions,
+  listAvailableCultureSessions,
+  createCultureSession,
+  endCultureSessionEarly,
+  reassignCultureSession,
+  deleteCultureSession,
 } from "../controllers/moldCaseController";
 const router = Router();
 
@@ -158,6 +167,62 @@ router.delete(
   validateParams(MoldIdSchema),
   async (req: Request, res: Response) => {
     await removeCultivationLog(req, res);
+  }
+);
+
+router.get(
+  "/:id/culture-sessions",
+  verifyUser(),
+  validateParams(MoldIdSchema),
+  async (req: Request, res: Response) => {
+    await listCultureSessions(req, res);
+  }
+);
+
+router.get(
+  "/:id/culture-sessions/available",
+  verifyUser(),
+  validateParams(MoldIdSchema),
+  async (req: Request, res: Response) => {
+    await listAvailableCultureSessions(req, res);
+  }
+);
+
+router.post(
+  "/:id/culture-sessions",
+  verifyUser(),
+  validateParams(MoldIdSchema),
+  validateBody(CultureSessionCreateSchema),
+  async (req: Request, res: Response) => {
+    await createCultureSession(req, res);
+  }
+);
+
+router.patch(
+  "/:id/culture-sessions/:cultureId/end-early",
+  verifyUser(),
+  validateParams(CultureSessionIdSchema),
+  async (req: Request, res: Response) => {
+    await endCultureSessionEarly(req, res);
+  }
+);
+
+router.patch(
+  "/:id/culture-sessions/:cultureId/reassign",
+  verifyUser(),
+  validateParams(CultureSessionIdSchema),
+  validateBody(CultureSessionReassignSchema),
+  async (req: Request, res: Response) => {
+    await reassignCultureSession(req, res);
+  }
+);
+
+router.delete(
+  "/:id/culture-sessions/:cultureId",
+  verifyUser(),
+  validateParams(CultureSessionIdSchema),
+  async (req: Request, res: Response) => {
+    await deleteCultureSession(req, res);
   }
 );
 

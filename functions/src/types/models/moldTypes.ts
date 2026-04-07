@@ -89,6 +89,8 @@ export interface CultivationDetails {
   specimen_quantities_csv?: string;
   initial_symptoms?: string[];
   initial_symptoms_csv?: string;
+  initial_signs?: string[];
+  initial_signs_csv?: string;
   initial_characteristics?: string[];
   initial_characteristics_csv?: string;
   location_gathered?: string;
@@ -115,4 +117,14 @@ export interface CultivationLog {
     | { lesion_size: number; lesion_color: string }
     | { colony_diameter: number; colony_color: string }; // respective places: vivo | vitro
   additional_info: string;
+}
+
+export type CultureSessionStatus = "incubating" | "available" | "ended_early";
+
+export interface CultureSession {
+  case_id: string;
+  name: string;
+  target_at: Timestamp;
+  ended_at?: Timestamp | null;
+  deleted_at?: Timestamp | null;
 }

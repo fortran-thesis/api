@@ -84,6 +84,8 @@ export const CultivationDetailsSchema = z.object({
     specimen_quantities_csv: z.string().optional(),
     initial_symptoms: z.array(z.string()).optional(),
     initial_symptoms_csv: z.string().optional(),
+    initial_signs: z.array(z.string()).optional(),
+    initial_signs_csv: z.string().optional(),
     initial_characteristics: z.array(z.string()).optional(),
     initial_characteristics_csv: z.string().optional(),
     location_gathered: z.string().optional(),
@@ -161,6 +163,29 @@ export const SearchMoldCasesQuerySchema = z.object({
   pageToken: z.string().optional(),
 });
 
+export const CultureSessionCreateSchema = z.object({
+  name: z
+    .string({required_error: "Culture name is required"})
+    .trim()
+    .min(1, {message: "Culture name is required"}),
+  target_at: zTimestamp,
+});
+
+export const CultureSessionReassignSchema = z.object({
+  target_at: zTimestamp,
+});
+
+export const CultureSessionIdSchema = z.object({
+  id: z
+    .string({required_error: "Mold case ID is required"})
+    .nonempty({message: "Mold case ID is required"})
+    .regex(ID_REGEX, {message: "Mold case ID format is invalid"}),
+  cultureId: z
+    .string({required_error: "Culture session ID is required"})
+    .nonempty({message: "Culture session ID is required"})
+    .regex(ID_REGEX, {message: "Culture session ID format is invalid"}),
+});
+
 // ── Inferred types ───────────────────────────────────────────────────────────
 export type MoldIdParams = z.infer<typeof MoldIdSchema>;
 export type MoldRequest = z.infer<typeof MoldSchema>;
@@ -170,6 +195,9 @@ export type CultivationDetailsRequest = z.infer<typeof CultivationDetailsSchema>
 export type FinalizeVerdictRequest = z.infer<typeof FinalizeVerdictSchema>;
 export type MoldCaseCreateRequest = z.infer<typeof MoldCaseCreateSchema>;
 export type SearchMoldCasesQuery = z.infer<typeof SearchMoldCasesQuerySchema>;
+export type CultureSessionCreateRequest = z.infer<typeof CultureSessionCreateSchema>;
+export type CultureSessionReassignRequest = z.infer<typeof CultureSessionReassignSchema>;
+export type CultureSessionIdParams = z.infer<typeof CultureSessionIdSchema>;
 
 /**
  * Shape of cultivation_details object persisted in mold case.

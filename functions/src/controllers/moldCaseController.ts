@@ -19,6 +19,14 @@ import {
   getCultivationLogsFromCase,
   removeCultivationLogFromCase,
 } from "../services/moldCaseService";
+import {
+  createCultureSessionForCase,
+  deleteCultureSessionForCase,
+  endCultureSessionEarlyForCase,
+  listAvailableCultureSessionsByCase,
+  listCultureSessionsByCase,
+  reassignCultureSessionForCase,
+} from "../services/cultureSessionService";
 import {analyzeCultivationImage} from "../services/cultivationAnalysisService";
 import {uploadFile} from "../lib/storage";
 import {StorageFolder, generateStoragePath} from "../configs/storage";
@@ -573,6 +581,139 @@ export const removeCultivationLog = async (req: Request, res: Response) => {
     }
     const deleted = await removeCultivationLogFromCase(id, logId);
     if (!deleted) return sendError(res, "Mold case or log not found", 404);
+    return sendSuccess(res, {deleted: true});
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
+export const listCultureSessions = async (req: Request, res: Response) => {
+  try {
+    const caseId = req.params.id;
+    const moldCase = await retrieveMoldCaseById(caseId);
+    if (!moldCase) return sendError(res, "Mold case not found", 404);
+
+    const {userId, role} = getActorContext(req);
+    if (!canReadMoldCase(moldCase, userId, role)) {
+      return sendError(res, "Forbidden", 403);
+    }
+
+    const limit = parseInt(req.query.limit as string, 10) || 100;
+    const pageToken = req.query.pageToken as string | undefined;
+    const sessions = await listCultureSessionsByCase(caseId, limit, pageToken);
+    if (!sessions) return sendError(res, "Failed to retrieve culture sessions", 400);
+    return sendSuccess(res, sessions);
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
+export const listAvailableCultureSessions = async (req: Request, res: Response) => {
+  try {
+    const caseId = req.params.id;
+    const moldCase = await retrieveMoldCaseById(caseId);
+    if (!moldCase) return sendError(res, "Mold case not found", 404);
+
+    const {userId, role} = getActorContext(req);
+    if (!canReadMoldCase(moldCase, userId, role)) {
+      return sendError(res, "Forbidden", 403);
+    }
+
+    const sessions = await listAvailableCultureSessionsByCase(caseId);
+    if (sessions === null) return sendError(res, "Failed to retrieve available cultures", 400);
+    return sendSuccess(res, sessions);
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
+export const createCultureSession = async (req: Request, res: Response) => {
+  try {
+    const caseId = req.params.id;
+    const moldCase = await retrieveMoldCaseById(caseId);
+    if (!moldCase) return sendError(res, "Mold case not found", 404);
+
+    const {userId, role} = getActorContext(req);
+    if (!canManageMoldCase(moldCase, userId, role)) {
+      return sendError(res, "Forbidden", 403);
+    }
+
+    const created = await createCultureSessionForCase(caseId, {
+      name: req.body.name,
+      target_at: req.body.target_at,
+    });
+    if (!created) return sendError(res, "Failed to create culture session", 400);
+    return sendSuccess(res, created);
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
+export const endCultureSessionEarly = async (req: Request, res: Response) => {
+  try {
+    const caseId = req.params.id;
+    const cultureId = req.params.cultureId;
+
+    const moldCase = await retrieveMoldCaseById(caseId);
+    if (!moldCase) return sendError(res, "Mold case not found", 404);
+
+    const {userId, role} = getActorContext(req);
+    if (!canManageMoldCase(moldCase, userId, role)) {
+      return sendError(res, "Forbidden", 403);
+    }
+
+    const ended = await endCultureSessionEarlyForCase(caseId, cultureId);
+    if (!ended) return sendError(res, "Culture session not found", 404);
+    return sendSuccess(res, ended);
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
+export const reassignCultureSession = async (req: Request, res: Response) => {
+  try {
+    const caseId = req.params.id;
+    const cultureId = req.params.cultureId;
+
+    const moldCase = await retrieveMoldCaseById(caseId);
+    if (!moldCase) return sendError(res, "Mold case not found", 404);
+
+    const {userId, role} = getActorContext(req);
+    if (!canManageMoldCase(moldCase, userId, role)) {
+      return sendError(res, "Forbidden", 403);
+    }
+
+    const updated = await reassignCultureSessionForCase(caseId, cultureId, {
+      target_at: req.body.target_at,
+    });
+    if (!updated) return sendError(res, "Culture session not found", 404);
+    return sendSuccess(res, updated);
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
+export const deleteCultureSession = async (req: Request, res: Response) => {
+  try {
+    const caseId = req.params.id;
+    const cultureId = req.params.cultureId;
+
+    const moldCase = await retrieveMoldCaseById(caseId);
+    if (!moldCase) return sendError(res, "Mold case not found", 404);
+
+    const {userId, role} = getActorContext(req);
+    if (!canManageMoldCase(moldCase, userId, role)) {
+      return sendError(res, "Forbidden", 403);
+    }
+
+    const deleted = await deleteCultureSessionForCase(caseId, cultureId);
+    if (!deleted) return sendError(res, "Culture session not found", 404);
     return sendSuccess(res, {deleted: true});
   } catch (error) {
     devLog(error);

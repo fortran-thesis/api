@@ -23,6 +23,7 @@ export enum FirestoreCollection {
  */
 export enum FirestoreSubcollection {
   CULTIVATION_LOGS = "cultivation_logs",
+  CULTURE_SESSIONS = "culture_sessions",
   CASE_DETAILS = "case_details",
   DEVICE_TOKENS = "device_tokens",
 }
