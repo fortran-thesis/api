@@ -13,6 +13,13 @@ export const ScannedMoldCreateSchema = z.object({
   source_tab: z.enum(["in-vivo", "in-vitro"]).optional(),
   mold_id: z.string().min(1).optional(),
   predicted_class_name: z.string().min(1).optional(),
+  corrected_genus: z.string().min(1).optional(),
+  corrected_predicted_class_name: z.string().min(1).nullable().optional(),
+  corrected_by_user_id: z.string().min(1).optional(),
+  corrected_at: z
+    .string()
+    .datetime({message: "corrected_at must be an ISO datetime string."})
+    .optional(),
   mold_case_id: z.string().min(1).optional(),
   captured_at: z
     .string()
@@ -32,6 +39,13 @@ export const ScannedMoldUpdateSchema = z.object({
   source_tab: z.enum(["in-vivo", "in-vitro"]).optional(),
   mold_id: z.string().nullable().optional(),
   predicted_class_name: z.string().optional(),
+  corrected_genus: z.string().min(1).optional(),
+  corrected_predicted_class_name: z.string().min(1).nullable().optional(),
+  corrected_by_user_id: z.string().min(1).optional(),
+  corrected_at: z
+    .string()
+    .datetime({message: "corrected_at must be an ISO datetime string."})
+    .optional(),
   mold_case_id: z.string().optional(),
   captured_at: z
     .string()

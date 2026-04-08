@@ -51,10 +51,18 @@ export const createScannedMold = async (req: Request, res: Response) => {
       ...(parsed.data.source_tab ? {source_tab: parsed.data.source_tab} : {}),
       ...(parsed.data.mold_id ? {mold_id: parsed.data.mold_id} : {}),
       ...(parsed.data.predicted_class_name ? {predicted_class_name: parsed.data.predicted_class_name} : {}),
+      ...(parsed.data.corrected_genus ? {corrected_genus: parsed.data.corrected_genus} : {}),
+      ...(parsed.data.corrected_predicted_class_name !== undefined ? {corrected_predicted_class_name: parsed.data.corrected_predicted_class_name} : {}),
+      ...(parsed.data.corrected_by_user_id ? {corrected_by_user_id: parsed.data.corrected_by_user_id} : {}),
+      ...(parsed.data.corrected_at ? {corrected_at: Timestamp.fromDate(new Date(parsed.data.corrected_at))} : {}),
       ...(parsed.data.mold_case_id ? {mold_case_id: parsed.data.mold_case_id} : {}),
       ...(parsed.data.captured_at ? {captured_at: Timestamp.fromDate(new Date(parsed.data.captured_at))} : {}),
       scanned_results: parsed.data.scanned_results,
     };
+
+    if (details.corrected_genus && !details.corrected_by_user_id) {
+      details.corrected_by_user_id = userId;
+    }
 
     const photo: Express.Multer.File = req.file as Express.Multer.File;
     if (!photo) {
@@ -120,7 +128,16 @@ export const getScannedMoldById = async (req: Request, res: Response) => {
 export const patchScannedMold = async (req: Request, res: Response) => {
   try {
     const id: string = req.params.id;
-    const details: Partial<ScannedMold> = req.body;
+    const details: Partial<ScannedMold> = {...req.body};
+
+    if (typeof req.body.corrected_at === "string") {
+      details.corrected_at = Timestamp.fromDate(new Date(req.body.corrected_at));
+    }
+
+    if (details.corrected_genus && !details.corrected_by_user_id && req.user?.id) {
+      details.corrected_by_user_id = req.user.id;
+    }
+
     const updated = await updateScannedMoldInFirestore(id, details);
     if (!updated) return sendError(res, "Failed to update scanned mold", 404);
     return sendSuccess(res, updated);

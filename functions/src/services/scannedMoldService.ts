@@ -31,8 +31,11 @@ export const addScannedMoldToFirestore = async (
 ): Promise<WithId<ScannedMold> | null> => {
   try {
     let resolvedMoldId: string | null | undefined = details.mold_id;
-    if (!resolvedMoldId && details.predicted_class_name) {
-      const molds = await findMoldByPredictedClassName(details.predicted_class_name);
+    const classNameForResolution =
+      details.corrected_predicted_class_name ?? details.predicted_class_name;
+
+    if (!resolvedMoldId && classNameForResolution) {
+      const molds = await findMoldByPredictedClassName(classNameForResolution);
       if (molds && !molds.empty) {
         resolvedMoldId = molds.docs[0].id;
       } else {

@@ -39,6 +39,39 @@ export const LEGACY_INFO_ALIASES: Record<string, string[]> = {
   prevention_summary: ["prevention summary", "prevention"],
 };
 
+const SUPPORTED_CORRECTION_GENERA = [
+  {
+    display_name: "Alternaria",
+    normalized_key: "alternaria",
+    predicted_class_name: "Alternaria_spp",
+  },
+  {
+    display_name: "Aspergillus Section Flavi",
+    normalized_key: "aspergillus section flavi",
+    predicted_class_name: "Aspergillus_section_Flavi",
+  },
+  {
+    display_name: "Aspergillus Section Nigri",
+    normalized_key: "aspergillus section nigri",
+    predicted_class_name: "Aspergillus_section_Nigri",
+  },
+  {
+    display_name: "Fusarium",
+    normalized_key: "fusarium",
+    predicted_class_name: "Fusarium_spp",
+  },
+  {
+    display_name: "Penicillium",
+    normalized_key: "penicillium",
+    predicted_class_name: "Penicillium_spp",
+  },
+  {
+    display_name: "Rhizopus",
+    normalized_key: "rhizopus",
+    predicted_class_name: "Rhizopus_spp",
+  },
+] as const;
+
 const asText = (value: unknown): string => {
   if (value == null) return "";
   return String(value).trim();
@@ -196,6 +229,43 @@ export const getAllMolds = async (req: Request, res: Response) => {
       snapshot: (result.snapshot || []).map((item) => normalizeMoldCompatibility(item)),
     };
     return sendSuccess(res, normalizedResult);
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
+export const getSupportedCorrectionGenera = async (
+  _req: Request,
+  res: Response
+) => {
+  try {
+    const enriched = await Promise.all(
+      SUPPORTED_CORRECTION_GENERA.map(async (item) => {
+        const mold = await retrieveMoldByPredictedClassName(
+          item.predicted_class_name
+        );
+        return {
+          ...item,
+          exists_in_system: !!mold,
+          status: mold?.status ?? null,
+        };
+      })
+    );
+
+    const available = enriched.filter(
+      (item) => item.exists_in_system && item.status !== MoldStatus.Draft
+    );
+
+    const responseItems = (available.length > 0 ? available : enriched).map(
+      (item) => ({
+        display_name: item.display_name,
+        normalized_key: item.normalized_key,
+        predicted_class_name: item.predicted_class_name,
+      })
+    );
+
+    return sendSuccess(res, {genera: responseItems});
   } catch (error) {
     devLog(error);
     return defaultError(res);

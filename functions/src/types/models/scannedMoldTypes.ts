@@ -9,6 +9,10 @@ export interface ScannedMold {
   source_tab?: ScanSourceTab;
   mold_id?: string | null;
   predicted_class_name?: string;
+  corrected_genus?: string;
+  corrected_predicted_class_name?: string | null;
+  corrected_by_user_id?: string;
+  corrected_at?: Timestamp;
   mold_case_id?: string;
   captured_at?: Timestamp;
   scanned_results: ScannedResult;

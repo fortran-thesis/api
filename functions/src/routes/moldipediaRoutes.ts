@@ -66,7 +66,6 @@ router.get(
 
 router.get(
   "/:id/cases",
-  verifyUser(),
   sanitizeParams,
   validateParams(MoldipediaIdSchema),
   async (req: Request, res: Response) => {

@@ -8,6 +8,7 @@ import {
   getMoldByName,
   getMoldByPredictedClassName,
   getMoldByPredictedClassId,
+  getSupportedCorrectionGenera,
   patchMold,
   softDeleteMold,
 } from "../controllers/moldController";
@@ -49,6 +50,14 @@ router.get(
   cacheGet("molds"),
   async (req: Request, res: Response) => {
     await getAllMolds(req, res);
+  }
+);
+
+router.get(
+  "/supported-genera",
+  verifyUser(),
+  async (req: Request, res: Response) => {
+    await getSupportedCorrectionGenera(req, res);
   }
 );
 
