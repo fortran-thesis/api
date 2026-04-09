@@ -428,6 +428,70 @@ describe("moldController (unit)", () => {
     });
   });
 
+  describe("getSupportedCorrectionGenera", () => {
+    it("should return all canonical genera with display-friendly labels", async () => {
+      mockMoldService.retrieveMoldByPredictedClassName.mockResolvedValue(null as any);
+
+      await moldController.getSupportedCorrectionGenera(
+        mockReq as Request,
+        mockRes as Response
+      );
+
+      expect(mockMoldService.retrieveMoldByPredictedClassName).toHaveBeenCalledWith(
+        "Alternaria_spp"
+      );
+      expect(mockMoldService.retrieveMoldByPredictedClassName).toHaveBeenCalledWith(
+        "Aspergillus_section_Flavi"
+      );
+      expect(mockMoldService.retrieveMoldByPredictedClassName).toHaveBeenCalledWith(
+        "Aspergillus_section_Nigri"
+      );
+
+      expect(mockResponseUtils.sendSuccess).toHaveBeenCalledWith(
+        mockRes,
+        expect.objectContaining({
+          genera: expect.arrayContaining([
+            expect.objectContaining({
+              display_name: "Aspergillus Flavi",
+              normalized_key: "aspergillus flavi",
+              predicted_class_name: "Aspergillus_section_Flavi",
+            }),
+          ]),
+        })
+      );
+    });
+
+    it("should keep six correction genera even when only a subset exists in system", async () => {
+      mockMoldService.retrieveMoldByPredictedClassName.mockImplementation(
+        async (predictedClassName: string) => {
+          if (predictedClassName === "Alternaria_spp") {
+            return {id: "mold-1", status: "reviewed"} as any;
+          }
+          return null as any;
+        }
+      );
+
+      await moldController.getSupportedCorrectionGenera(
+        mockReq as Request,
+        mockRes as Response
+      );
+
+      const payload = mockResponseUtils.sendSuccess.mock.calls[0][1] as any;
+      expect(Array.isArray(payload.genera)).toBe(true);
+      expect(payload.genera).toHaveLength(6);
+      expect(payload.genera).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({predicted_class_name: "Alternaria_spp"}),
+          expect.objectContaining({predicted_class_name: "Aspergillus_section_Flavi"}),
+          expect.objectContaining({predicted_class_name: "Aspergillus_section_Nigri"}),
+          expect.objectContaining({predicted_class_name: "Fusarium_spp"}),
+          expect.objectContaining({predicted_class_name: "Penicillium_spp"}),
+          expect.objectContaining({predicted_class_name: "Rhizopus_spp"}),
+        ])
+      );
+    });
+  });
+
   describe("patchMold", () => {
     it("should successfully update a mold", async () => {
       const moldId = "test-mold-id";

@@ -46,8 +46,8 @@ const SUPPORTED_CORRECTION_GENERA = [
     predicted_class_name: "Alternaria_spp",
   },
   {
-    display_name: "Aspergillus Section Flavi",
-    normalized_key: "aspergillus section flavi",
+    display_name: "Aspergillus Flavi",
+    normalized_key: "aspergillus flavi",
     predicted_class_name: "Aspergillus_section_Flavi",
   },
   {
@@ -253,11 +253,7 @@ export const getSupportedCorrectionGenera = async (
       })
     );
 
-    const available = enriched.filter(
-      (item) => item.exists_in_system && item.status !== MoldStatus.Draft
-    );
-
-    const responseItems = (available.length > 0 ? available : enriched).map(
+    const responseItems = enriched.map(
       (item) => ({
         display_name: item.display_name,
         normalized_key: item.normalized_key,
