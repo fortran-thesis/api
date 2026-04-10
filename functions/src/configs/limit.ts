@@ -1,5 +1,22 @@
 
 import {Options, ipKeyGenerator} from "express-rate-limit";
+import {RedisStore} from "rate-limit-redis";
+import {ensureRedisConnection} from "./redis";
+import {envOptions} from "./environment";
+
+const useRedisLimiterStore = envOptions.isProd && !envOptions.isTest;
+
+const createLimiterStore = () => {
+  if (!useRedisLimiterStore) return undefined;
+
+  return new RedisStore({
+    prefix: "rl:",
+    sendCommand: async (...args: string[]) => {
+      const redis = await ensureRedisConnection();
+      return redis.sendCommand(args);
+    },
+  });
+};
 
 /**
  * Key generator that prefers X-Forwarded-For (Cloud Run sets this),
@@ -25,6 +42,7 @@ export const limitingOptions: Partial<Options> = {
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: genericKeyGenerator,
+  store: createLimiterStore(),
 };
 
 // Step 1: Send code (strict limit)
@@ -33,6 +51,7 @@ export const sendCodeLimiter: Partial<Options> = {
   max: 10, // 3 requests per hour per IP
   message: "Too many requests. Please try again later.",
   keyGenerator: genericKeyGenerator,
+  store: createLimiterStore(),
 };
 
 // Step 2: Verify code (medium limit)
@@ -41,6 +60,7 @@ export const verifyCodeLimiter: Partial<Options> = {
   max: 10,
   message: "Too many verification attempts. Please try again later.",
   keyGenerator: genericKeyGenerator,
+  store: createLimiterStore(),
 };
 
 // Step 3: Final action (medium limit)
@@ -49,6 +69,7 @@ export const finalActionLimiter: Partial<Options> = {
   max: 5,
   message: "Too many sensitive actions. Please try again later.",
   keyGenerator: genericKeyGenerator,
+  store: createLimiterStore(),
 };
 
 // Account creation throttling to reduce signup abuse bursts.
@@ -57,6 +78,7 @@ export const registerLimiter: Partial<Options> = {
   max: 15,
   message: "Too many registration attempts. Please try again later.",
   keyGenerator: genericKeyGenerator,
+  store: createLimiterStore(),
 };
 
 // ML prediction endpoints are compute-heavy; apply tighter per-IP limits.
@@ -65,6 +87,7 @@ export const modelPredictionLimiter: Partial<Options> = {
   max: 60,
   message: "Too many prediction requests. Please try again later.",
   keyGenerator: genericKeyGenerator,
+  store: createLimiterStore(),
 };
 
 export const reportCreateLimiter: Partial<Options> = {
@@ -72,6 +95,7 @@ export const reportCreateLimiter: Partial<Options> = {
   max: 20,
   message: "Too many reports submitted. Please try again later.",
   keyGenerator: genericKeyGenerator,
+  store: createLimiterStore(),
 };
 
 export const flagReportCreateLimiter: Partial<Options> = {
@@ -79,4 +103,5 @@ export const flagReportCreateLimiter: Partial<Options> = {
   max: 20,
   message: "Too many flag reports submitted. Please try again later.",
   keyGenerator: genericKeyGenerator,
+  store: createLimiterStore(),
 };

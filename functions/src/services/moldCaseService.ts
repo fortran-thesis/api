@@ -60,23 +60,37 @@ const transformMoldCaseImages = async (moldCase: MoldCase): Promise<MoldCase> =>
       return (await transformToSignedUrl(value, MOLD_CASE_SERVICE_TTL_SECONDS)) || value;
     };
 
-    details.initial_microscopic_image_url = await signIfString(details.initial_microscopic_image_url);
-    details.initial_macroscopic_image_url = await signIfString(details.initial_macroscopic_image_url);
+    const [initialMicroscopicUrl, initialMacroscopicUrl] = await Promise.all([
+      signIfString(details.initial_microscopic_image_url),
+      signIfString(details.initial_macroscopic_image_url),
+    ]);
+    details.initial_microscopic_image_url = initialMicroscopicUrl;
+    details.initial_macroscopic_image_url = initialMacroscopicUrl;
 
     const initialObservations = details.initial_observations;
     if (initialObservations && typeof initialObservations === "object") {
-      initialObservations.initial_microscopic_image_url =
-        await signIfString(initialObservations.initial_microscopic_image_url);
-      initialObservations.initial_macroscopic_image_url =
-        await signIfString(initialObservations.initial_macroscopic_image_url);
-      initialObservations.microscopic_image_url =
-        await signIfString(initialObservations.microscopic_image_url);
-      initialObservations.macroscopic_image_url =
-        await signIfString(initialObservations.macroscopic_image_url);
-      initialObservations.microscopic_image_path =
-        await signIfString(initialObservations.microscopic_image_path);
-      initialObservations.macroscopic_image_path =
-        await signIfString(initialObservations.macroscopic_image_path);
+      const [
+        initialObsMicroscopicUrl,
+        initialObsMacroscopicUrl,
+        microscopicUrl,
+        macroscopicUrl,
+        microscopicPath,
+        macroscopicPath,
+      ] = await Promise.all([
+        signIfString(initialObservations.initial_microscopic_image_url),
+        signIfString(initialObservations.initial_macroscopic_image_url),
+        signIfString(initialObservations.microscopic_image_url),
+        signIfString(initialObservations.macroscopic_image_url),
+        signIfString(initialObservations.microscopic_image_path),
+        signIfString(initialObservations.macroscopic_image_path),
+      ]);
+
+      initialObservations.initial_microscopic_image_url = initialObsMicroscopicUrl;
+      initialObservations.initial_macroscopic_image_url = initialObsMacroscopicUrl;
+      initialObservations.microscopic_image_url = microscopicUrl;
+      initialObservations.macroscopic_image_url = macroscopicUrl;
+      initialObservations.microscopic_image_path = microscopicPath;
+      initialObservations.macroscopic_image_path = macroscopicPath;
     }
   }
 

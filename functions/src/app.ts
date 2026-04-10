@@ -48,6 +48,26 @@ app.use((req, res, next) => {
 // HTTP request/response logging (structured JSON in prod, pretty in dev)
 app.use(httpLogger);
 
+// Capture request duration so p95/p99 can be measured per route in logs.
+app.use((req, res, next) => {
+  const startedAt = process.hrtime.bigint();
+  res.on("finish", () => {
+    const durationMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
+    if ((req as any).log?.info) {
+      (req as any).log.info(
+        {
+          duration_ms: Math.round(durationMs * 100) / 100,
+          method: req.method,
+          path: req.path,
+          statusCode: res.statusCode,
+        },
+        "Request completed"
+      );
+    }
+  });
+  next();
+});
+
 // Capture raw body for multipart requests before any middleware consumes the stream.
 // Firebase Functions provides rawBody automatically in production; this covers local dev.
 app.use((req: Request, res: Response, next: NextFunction) => {

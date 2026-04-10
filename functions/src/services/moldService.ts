@@ -27,6 +27,7 @@ import {
   invalidateItem,
   invalidateAllCounts,
 } from "../utils/cacheManager";
+import {invalidateLookupCorpusCache} from "./lookupService";
 
 const RESOURCE = "molds";
 const TTL = 300; // 5 minutes
@@ -49,6 +50,7 @@ export const addMoldToFirestore = async (
     await Promise.all([
       invalidateAllLists(RESOURCE),
       invalidateAllCounts(RESOURCE),
+      invalidateLookupCorpusCache(),
     ]);
     return result;
   } catch (error) {
@@ -187,6 +189,7 @@ export const updateMoldInFirestore = async (
       invalidateItem(RESOURCE, id),
       invalidateAllLists(RESOURCE),
       invalidateAllCounts(RESOURCE),
+      invalidateLookupCorpusCache(),
     ]);
 
     const updatedMold = await retrieveMoldById(id);
@@ -205,6 +208,7 @@ export const softRemoveMold = async (id: string): Promise<void> => {
       invalidateItem(RESOURCE, id),
       invalidateAllLists(RESOURCE),
       invalidateAllCounts(RESOURCE),
+      invalidateLookupCorpusCache(),
     ]);
   } catch (error) {
     devLog(error);
@@ -219,6 +223,7 @@ export const removeMold = async (id: string): Promise<void> => {
       invalidateItem(RESOURCE, id),
       invalidateAllLists(RESOURCE),
       invalidateAllCounts(RESOURCE),
+      invalidateLookupCorpusCache(),
     ]);
   } catch (error) {
     devLog(error);

@@ -2,12 +2,63 @@ import {getFirestore} from "firebase-admin/firestore";
 import {devLog} from "../utils/dev";
 import {FirestoreCollection, getCollectionName} from "../types/models/firestoreCollections";
 import {firebase} from "../configs/firebase";
+import {cacheList, getCachedList, invalidateAllLists} from "../utils/cacheManager";
 
 export interface LookupResult {
   moldId: string;
   moldName: string;
   confidence: number; // 0–100%
 }
+
+interface LookupCorpusMold {
+  id: string;
+  name: string;
+  symptoms: string[];
+  signs: string[];
+  characteristics: string[];
+}
+
+const LOOKUP_CORPUS_RESOURCE = "lookup-corpus-molds";
+const LOOKUP_CORPUS_VERSION = 1;
+const LOOKUP_CORPUS_TTL_SECONDS = 60 * 60; // 1 hour
+
+const toStringArray = (value: unknown): string[] => {
+  if (!Array.isArray(value)) return [];
+  return value.map((item) => String(item));
+};
+
+const getLookupCorpus = async (): Promise<{molds: LookupCorpusMold[]; source: "cache" | "firestore"}> => {
+  const cacheQuery = {version: LOOKUP_CORPUS_VERSION};
+  const cached = await getCachedList<LookupCorpusMold[]>(LOOKUP_CORPUS_RESOURCE, cacheQuery);
+  if (cached && Array.isArray(cached)) {
+    return {molds: cached, source: "cache"};
+  }
+
+  const db = getFirestore(firebase);
+  const moldsCollection = getCollectionName(FirestoreCollection.MOLDS);
+  const moldsSnapshot = await db
+    .collection(moldsCollection)
+    .select("name", "symptoms", "signs", "characteristics")
+    .get();
+
+  const molds: LookupCorpusMold[] = moldsSnapshot.docs.map((doc) => {
+    const data = doc.data() as Record<string, unknown>;
+    return {
+      id: doc.id,
+      name: String(data.name || ""),
+      symptoms: toStringArray(data.symptoms),
+      signs: toStringArray(data.signs),
+      characteristics: toStringArray(data.characteristics),
+    };
+  });
+
+  await cacheList(LOOKUP_CORPUS_RESOURCE, molds, cacheQuery, {ttl: LOOKUP_CORPUS_TTL_SECONDS});
+  return {molds, source: "firestore"};
+};
+
+export const invalidateLookupCorpusCache = async (): Promise<void> => {
+  await invalidateAllLists(LOOKUP_CORPUS_RESOURCE);
+};
 
 /**
  * Performs mold lookup based on reported symptoms, signs, and characteristics
@@ -24,21 +75,14 @@ export async function performMoldLookup(
   reportedCharacteristics: string[] = [],
   reportedMoldNames: string[] = []
 ): Promise<LookupResult[]> {
+  const totalStartedAt = Date.now();
   try {
-    // 1. Fetch all molds from Firestore
-    const db = getFirestore(firebase);
-    const moldsCollection = getCollectionName(FirestoreCollection.MOLDS);
-    console.log(`[performMoldLookup] Fetching molds from collection: ${moldsCollection}`);
-    devLog(`[performMoldLookup] Fetching molds from collection: ${moldsCollection}`);
-
-    const moldsSnapshot = await db.collection(moldsCollection).get();
-    console.log(`[performMoldLookup] Found ${moldsSnapshot.docs.length} molds in database`);
-    devLog(`[performMoldLookup] Found ${moldsSnapshot.docs.length} molds in database`);
-
-    const molds = moldsSnapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    })) as Array<any>;
+    // 1. Fetch mold corpus from cache first, then Firestore on miss
+    const fetchStartedAt = Date.now();
+    const {molds, source} = await getLookupCorpus();
+    const fetchDurationMs = Date.now() - fetchStartedAt;
+    console.log(`[performMoldLookup] Loaded ${molds.length} molds from ${source}`);
+    devLog(`[performMoldLookup] Loaded ${molds.length} molds from ${source}`);
 
     if (molds.length === 0) {
       console.log("[performMoldLookup] ⚠️ No molds found in database");
@@ -78,7 +122,8 @@ export async function performMoldLookup(
     }
 
     // 3. Score each mold
-    const results = molds.map((mold: any) => {
+    const scoringStartedAt = Date.now();
+    const results = molds.map((mold: LookupCorpusMold) => {
       // Create sets for O(1) lookup
       const moldSymptomSet = new Set(
         (mold.symptoms || []).map((s: string) => s.toLowerCase())
@@ -128,9 +173,18 @@ export async function performMoldLookup(
     const filtered = results.filter((r) => r.confidence > 0);
     const sorted = filtered.sort((a, b) => b.confidence - a.confidence);
 
+    const scoringDurationMs = Date.now() - scoringStartedAt;
+    const totalDurationMs = Date.now() - totalStartedAt;
+
     console.log(`[performMoldLookup] ✅ Found ${sorted.length} matches from ${molds.length} molds`);
     devLog(
       `[performMoldLookup] ✅ Found ${sorted.length} matches from ${molds.length} molds`
+    );
+    console.log(
+      `[performMoldLookup] Timing: fetch=${fetchDurationMs}ms scoring=${scoringDurationMs}ms total=${totalDurationMs}ms`
+    );
+    devLog(
+      `[performMoldLookup] Timing: fetch=${fetchDurationMs}ms scoring=${scoringDurationMs}ms total=${totalDurationMs}ms`
     );
     if (sorted.length > 0) {
       console.log(`[performMoldLookup] Top result: ${sorted[0].moldName} (${sorted[0].confidence}%)`);
