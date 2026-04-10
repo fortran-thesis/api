@@ -30,6 +30,8 @@ import {
 
 const RESOURCE = "molds";
 const TTL = 300; // 5 minutes
+const LOOKUP_CATALOG_RESOURCE = "mold-catalog";
+const LOOKUP_CATALOG_KEY = "all";
 
 export const addMoldToFirestore = async (
   details: Mold
@@ -49,6 +51,7 @@ export const addMoldToFirestore = async (
     await Promise.all([
       invalidateAllLists(RESOURCE),
       invalidateAllCounts(RESOURCE),
+      invalidateItem(LOOKUP_CATALOG_RESOURCE, LOOKUP_CATALOG_KEY),
     ]);
     return result;
   } catch (error) {
@@ -187,6 +190,7 @@ export const updateMoldInFirestore = async (
       invalidateItem(RESOURCE, id),
       invalidateAllLists(RESOURCE),
       invalidateAllCounts(RESOURCE),
+      invalidateItem(LOOKUP_CATALOG_RESOURCE, LOOKUP_CATALOG_KEY),
     ]);
 
     const updatedMold = await retrieveMoldById(id);
@@ -205,6 +209,7 @@ export const softRemoveMold = async (id: string): Promise<void> => {
       invalidateItem(RESOURCE, id),
       invalidateAllLists(RESOURCE),
       invalidateAllCounts(RESOURCE),
+      invalidateItem(LOOKUP_CATALOG_RESOURCE, LOOKUP_CATALOG_KEY),
     ]);
   } catch (error) {
     devLog(error);
@@ -219,6 +224,7 @@ export const removeMold = async (id: string): Promise<void> => {
       invalidateItem(RESOURCE, id),
       invalidateAllLists(RESOURCE),
       invalidateAllCounts(RESOURCE),
+      invalidateItem(LOOKUP_CATALOG_RESOURCE, LOOKUP_CATALOG_KEY),
     ]);
   } catch (error) {
     devLog(error);

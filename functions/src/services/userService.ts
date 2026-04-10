@@ -45,11 +45,10 @@ export const retrieveAllUsers = async (
     const firestoreList: WithId<User>[] = queryToJson<User>(result.snapshot);
     const identifiers = firestoreList.map((user) => ({uid: user.id}));
     const authUsers = await getAuth().getUsers(identifiers);
+    const authUsersMap = new Map(authUsers.users.map((user) => [user.uid, user]));
 
     const userList: APIUser[] = firestoreList.map((firestoreUser) => {
-      const authUser = authUsers.users.find(
-        (u: any) => u.uid === firestoreUser.id
-      );
+      const authUser = authUsersMap.get(firestoreUser.id);
       return {
         id: firestoreUser.id,
         user: {
@@ -113,11 +112,10 @@ export const retrieveUsersByRole = async (
     const firestoreList: any[] = queryToJson<any>(result.snapshot);
     const identifiers = firestoreList.map((user) => ({uid: user.id}));
     const authUsers = await getAuth().getUsers(identifiers);
+    const authUsersMap = new Map(authUsers.users.map((user) => [user.uid, user]));
 
     const userList: APIUser[] = firestoreList.map((firestoreUser) => {
-      const authUser = authUsers.users.find(
-        (u: any) => u.uid === firestoreUser.id
-      );
+      const authUser = authUsersMap.get(firestoreUser.id);
       return {
         id: firestoreUser.id,
         user: {
@@ -339,11 +337,10 @@ export const searchAndFilterUsers = async (
     const firestoreList: WithId<User>[] = queryToJson<User>(result.snapshot);
     const identifiers = firestoreList.map((user) => ({uid: user.id}));
     const authUsers = await getAuth().getUsers(identifiers);
+    const authUsersMap = new Map(authUsers.users.map((user) => [user.uid, user]));
 
     let userList: APIUser[] = firestoreList.map((firestoreUser) => {
-      const authUser = authUsers.users.find(
-        (u: any) => u.uid === firestoreUser.id
-      );
+      const authUser = authUsersMap.get(firestoreUser.id);
       return {
         id: firestoreUser.id,
         user: {

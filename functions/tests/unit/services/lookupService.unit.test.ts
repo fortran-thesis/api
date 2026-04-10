@@ -5,10 +5,18 @@ jest.mock("firebase-admin/firestore", () => ({
   getFirestore: jest.fn(),
 }));
 
+jest.mock("../../../src/utils/cacheManager", () => ({
+  getCachedItem: jest.fn(),
+  cacheItem: jest.fn(),
+}));
+
 import {getFirestore} from "firebase-admin/firestore";
 import {performMoldLookup} from "../../../src/services/lookupService";
+import {getCachedItem, cacheItem} from "../../../src/utils/cacheManager";
 
 const mockGetFirestore = getFirestore as jest.MockedFunction<any>;
+const mockGetCachedItem = getCachedItem as jest.MockedFunction<typeof getCachedItem>;
+const mockCacheItem = cacheItem as jest.MockedFunction<typeof cacheItem>;
 
 function makeDoc(id: string, dataObj: any) {
   return {
@@ -20,6 +28,8 @@ function makeDoc(id: string, dataObj: any) {
 describe("lookupService (unit)", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockGetCachedItem.mockResolvedValue(null);
+    mockCacheItem.mockResolvedValue(undefined);
   });
 
   it("returns empty array when no reported items provided", async () => {
@@ -62,5 +72,58 @@ describe("lookupService (unit)", () => {
     const results = await performMoldLookup(reportedSymptoms, reportedSigns, reportedChars);
     expect(results).toHaveLength(1);
     expect(results[0].confidence).toBe(50);
+  });
+
+  it("excludes soft-deleted molds from lookup catalog", async () => {
+    const mockCollection = {
+      get: jest.fn().mockResolvedValue({
+        docs: [
+          makeDoc("m-active", {
+            name: "Active Mold",
+            symptoms: ["yellowing"],
+            signs: [],
+            characteristics: [],
+            metadata: {deleted_at: null},
+          }),
+          makeDoc("m-deleted", {
+            name: "Deleted Mold",
+            symptoms: ["yellowing"],
+            signs: [],
+            characteristics: [],
+            metadata: {deleted_at: {seconds: 1}},
+          }),
+        ],
+      }),
+    };
+
+    mockGetFirestore.mockReturnValue({
+      collection: jest.fn().mockReturnValue(mockCollection),
+    });
+
+    const results = await performMoldLookup(["yellowing"], [], []);
+    expect(results).toHaveLength(1);
+    expect(results[0].moldId).toBe("m-active");
+  });
+
+  it("uses cached lookup catalog when available", async () => {
+    mockGetCachedItem.mockResolvedValueOnce([
+      {
+        moldId: "m-cached",
+        moldName: "Cached Mold",
+        moldNameNormalized: "cached mold",
+        symptoms: ["yellowing"],
+        signs: [],
+        characteristics: [],
+        symptomLookup: {yellowing: true},
+        signLookup: {},
+        characteristicLookup: {},
+      },
+    ] as any);
+
+    const results = await performMoldLookup(["yellowing"], [], []);
+
+    expect(results).toHaveLength(1);
+    expect(results[0].moldId).toBe("m-cached");
+    expect(mockGetFirestore).not.toHaveBeenCalled();
   });
 });

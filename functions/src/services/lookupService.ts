@@ -2,12 +2,110 @@ import {getFirestore} from "firebase-admin/firestore";
 import {devLog} from "../utils/dev";
 import {FirestoreCollection, getCollectionName} from "../types/models/firestoreCollections";
 import {firebase} from "../configs/firebase";
+import {cacheItem, getCachedItem} from "../utils/cacheManager";
+
+const LOOKUP_CATALOG_RESOURCE = "mold-catalog";
+const LOOKUP_CATALOG_KEY = "all";
+const LOOKUP_CATALOG_TTL_SECONDS = 3600;
+
+interface LookupCatalogEntry {
+  moldId: string;
+  moldName: string;
+  moldNameNormalized: string;
+  symptoms: string[];
+  signs: string[];
+  characteristics: string[];
+  symptomLookup: Record<string, true>;
+  signLookup: Record<string, true>;
+  characteristicLookup: Record<string, true>;
+}
 
 export interface LookupResult {
   moldId: string;
   moldName: string;
   confidence: number; // 0–100%
 }
+
+const normalizeCatalogTerms = (values: unknown): string[] => {
+  if (!Array.isArray(values)) return [];
+
+  const normalized = values.map((value) => String(value).toLowerCase());
+  return Array.from(new Set(normalized));
+};
+
+const toLookupMap = (values: string[]): Record<string, true> => {
+  const lookup: Record<string, true> = {};
+
+  values.forEach((value) => {
+    lookup[value] = true;
+  });
+
+  return lookup;
+};
+
+const isMoldActive = (mold: Record<string, any>): boolean => {
+  const deletedAt = mold?.metadata?.deleted_at;
+  return deletedAt === null || deletedAt === undefined;
+};
+
+const toLookupCatalogEntry = (mold: Record<string, any>): LookupCatalogEntry => {
+  const symptoms = normalizeCatalogTerms(mold.symptoms);
+  const signs = normalizeCatalogTerms(mold.signs);
+  const characteristics = normalizeCatalogTerms(mold.characteristics);
+  const moldName = String(mold.name || "");
+
+  return {
+    moldId: String(mold.id || ""),
+    moldName,
+    moldNameNormalized: moldName.toLowerCase(),
+    symptoms,
+    signs,
+    characteristics,
+    symptomLookup: toLookupMap(symptoms),
+    signLookup: toLookupMap(signs),
+    characteristicLookup: toLookupMap(characteristics),
+  };
+};
+
+const getLookupCatalog = async (): Promise<LookupCatalogEntry[]> => {
+  const cached = await getCachedItem<LookupCatalogEntry[]>(
+    LOOKUP_CATALOG_RESOURCE,
+    LOOKUP_CATALOG_KEY
+  );
+
+  if (cached) {
+    devLog(`[performMoldLookup] Cache hit for ${LOOKUP_CATALOG_RESOURCE}:item:${LOOKUP_CATALOG_KEY}`);
+    return cached;
+  }
+
+  const db = getFirestore(firebase);
+  const moldsCollection = getCollectionName(FirestoreCollection.MOLDS);
+  console.log(`[performMoldLookup] Fetching molds from collection: ${moldsCollection}`);
+  devLog(`[performMoldLookup] Fetching molds from collection: ${moldsCollection}`);
+
+  const moldsSnapshot = await db.collection(moldsCollection).get();
+  console.log(`[performMoldLookup] Found ${moldsSnapshot.docs.length} molds in database`);
+  devLog(`[performMoldLookup] Found ${moldsSnapshot.docs.length} molds in database`);
+
+  const molds = moldsSnapshot.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+  })) as Array<Record<string, any>>;
+
+  const catalog = molds
+    .filter((mold) => isMoldActive(mold))
+    .map((mold) => toLookupCatalogEntry(mold));
+
+  await cacheItem(
+    LOOKUP_CATALOG_RESOURCE,
+    LOOKUP_CATALOG_KEY,
+    catalog,
+    {ttl: LOOKUP_CATALOG_TTL_SECONDS}
+  );
+
+  devLog(`[performMoldLookup] Cached ${catalog.length} active molds for lookup`);
+  return catalog;
+};
 
 /**
  * Performs mold lookup based on reported symptoms, signs, and characteristics
@@ -25,32 +123,7 @@ export async function performMoldLookup(
   reportedMoldNames: string[] = []
 ): Promise<LookupResult[]> {
   try {
-    // 1. Fetch all molds from Firestore
-    const db = getFirestore(firebase);
-    const moldsCollection = getCollectionName(FirestoreCollection.MOLDS);
-    console.log(`[performMoldLookup] Fetching molds from collection: ${moldsCollection}`);
-    devLog(`[performMoldLookup] Fetching molds from collection: ${moldsCollection}`);
-
-    const moldsSnapshot = await db.collection(moldsCollection).get();
-    console.log(`[performMoldLookup] Found ${moldsSnapshot.docs.length} molds in database`);
-    devLog(`[performMoldLookup] Found ${moldsSnapshot.docs.length} molds in database`);
-
-    const molds = moldsSnapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    })) as Array<any>;
-
-    if (molds.length === 0) {
-      console.log("[performMoldLookup] ⚠️ No molds found in database");
-      devLog("[performMoldLookup] ⚠️ No molds found in database");
-      return [];
-    }
-
-    // Log first few molds for debugging
-    console.log(`[performMoldLookup] First mold: ${molds[0]?.name || "N/A"} with ${((molds[0] as any)?.symptoms || []).length} symptoms`);
-    devLog(`[performMoldLookup] First mold: ${molds[0]?.name || "N/A"} with ${((molds[0] as any)?.symptoms || []).length} symptoms`);
-
-    // 2. Normalize input (lowercase for case-insensitive matching)
+    // 1. Normalize input (lowercase for case-insensitive matching)
     const normalizedSymptoms = reportedSymptoms.map((s) => String(s).toLowerCase());
     const normalizedSigns = reportedSigns.map((s) => String(s).toLowerCase());
     const normalizedCharacteristics = reportedCharacteristics.map((c) =>
@@ -77,28 +150,27 @@ export async function performMoldLookup(
       return [];
     }
 
-    // 3. Score each mold
-    const results = molds.map((mold: any) => {
-      // Create sets for O(1) lookup
-      const moldSymptomSet = new Set(
-        (mold.symptoms || []).map((s: string) => s.toLowerCase())
-      );
-      const moldSignSet = new Set(
-        (mold.signs || []).map((s: string) => s.toLowerCase())
-      );
-      const moldCharacteristicSet = new Set(
-        (mold.characteristics || []).map((c: string) => c.toLowerCase())
-      );
+    // 2. Fetch slim catalog from Redis/Firestore
+    const molds = await getLookupCatalog();
+    if (molds.length === 0) {
+      console.log("[performMoldLookup] ⚠️ No active molds found in database");
+      devLog("[performMoldLookup] ⚠️ No active molds found in database");
+      return [];
+    }
 
+    // Log first mold for debugging
+    console.log(`[performMoldLookup] First mold: ${molds[0]?.moldName || "N/A"} with ${(molds[0]?.symptoms || []).length} symptoms`);
+    devLog(`[performMoldLookup] First mold: ${molds[0]?.moldName || "N/A"} with ${(molds[0]?.symptoms || []).length} symptoms`);
+
+    // 3. Score each mold
+    const results = molds.map((mold) => {
       // Count matches
       let matches = 0;
-      matches += normalizedSymptoms.filter((s) => moldSymptomSet.has(s)).length;
-      matches += normalizedSigns.filter((s) => moldSignSet.has(s)).length;
-      matches += normalizedCharacteristics.filter((c) =>
-        moldCharacteristicSet.has(c)
-      ).length;
+      matches += normalizedSymptoms.filter((s) => mold.symptomLookup[s]).length;
+      matches += normalizedSigns.filter((s) => mold.signLookup[s]).length;
+      matches += normalizedCharacteristics.filter((c) => mold.characteristicLookup[c]).length;
 
-      const moldNameNormalized = String(mold.name || "").toLowerCase();
+      const moldNameNormalized = mold.moldNameNormalized;
       let nameMatches = 0;
 
       normalizedMoldNames.forEach((reportedName) => {
@@ -118,8 +190,8 @@ export async function performMoldLookup(
       const confidence = totalReported > 0 ? Math.round((matches / totalReported) * 100) : 0;
 
       return {
-        moldId: mold.id,
-        moldName: mold.name,
+        moldId: mold.moldId,
+        moldName: mold.moldName,
         confidence: Math.max(0, confidence), // ensure non-negative
       };
     });

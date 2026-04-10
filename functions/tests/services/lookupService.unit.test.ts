@@ -1,12 +1,19 @@
 import {describe, it, expect, jest, beforeEach, afterEach} from "@jest/globals";
 import {performMoldLookup, LookupResult} from "../../src/services/lookupService";
 import {getFirestore} from "firebase-admin/firestore";
+import {getCachedItem, cacheItem} from "../../src/utils/cacheManager";
 
 // Mock Firebase Firestore
 jest.mock("firebase-admin/firestore");
 jest.mock("../../src/utils/dev");
+jest.mock("../../src/utils/cacheManager", () => ({
+  getCachedItem: jest.fn(),
+  cacheItem: jest.fn(),
+}));
 
 const mockGetFirestore = getFirestore as jest.MockedFunction<typeof getFirestore>;
+const mockGetCachedItem = getCachedItem as jest.MockedFunction<typeof getCachedItem>;
+const mockCacheItem = cacheItem as jest.MockedFunction<typeof cacheItem>;
 
 describe("lookupService.performMoldLookup (unit)", () => {
   let mockDb: any;
@@ -15,6 +22,8 @@ describe("lookupService.performMoldLookup (unit)", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockGetCachedItem.mockResolvedValue(null);
+    mockCacheItem.mockResolvedValue(undefined);
 
     // Setup mock Firestore structure
     mockDb = {
