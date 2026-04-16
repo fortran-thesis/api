@@ -1,8 +1,8 @@
 import {Request, Response, Router} from "express";
 import {rateLimit} from "express-rate-limit";
-import {lookupLimiter} from "../configs/limit";
 import {verifyUser} from "../middlewares/verification";
 import {lookupMolds} from "../controllers/lookupController";
+import {lookupLimiter} from "../configs/limit";
 
 const router = Router();
 
@@ -12,8 +12,8 @@ const router = Router();
  */
 router.post(
   "/",
-  rateLimit(lookupLimiter),
   verifyUser(),
+  rateLimit(lookupLimiter),
   async (req: Request, res: Response) => {
     await lookupMolds(req, res);
   }

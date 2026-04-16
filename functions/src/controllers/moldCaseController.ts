@@ -244,7 +244,7 @@ export const addCultivationLog = async (req: Request, res: Response) => {
 
     const created = await addCultivationLogToCase(caseId, logData);
     if (!created) return sendError(res, "Failed to add cultivation log", 400);
-    return sendSuccess(res, created);
+    return sendSuccess(res, created, 201);
   } catch (error) {
     devLog(error);
     return defaultError(res);
@@ -646,7 +646,7 @@ export const createCultureSession = async (req: Request, res: Response) => {
       target_at: req.body.target_at,
     });
     if (!created) return sendError(res, "Failed to create culture session", 400);
-    return sendSuccess(res, created);
+    return sendSuccess(res, created, 201);
   } catch (error) {
     devLog(error);
     return defaultError(res);

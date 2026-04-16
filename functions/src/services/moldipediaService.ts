@@ -130,17 +130,16 @@ export const retrieveMoldipediaById = async (
     if (!query) throw new Error("No moldipedia found.");
     const moldipedia = documentToJson<Moldipedia>(query);
 
-    // Transform cover_photo path to signed URL
-    const signedUrl = await transformToSignedUrl(moldipedia.cover_photo);
+    const [signedUrl, author] = await Promise.all([
+      transformToSignedUrl(moldipedia.cover_photo),
+      moldipedia.author_id ? retrieveUserById(moldipedia.author_id) : Promise.resolve(null),
+    ]);
 
     let authorName = "Unknown Author";
-    if (moldipedia.author_id) {
-      const user = await retrieveUserById(moldipedia.author_id);
-      if (user) {
-        authorName =
-          user.details.displayName ||
-          `${user.user.first_name} ${user.user.last_name}`;
-      }
+    if (author) {
+      authorName =
+        author.details.displayName ||
+        `${author.user.first_name} ${author.user.last_name}`;
     }
 
     // eslint-disable-next-line camelcase

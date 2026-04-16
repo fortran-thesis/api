@@ -36,6 +36,20 @@ const genericKeyGenerator = (req: any): string => {
   return ipKeyGenerator(req) || `anon-${Date.now()}`;
 };
 
+const createUserScopedKeyGenerator = (scope: string) => (req: any): string => {
+  const userId = req.user?.id;
+  if (typeof userId === "string" && userId.trim()) {
+    return `${scope}:${userId}`;
+  }
+
+  return genericKeyGenerator(req);
+};
+
+const lookupUserKeyGenerator = createUserScopedKeyGenerator("lookup-user");
+const modelUserKeyGenerator = createUserScopedKeyGenerator("model-user");
+const reportUserKeyGenerator = createUserScopedKeyGenerator("report-user");
+const flagReportUserKeyGenerator = createUserScopedKeyGenerator("flag-report-user");
+
 export const limitingOptions: Partial<Options> = {
   windowMs: 15 * 60 * 1000,
   max: 300,
@@ -81,12 +95,12 @@ export const registerLimiter: Partial<Options> = {
   store: createLimiterStore(),
 };
 
-// ML prediction endpoints are compute-heavy; apply tighter per-IP limits.
+// ML prediction endpoints are compute-heavy; apply tighter per-user limits.
 export const modelPredictionLimiter: Partial<Options> = {
   windowMs: 10 * 60 * 1000,
   max: 60,
   message: "Too many prediction requests. Please try again later.",
-  keyGenerator: genericKeyGenerator,
+  keyGenerator: modelUserKeyGenerator,
   store: createLimiterStore(),
 };
 
@@ -94,7 +108,7 @@ export const reportCreateLimiter: Partial<Options> = {
   windowMs: 60 * 60 * 1000,
   max: 20,
   message: "Too many reports submitted. Please try again later.",
-  keyGenerator: genericKeyGenerator,
+  keyGenerator: reportUserKeyGenerator,
   store: createLimiterStore(),
 };
 
@@ -102,6 +116,14 @@ export const flagReportCreateLimiter: Partial<Options> = {
   windowMs: 60 * 60 * 1000,
   max: 20,
   message: "Too many flag reports submitted. Please try again later.",
-  keyGenerator: genericKeyGenerator,
+  keyGenerator: flagReportUserKeyGenerator,
+  store: createLimiterStore(),
+};
+
+export const lookupLimiter: Partial<Options> = {
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  message: "Too many lookup requests. Please try again later.",
+  keyGenerator: lookupUserKeyGenerator,
   store: createLimiterStore(),
 };

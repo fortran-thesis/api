@@ -36,12 +36,13 @@ const getLookupCorpus = async (): Promise<{molds: LookupCorpusMold[]; source: "c
 
   const db = getFirestore(firebase);
   const moldsCollection = getCollectionName(FirestoreCollection.MOLDS);
-  const moldsSnapshot = await db
-    .collection(moldsCollection)
-    .select("name", "symptoms", "signs", "characteristics")
-    .get();
+  const moldsQuery = db.collection(moldsCollection) as any;
+  const projectedQuery = typeof moldsQuery.select === "function" ?
+    moldsQuery.select("name", "symptoms", "signs", "characteristics") :
+    moldsQuery;
+  const moldsSnapshot = await projectedQuery.get();
 
-  const molds: LookupCorpusMold[] = moldsSnapshot.docs.map((doc) => {
+  const molds: LookupCorpusMold[] = moldsSnapshot.docs.map((doc: any) => {
     const data = doc.data() as Record<string, unknown>;
     return {
       id: doc.id,

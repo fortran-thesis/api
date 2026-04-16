@@ -21,8 +21,8 @@ const router = Router();
  */
 router.post(
   "/predict",
-  rateLimit(modelPredictionLimiter),
   verifyUser(),
+  rateLimit(modelPredictionLimiter),
   async (req: Request, res: Response): Promise<void> => {
     await predictJson(req, res);
   }
@@ -35,8 +35,8 @@ router.post(
  */
 router.post(
   "/predict/multipart",
-  rateLimit(modelPredictionLimiter),
   verifyUser(),
+  rateLimit(modelPredictionLimiter),
   upload.single("image"),
   async (req: Request, res: Response): Promise<void> => {
     await predictMultipart(req, res);
@@ -50,8 +50,8 @@ router.post(
  */
 router.post(
   "/predict-with-details",
-  rateLimit(modelPredictionLimiter),
   verifyUser(),
+  rateLimit(modelPredictionLimiter),
   async (req: Request, res: Response): Promise<void> => {
     await predictWithDetails(req, res);
   }

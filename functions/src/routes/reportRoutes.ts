@@ -26,8 +26,8 @@ const router = Router();
 // Create report
 router.post(
   "/",
-  rateLimit(reportCreateLimiter),
   verifyUser(),
+  rateLimit(reportCreateLimiter),
   validateBody(ReportCreateSchema),
   auditLog(AuditAction.CREATE_REPORT, "Reported user"),
   cacheInvalidate("reports", "create"),

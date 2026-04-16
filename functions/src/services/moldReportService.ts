@@ -205,10 +205,11 @@ const parseFindingEntry = (findings: unknown, aliases: string[]): string => {
 };
 
 export const retrieveMoldReportPrintPayload = async (
-  reportId: string
+  reportId: string,
+  preloadedReport?: MoldReport | null
 ): Promise<MoldReportPrintPayload | null> => {
   try {
-    const report = await retrieveMoldReportById(reportId);
+    const report = preloadedReport ?? await retrieveMoldReportById(reportId);
     if (!report) return null;
 
     const reportDynamic = report as MoldReport & Record<string, unknown>;
@@ -223,8 +224,11 @@ export const retrieveMoldReportPrintPayload = async (
     const confidenceLevel = normalizeConfidencePercent(finalVerdict?.confidence ?? lookupTop?.confidence);
     const selectedWikiId = toText(finalVerdict?.moldipedia_id);
 
-    const moldCatalog = selectedMoldId ? await retrieveMoldById(selectedMoldId) : (selectedMoldName ? await retrieveMoldByName(selectedMoldName) : null);
-    const wiki = selectedWikiId ? await retrieveMoldipediaById(selectedWikiId) : null;
+    const moldCatalogPromise = selectedMoldId ?
+      retrieveMoldById(selectedMoldId) :
+      (selectedMoldName ? retrieveMoldByName(selectedMoldName) : Promise.resolve(null));
+    const wikiPromise = selectedWikiId ? retrieveMoldipediaById(selectedWikiId) : Promise.resolve(null);
+    const [moldCatalog, wiki] = await Promise.all([moldCatalogPromise, wikiPromise]);
 
     const moldInfo = moldCatalog?.mold_details?.info;
     const moldPrevention = moldCatalog?.mold_details?.prevention;
@@ -360,28 +364,21 @@ const transformCoverPhotos = async (
   return Promise.all(
     caseDetails.map(async (detail, idx) => {
       if (!detail.cover_photo) {
-        devLog(`transformCoverPhotos[${idx}]: No cover_photo field`);
         return detail;
       }
 
       if (!Array.isArray(detail.cover_photo)) {
-        devLog(`transformCoverPhotos[${idx}]: cover_photo is not an array: ${typeof detail.cover_photo}`);
         return detail;
       }
 
-      devLog(`transformCoverPhotos[${idx}]: Found ${detail.cover_photo.length} photos to transform`);
-
       const transformedPhotos = await Promise.all(
-        detail.cover_photo.map(async (photoPath: string, photoIdx: number) => {
-          devLog(`transformCoverPhotos[${idx}][${photoIdx}]: Transforming: ${photoPath}`);
+        detail.cover_photo.map(async (photoPath: string) => {
           const signedUrl = await transformToSignedUrl(photoPath, MOLD_REPORT_SERVICE_TTL_SECONDS);
-          devLog(`transformCoverPhotos[${idx}][${photoIdx}]: Result: ${signedUrl ? "SUCCESS" : "FAILED"} - ${signedUrl}`);
           return signedUrl;
         })
       );
 
       const filteredPhotos = transformedPhotos.filter((url) => url !== null);
-      devLog(`transformCoverPhotos[${idx}]: Filtered ${filteredPhotos.length}/${transformedPhotos.length} photos (removed nulls)`);
 
       return {
         ...detail,
@@ -679,29 +676,45 @@ export const retrieveMoldReportById = async (
     }
 
     const raw = documentToJson<MoldReport>(doc);
-    devLog(`retrieveMoldReportById: Raw data case_details: ${JSON.stringify(raw.case_details)}`);
 
     const nr = normalizeDateObserved(raw) as unknown as MoldReport & any;
-    try {
-      const authUser = await getAuthUserById(nr.user_id);
-      if (authUser) {
-        // Include location as alias for address so mobile clients can read either field
-        const detailsWithLocation = {
-          ...authUser.details,
-          location: authUser.details.address || authUser.user.address || null,
-        };
-        nr.reporter = {
-          id: authUser.id,
-          user: authUser.user,
-          details: detailsWithLocation,
-        } as WithId<APIUser>;
-      }
-    } catch (e) {
-      devLog(e, "ENRICH_REPORT_USER");
+    const authUserPromise = nr.user_id ?
+      getAuthUserById(nr.user_id).catch((error) => {
+        devLog(error, "ENRICH_REPORT_USER");
+        return null;
+      }) :
+      Promise.resolve(null);
+
+    const detailDocsPromise = findAllCaseDetailsByReportId(id).catch((error) => {
+      devLog(error, "ENRICH_REPORT_DETAILS");
+      return [];
+    });
+
+    const moldCasePromise = retrieveMoldCaseByReportId(id).catch((error) => {
+      devLog(error, "ENRICH_REPORT_PRIORITY");
+      return null;
+    });
+
+    const [authUser, detailDocs, moldCase] = await Promise.all([
+      authUserPromise,
+      detailDocsPromise,
+      moldCasePromise,
+    ]);
+
+    if (authUser) {
+      // Include location as alias for address so mobile clients can read either field
+      const detailsWithLocation = {
+        ...authUser.details,
+        location: authUser.details.address || authUser.user.address || null,
+      };
+      nr.reporter = {
+        id: authUser.id,
+        user: authUser.user,
+        details: detailsWithLocation,
+      } as WithId<APIUser>;
     }
 
     // Fetch case_details from subcollection instead of embedded field
-    const detailDocs = await findAllCaseDetailsByReportId(id);
     const caseDetails = detailDocs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
@@ -709,21 +722,15 @@ export const retrieveMoldReportById = async (
 
     // Transform cover photos to signed URLs
     if (caseDetails.length > 0) {
-      devLog(`retrieveMoldReportById: Transforming cover photos for ${caseDetails.length} case details`);
+      devLog(`retrieveMoldReportById: Transforming ${caseDetails.length} case detail(s)`);
       nr.case_details = await transformCoverPhotos(caseDetails);
-      devLog(`retrieveMoldReportById: After transform case_details: ${JSON.stringify(nr.case_details)}`);
     } else {
       nr.case_details = [];
     }
 
     // Embed mold_case priority so clients have it on the detail view too
-    try {
-      const moldCase = await retrieveMoldCaseByReportId(id);
-      if (moldCase?.priority) {
-        nr.priority = moldCase.priority;
-      }
-    } catch (e) {
-      devLog(e, "ENRICH_REPORT_PRIORITY");
+    if (moldCase?.priority) {
+      nr.priority = moldCase.priority;
     }
 
     devLog("retrieveMoldReportById: ✅ Report retrieved successfully");
