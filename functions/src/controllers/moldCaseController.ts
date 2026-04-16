@@ -784,7 +784,8 @@ export const finalizeVerdict = async (req: Request, res: Response) => {
 
     const updatedCase = await updateMoldCaseInFirestore(caseId, {
       final_verdict: verdict,
-      is_archived: true,
+      // Keep the case active after resolution; explicit closure/archive is a separate action.
+      is_archived: false,
       end_date: moldCase.end_date || Timestamp.now(),
     });
 
@@ -799,7 +800,7 @@ export const finalizeVerdict = async (req: Request, res: Response) => {
         const linkedReport = await retrieveMoldReportById(moldCase.mold_report_id);
         if (!linkedReport) {
           reportSyncWarning = "Verdict saved, but linked report could not be found";
-        } else if (linkedReport.status !== "in progress") {
+        } else if (linkedReport.status === "rejected" || linkedReport.status === "closed") {
           reportSyncWarning = `Verdict saved, but report status '${linkedReport.status}' cannot transition to 'resolved'`;
         }
 

@@ -42,6 +42,7 @@ import {
   getCombinedTotalCountsController,
   getMoldCasePriorityBreakdownController,
   getResolvedMoldReportsCountController,
+  getMoldReportPrintById,
 } from "../controllers/moldReportController";
 import {Role, AuditAction} from "../types/enums";
 import {NotificationType} from "../types/models/notificationTypes";
@@ -276,6 +277,15 @@ router.get(
   validateQuery(SearchMoldReportsQuerySchema),
   async (req: Request, res: Response) => {
     await searchMoldReports(req, res);
+  }
+);
+
+router.get(
+  "/:id/export",
+  verifyUser(),
+  validateParams(ReportIdSchema),
+  async (req: Request, res: Response) => {
+    await getMoldReportPrintById(req, res);
   }
 );
 

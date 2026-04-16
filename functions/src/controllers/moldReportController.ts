@@ -21,6 +21,7 @@ import {
   searchAndFilterMoldReports,
   getMoldReportMonthlyTotals,
   getRawCaseCoverPhoto,
+  retrieveMoldReportPrintPayload,
 } from "../services/moldReportService";
 import {performMoldLookup} from "../services/lookupService";
 import {createLog} from "../utils/logging";
@@ -735,6 +736,22 @@ export const getMoldReportById = async (req: Request, res: Response) => {
     if (!report) return sendError(res, "Failed to retrieve mold report", 404);
     if (!canAccessReport(req.user, report)) return sendError(res, "Forbidden", 403);
     return sendSuccess(res, report);
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
+export const getMoldReportPrintById = async (req: Request, res: Response) => {
+  try {
+    const id: string = req.params.id;
+    const report: MoldReport | null = await retrieveMoldReportById(id);
+    if (!report) return sendError(res, "Failed to retrieve mold report", 404);
+    if (!canAccessReport(req.user, report)) return sendError(res, "Forbidden", 403);
+
+    const payload = await retrieveMoldReportPrintPayload(id);
+    if (!payload) return sendError(res, "Failed to retrieve printable report payload", 404);
+    return sendSuccess(res, payload);
   } catch (error) {
     devLog(error);
     return defaultError(res);

@@ -32,6 +32,9 @@ import {
 import {findMoldCasesByPriority} from "../repositories/moldCaseRepository";
 import {
   APIUser,
+  Mold,
+  MoldCase,
+  MoldipediaResponse,
   MoldReport,
   MoldReportDetails,
   PaginatedResult,
@@ -42,9 +45,306 @@ import {getAuthUserById, getAuthUsersByIds, getAuthUserNamesByIds} from "../lib/
 import {batchRetrieveMoldCasesByReportIds, retrieveMoldCaseByReportId} from "./moldCaseService";
 import {transformToSignedUrl} from "../utils/storageTransform";
 import {normalizeResponseTimestamps} from "../utils/normalizeResponse";
+import {retrieveMoldById, retrieveMoldByName} from "./moldService";
+import {retrieveMoldipediaById} from "./moldipediaService";
 
 // Cache TTL for this service (in seconds) — signed URLs should match cached responses
 const MOLD_REPORT_SERVICE_TTL_SECONDS = 300;
+
+export interface MoldReportPrintSectionPayload {
+  fungus_name: string;
+  overview: string;
+  description: string;
+  health_risks: string;
+  affected_hosts: string[];
+  symptoms_and_signs: string;
+  disease_cycle: string;
+  impact: string;
+  prevention_summary: string;
+  physical_control: string;
+  cultural_control: string;
+  biological_control: string;
+  mechanical_control: string;
+  chemical_control: string;
+}
+
+export interface MoldReportPrintPayload {
+  report: {
+    report_id: string;
+    report_date: string;
+    case_name: string;
+    host_plant_affected: string;
+    case_status: string;
+    confidence_level: string;
+    location: string;
+    date_observed: string;
+  };
+  identities: {
+    reporter_name: string;
+    mycologist_name: string;
+  };
+  sections: MoldReportPrintSectionPayload;
+  source: {
+    mold_catalog_used: boolean;
+    wikimold_used: boolean;
+    mold_catalog_id?: string;
+    wikimold_id?: string;
+  };
+}
+
+const toText = (...values: unknown[]): string => {
+  for (const value of values) {
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      if (trimmed.length > 0) return trimmed;
+      continue;
+    }
+
+    if (typeof value === "number") {
+      return String(value);
+    }
+
+    if (Array.isArray(value)) {
+      const joined = value
+        .map((entry) => (typeof entry === "string" ? entry.trim() : String(entry ?? "").trim()))
+        .filter((entry) => entry.length > 0)
+        .join(", ");
+      if (joined.length > 0) return joined;
+    }
+  }
+
+  return "";
+};
+
+const toStringList = (...values: unknown[]): string[] => {
+  for (const value of values) {
+    if (Array.isArray(value)) {
+      const normalized = value
+        .map((entry) => String(entry ?? "").trim())
+        .filter((entry) => entry.length > 0);
+      if (normalized.length > 0) return normalized;
+      continue;
+    }
+
+    if (typeof value === "string") {
+      const normalized = value
+        .split(/[,;|\n]/)
+        .map((entry) => entry.trim())
+        .filter((entry) => entry.length > 0);
+      if (normalized.length > 0) return normalized;
+    }
+  }
+
+  return [];
+};
+
+const formatDateLabel = (value: unknown): string => {
+  if (!value) return "N/A";
+
+  const asDate = new Date(value as any);
+  if (!isNaN(asDate.getTime())) {
+    return asDate.toISOString().split("T")[0];
+  }
+
+  if (typeof value === "object" && value !== null && "_seconds" in (value as Record<string, unknown>)) {
+    const seconds = (value as Record<string, unknown>)._seconds;
+    if (typeof seconds === "number") {
+      return new Date(seconds * 1000).toISOString().split("T")[0];
+    }
+  }
+
+  return "N/A";
+};
+
+const normalizeConfidencePercent = (rawValue: unknown): string => {
+  if (rawValue === null || rawValue === undefined || rawValue === "") return "N/A";
+
+  const parsed = typeof rawValue === "number" ? rawValue : parseFloat(String(rawValue));
+  if (Number.isNaN(parsed)) return "N/A";
+
+  const percent = parsed <= 1 ? parsed * 100 : parsed;
+  const clamped = Math.max(0, Math.min(100, percent));
+  return `${clamped.toFixed(0)}%`;
+};
+
+const parseAdditionalInfoEntry = (
+  additionalInfo: unknown,
+  aliases: string[]
+): string => {
+  if (!Array.isArray(additionalInfo)) return "";
+
+  const normalizedAliases = aliases.map((entry) => entry.toLowerCase().trim());
+  for (const row of additionalInfo) {
+    if (!row || typeof row !== "object") continue;
+    const title = String((row as Record<string, unknown>).title ?? "").toLowerCase().trim();
+    if (!title) continue;
+
+    if (normalizedAliases.some((alias) => title === alias || title.includes(alias) || alias.includes(title))) {
+      return toText((row as Record<string, unknown>).description);
+    }
+  }
+
+  return "";
+};
+
+const parseFindingEntry = (findings: unknown, aliases: string[]): string => {
+  if (!Array.isArray(findings)) return "";
+
+  const normalizedAliases = aliases.map((entry) => entry.toLowerCase().trim());
+  for (const row of findings) {
+    if (!row || typeof row !== "object") continue;
+    const title = String((row as Record<string, unknown>).title ?? "").toLowerCase().trim();
+    if (!title) continue;
+
+    if (normalizedAliases.some((alias) => title === alias || title.includes(alias) || alias.includes(title))) {
+      return toText((row as Record<string, unknown>).content);
+    }
+  }
+
+  return "";
+};
+
+export const retrieveMoldReportPrintPayload = async (
+  reportId: string
+): Promise<MoldReportPrintPayload | null> => {
+  try {
+    const report = await retrieveMoldReportById(reportId);
+    if (!report) return null;
+
+    const reportDynamic = report as MoldReport & Record<string, unknown>;
+
+    const moldCase = await retrieveMoldCaseByReportId(reportId, report.user_id);
+    const moldCaseDynamic = moldCase as (MoldCase & Record<string, unknown>) | null;
+    const finalVerdict = moldCase?.final_verdict;
+    const lookupTop = Array.isArray(report.lookup_results) && report.lookup_results.length > 0 ? report.lookup_results[0] : null;
+
+    const selectedMoldId = toText(finalVerdict?.moldId, lookupTop?.moldId);
+    const selectedMoldName = toText(finalVerdict?.moldName, lookupTop?.moldName);
+    const confidenceLevel = normalizeConfidencePercent(finalVerdict?.confidence ?? lookupTop?.confidence);
+    const selectedWikiId = toText(finalVerdict?.moldipedia_id);
+
+    const moldCatalog = selectedMoldId ? await retrieveMoldById(selectedMoldId) : (selectedMoldName ? await retrieveMoldByName(selectedMoldName) : null);
+    const wiki = selectedWikiId ? await retrieveMoldipediaById(selectedWikiId) : null;
+
+    const moldInfo = moldCatalog?.mold_details?.info;
+    const moldPrevention = moldCatalog?.mold_details?.prevention;
+    const moldAdditionalInfo = moldInfo?.additional_info;
+
+    const sections: MoldReportPrintSectionPayload = {
+      fungus_name: toText(selectedMoldName, moldCatalog?.name, wiki?.title, "Pending Identification"),
+      overview: toText(
+        moldInfo?.overview,
+        parseAdditionalInfoEntry(moldAdditionalInfo, ["overview"]),
+        wiki?.body,
+      ),
+      description: toText(
+        moldInfo?.description,
+        wiki?.body,
+      ),
+      health_risks: toText(
+        moldInfo?.health_risks,
+        parseAdditionalInfoEntry(moldAdditionalInfo, ["health risks", "health risk", "risk"]),
+        parseFindingEntry(wiki?.findings, ["health risks", "health risk"]),
+      ),
+      affected_hosts: toStringList(
+        moldInfo?.affected_hosts,
+        parseAdditionalInfoEntry(moldAdditionalInfo, ["affected hosts", "affected crops", "hosts", "host"]),
+        wiki?.affected_hosts,
+      ),
+      symptoms_and_signs: toText(
+        moldInfo?.symptoms_and_signs,
+        parseAdditionalInfoEntry(moldAdditionalInfo, ["symptoms and signs", "symptoms & signs", "symptoms", "signs"]),
+        wiki?.symptoms,
+      ),
+      disease_cycle: toText(
+        parseAdditionalInfoEntry(moldAdditionalInfo, ["disease cycle", "disease cycle spread", "disease cycle spread impact"]),
+        wiki?.disease_cycle,
+      ),
+      impact: toText(
+        parseAdditionalInfoEntry(moldAdditionalInfo, ["impact"]),
+        wiki?.impact,
+      ),
+      prevention_summary: toText(
+        moldInfo?.prevention_summary,
+        parseAdditionalInfoEntry(moldAdditionalInfo, ["prevention summary", "prevention"]),
+        wiki?.prevention,
+      ),
+      physical_control: toText(
+        moldPrevention?.physicalControl,
+        wiki?.treatments?.physical,
+      ),
+      cultural_control: toText(
+        moldPrevention?.culturalControl,
+        wiki?.treatments?.cultural,
+      ),
+      biological_control: toText(
+        moldPrevention?.biologicalControl,
+        wiki?.treatments?.biological,
+      ),
+      mechanical_control: toText(
+        moldPrevention?.mechanicalControl,
+        wiki?.treatments?.mechanical,
+      ),
+      chemical_control: toText(
+        moldPrevention?.chemicalControl,
+        wiki?.treatments?.chemical,
+      ),
+    };
+
+    const reporterPayload = (reportDynamic.reporter && typeof reportDynamic.reporter === "object") ?
+      reportDynamic.reporter as Record<string, unknown> :
+      {};
+    const reporterDetails = (reporterPayload.details && typeof reporterPayload.details === "object") ?
+      reporterPayload.details as Record<string, unknown> :
+      {};
+    const reporterUser = (reporterPayload.user && typeof reporterPayload.user === "object") ?
+      reporterPayload.user as Record<string, unknown> :
+      {};
+
+    const reporterName = toText(
+      reporterPayload.name,
+      reporterDetails.displayName,
+      `${String(reporterUser.first_name || "").trim()} ${String(reporterUser.last_name || "").trim()}`.trim(),
+      "Unknown Reporter"
+    );
+
+    const mycologistName = toText(
+      moldCaseDynamic?.mycologist_name,
+      moldCase?.mycologist_id,
+      "Unassigned"
+    );
+
+    const moldCatalogDynamic = moldCatalog as (Mold & Record<string, unknown>) | null;
+    const wikiDynamic = wiki as (MoldipediaResponse & Record<string, unknown>) | null;
+
+    return {
+      report: {
+        report_id: toText(reportDynamic.id, reportId),
+        report_date: formatDateLabel(new Date()),
+        case_name: toText(report.case_name, `MR-${reportId}`),
+        host_plant_affected: toText(report.host, "N/A"),
+        case_status: toText(report.status, "pending").toUpperCase(),
+        confidence_level: confidenceLevel,
+        location: toText(report.location, "N/A"),
+        date_observed: formatDateLabel(report.date_observed),
+      },
+      identities: {
+        reporter_name: reporterName,
+        mycologist_name: mycologistName,
+      },
+      sections,
+      source: {
+        mold_catalog_used: !!moldCatalog,
+        wikimold_used: !!wiki,
+        ...(moldCatalogDynamic?.id ? {mold_catalog_id: String(moldCatalogDynamic.id)} : {}),
+        ...(wikiDynamic?.id ? {wikimold_id: String(wikiDynamic.id)} : {}),
+      },
+    };
+  } catch (error) {
+    devLog(error, "RETRIEVE_MOLD_REPORT_PRINT_PAYLOAD");
+    return null;
+  }
+};
 
 // Helper: transform cover_photo arrays to signed URLs
 const transformCoverPhotos = async (
