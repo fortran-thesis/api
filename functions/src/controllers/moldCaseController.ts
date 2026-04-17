@@ -33,7 +33,7 @@ import {StorageFolder, generateStoragePath} from "../configs/storage";
 import {Timestamp} from "firebase-admin/firestore";
 import {retrieveMoldReportById, updateMoldReportInFirestore} from "../services/moldReportService";
 import {performMoldLookup} from "../services/lookupService";
-import {retrieveAllMoldipedia} from "../services/moldipediaService";
+import {retrieveAllMoldipedia, retrieveMoldipediaByTitle} from "../services/moldipediaService";
 
 const getActorContext = (req: Request) => {
   const userId = req.user?.id;
@@ -761,11 +761,16 @@ export const finalizeVerdict = async (req: Request, res: Response) => {
         undefined;
     try {
       if (!matchedWikiMoldId && moldName && moldName.trim()) {
-        const moldipediaResponse = await retrieveAllMoldipedia(10, undefined, moldName.trim());
-        const candidates = moldipediaResponse?.snapshot || [];
-        if (Array.isArray(candidates) && candidates.length > 0) {
-          matchedWikiMold = candidates[0];
-          matchedWikiMoldId = (matchedWikiMold as any)?.id;
+        matchedWikiMold = await retrieveMoldipediaByTitle(moldName.trim());
+        matchedWikiMoldId = (matchedWikiMold as any)?.id;
+
+        if (!matchedWikiMoldId) {
+          const moldipediaResponse = await retrieveAllMoldipedia(10, undefined, moldName.trim());
+          const candidates = moldipediaResponse?.snapshot || [];
+          if (Array.isArray(candidates) && candidates.length > 0) {
+            matchedWikiMold = candidates[0];
+            matchedWikiMoldId = (matchedWikiMold as any)?.id;
+          }
         }
       }
     } catch (matchErr) {

@@ -12,6 +12,7 @@ import {
   findAllMoldipedia,
   findArchivedMoldipedia,
   findMoldipediaById,
+  findMoldipediaByTitle,
   softDeleteMoldipedia,
   updateMoldipedia,
 } from "../repositories/moldipediaRepository";
@@ -26,6 +27,31 @@ import {transformToSignedUrl} from "../utils/storageTransform";
 import {normalizeResponseTimestamps} from "../utils/normalizeResponse";
 import {retrieveUserById} from "./userService";
 import {getAuthUsersByIds} from "../lib/auth";
+
+const buildMoldipediaResponse = async (
+  moldipedia: Moldipedia & {author_id?: string | null}
+): Promise<MoldipediaResponse> => {
+  const [signedUrl, author] = await Promise.all([
+    transformToSignedUrl(moldipedia.cover_photo),
+    moldipedia.author_id ? retrieveUserById(moldipedia.author_id) : Promise.resolve(null),
+  ]);
+
+  let authorName = "Unknown Author";
+  if (author) {
+    authorName =
+      author.details.displayName ||
+      `${author.user.first_name} ${author.user.last_name}`;
+  }
+
+  // eslint-disable-next-line camelcase
+  const {author_id: _, ...rest} = moldipedia;
+
+  return normalizeResponseTimestamps({
+    ...rest,
+    cover_photo: signedUrl || moldipedia.cover_photo,
+    author: authorName,
+  });
+};
 
 export const addMoldipediaToFirestore = async (
   details: Moldipedia
@@ -129,27 +155,21 @@ export const retrieveMoldipediaById = async (
     const query: DocumentSnapshot | null = await findMoldipediaById(id);
     if (!query) throw new Error("No moldipedia found.");
     const moldipedia = documentToJson<Moldipedia>(query);
+    return await buildMoldipediaResponse(moldipedia);
+  } catch (error) {
+    devLog(error);
+    return null;
+  }
+};
 
-    const [signedUrl, author] = await Promise.all([
-      transformToSignedUrl(moldipedia.cover_photo),
-      moldipedia.author_id ? retrieveUserById(moldipedia.author_id) : Promise.resolve(null),
-    ]);
-
-    let authorName = "Unknown Author";
-    if (author) {
-      authorName =
-        author.details.displayName ||
-        `${author.user.first_name} ${author.user.last_name}`;
-    }
-
-    // eslint-disable-next-line camelcase
-    const {author_id: _, ...rest} = moldipedia;
-
-    return normalizeResponseTimestamps({
-      ...rest,
-      cover_photo: signedUrl || moldipedia.cover_photo,
-      author: authorName,
-    });
+export const retrieveMoldipediaByTitle = async (
+  title: string
+): Promise<MoldipediaResponse | null> => {
+  try {
+    const query: DocumentSnapshot | null = await findMoldipediaByTitle(title);
+    if (!query) throw new Error("No moldipedia found.");
+    const moldipedia = documentToJson<Moldipedia>(query);
+    return await buildMoldipediaResponse(moldipedia);
   } catch (error) {
     devLog(error);
     return null;

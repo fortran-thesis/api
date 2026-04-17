@@ -1,6 +1,7 @@
 import {FieldPath} from "firebase-admin/firestore";
 import {
   addDocument,
+  getDocumentByFieldId,
   getDocumentById,
   getPaginatedDocuments,
   updateDocument,
@@ -17,6 +18,8 @@ export const addMoldipedia = async (data: Moldipedia) =>
   addDocument(collection, data);
 export const findMoldipediaById = async (id: string) =>
   getDocumentById(collection, id);
+export const findMoldipediaByTitle = async (title: string) =>
+  getDocumentByFieldId(collection, "title", title);
 export const findAllMoldipedia = async (
   limit: number,
   token?: string,

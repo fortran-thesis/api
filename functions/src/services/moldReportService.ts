@@ -478,12 +478,14 @@ export const addMoldReportToFirestore = async (
       devLog(`addMoldReportToFirestore: ✅ ${caseDetailsArray.length} case details written to subcollection with IDs: ${caseDetailIds.join(", ")}`);
     }
 
-    // Invalidate all report caches since new report was added
+    // Invalidate report list caches that can reflect the new document.
     await invalidateAllLists("mold-reports-search");
     await invalidateAllLists("mold-reports-all");
     await invalidateAllLists("mold-reports-user");
     await invalidateAllLists("mold-reports-unassigned");
-    await invalidateAllLists("mold-reports-assigned");
+    if (details.assigned_mycologist_id) {
+      await invalidateAllLists("mold-reports-assigned");
+    }
 
     // Return with case_details included in response for backward compat
     const result = documentToJson<MoldReport>(doc);
@@ -894,13 +896,6 @@ export const addCaseDetailToReport = async (
     const doc = await addCaseDetailToSubcollection(reportId, detail);
     if (!doc) throw new Error("Failed to add case detail to report.");
 
-    // Invalidate all report caches since report was modified
-    await invalidateAllLists("mold-reports-search");
-    await invalidateAllLists("mold-reports-all");
-    await invalidateAllLists("mold-reports-user");
-    await invalidateAllLists("mold-reports-unassigned");
-    await invalidateAllLists("mold-reports-assigned");
-
     return normalizeResponseTimestamps({
       id: doc.id,
       ...doc.data() as MoldReportDetails,
@@ -919,13 +914,6 @@ export const updateCaseDetailInReport = async (
   try {
     const result = await updateCaseDetailRepo(reportId, detailId, updates);
     if (!result) throw new Error("Failed to update case detail.");
-
-    // Invalidate all report caches since report was modified
-    await invalidateAllLists("mold-reports-search");
-    await invalidateAllLists("mold-reports-all");
-    await invalidateAllLists("mold-reports-user");
-    await invalidateAllLists("mold-reports-unassigned");
-    await invalidateAllLists("mold-reports-assigned");
 
     return updates as MoldReportDetails;
   } catch (error) {
