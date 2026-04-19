@@ -31,6 +31,7 @@ import {generateCode} from "../utils/code";
 import {transformToSignedUrl} from "../utils/storageTransform";
 import {v4 as uuidv4} from "uuid";
 import {envOptions} from "../configs/environment";
+import type {GeoLocation} from "../types/models/userTypes";
 
 export const registerUser = async (
   username: string,
@@ -41,7 +42,8 @@ export const registerUser = async (
   address: string,
   phoneNumber?: string,
   role: Role = Role.USER,
-  occupation?: string
+  occupation?: string,
+  geoLocation?: GeoLocation
 ): Promise<ApiResponse<string>> => {
   try {
     // Normalize Philippine phone numbers to E.164 (+63...) expected by Firebase
@@ -87,6 +89,7 @@ export const registerUser = async (
       first_name: firstName,
       last_name: lastName,
       address: address,
+      ...(geoLocation && {geo_location: geoLocation}),
       role: role,
       is_banned: false,
       ...(occupation && {occupation}),
@@ -284,6 +287,7 @@ export const updateUserProfile = async (
     address?: string;
     phoneNumber?: string;
     photo_url?: string;
+    geoLocation?: GeoLocation;
   }>
 ): Promise<boolean> => {
   try {
@@ -331,6 +335,7 @@ export const updateUserProfile = async (
     if (profile.lastName !== undefined) firestoreUpdate.last_name = profile.lastName;
     if (profile.address !== undefined) firestoreUpdate.address = profile.address;
     if (profile.phoneNumber !== undefined) firestoreUpdate.phone_number = normalizePH(profile.phoneNumber) || profile.phoneNumber;
+    if (profile.geoLocation !== undefined) firestoreUpdate.geo_location = profile.geoLocation;
     // Do not write `photo_url` to Firestore user document (leave original types unchanged)
 
     devLog(`[updateUserProfile] authUpdate: ${JSON.stringify(authUpdate)}`);

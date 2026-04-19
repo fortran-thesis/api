@@ -17,6 +17,7 @@ import {devLog} from "../utils/dev";
 import {sendError, sendSuccess, defaultError} from "../utils/response";
 import {ApiResponse} from "../types/types";
 import {getAuth} from "firebase-admin/auth";
+import type {GeoLocation} from "../types/models/userTypes";
 
 
 export const createUser = async (req: Request, res: Response) => {
@@ -30,6 +31,8 @@ export const createUser = async (req: Request, res: Response) => {
       address,
       phoneNumber,
       occupation,
+      geoLocation,
+      geo_location,
     }: {
       username: string;
       email: string;
@@ -39,6 +42,8 @@ export const createUser = async (req: Request, res: Response) => {
       address: string;
       phoneNumber?: string;
       occupation?: string;
+      geoLocation?: GeoLocation;
+      geo_location?: GeoLocation;
     } = req.body;
     const process: ApiResponse<string> = await registerUser(
       username,
@@ -49,7 +54,8 @@ export const createUser = async (req: Request, res: Response) => {
       address,
       phoneNumber,
       undefined,
-      occupation
+      occupation,
+      geoLocation ?? geo_location
     );
     if (!process.success) {
       devLog(process, "REGISTER_USER");

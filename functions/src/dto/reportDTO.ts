@@ -1,6 +1,7 @@
 import {z} from "zod";
 import {ReportReason} from "../types/enums";
 import {zTimestamp, zTimestampOptional} from "./shared";
+import {GeoLocationSchema} from "./dto";
 
 const ID_REGEX = /^[A-Za-z0-9_-]+$/;
 
@@ -27,6 +28,7 @@ export const MoldReportSchema = z.object({
   priority: z.enum(["low", "medium", "high"]).optional(),
   host: z.string({required_error: "Host is required."}).min(1, {message: "Host is required."}),
   location: z.string({required_error: "Location is required."}).min(1, {message: "Location is required."}),
+  geo_location: GeoLocationSchema.optional(),
   description: z.string({required_error: "Description is required."}).min(1, {message: "Description is required."}),
   reported_symptoms: z.array(z.string()).optional(),
   reported_signs: z.array(z.string()).optional(),

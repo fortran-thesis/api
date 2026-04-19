@@ -456,6 +456,11 @@ describe("moldController (unit)", () => {
               normalized_key: "aspergillus flavi",
               predicted_class_name: "Aspergillus_section_Flavi",
             }),
+            expect.objectContaining({
+              display_name: "Aspergillus Nigri",
+              normalized_key: "aspergillus nigri",
+              predicted_class_name: "Aspergillus_section_Nigri",
+            }),
           ]),
         })
       );

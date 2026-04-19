@@ -1,5 +1,6 @@
 import {ReportReason, Role, AuditAction} from "../enums";
 import {Timestamp} from "firebase-admin/firestore";
+import type {GeoLocation} from "./userTypes";
 
 export interface Report {
   reporter_id: string;
@@ -29,6 +30,7 @@ export interface MoldReport {
   case_details?: Array<MoldReportDetails>
   host: string
   location: string
+  geo_location?: GeoLocation;
   priority?: "low" | "medium" | "high"
   status: "pending" | "in progress" | "resolved" | "rejected" | "closed"
   reported_symptoms?: string[];

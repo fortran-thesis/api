@@ -77,6 +77,13 @@ export interface MoldReportPrintPayload {
     case_status: string;
     confidence_level: string;
     location: string;
+    geo_location?: {
+      latitude?: number;
+      longitude?: number;
+      altitude?: number;
+      accuracy?: number;
+      source?: string;
+    };
     date_observed: string;
   };
   identities: {
@@ -330,6 +337,7 @@ export const retrieveMoldReportPrintPayload = async (
         case_status: toText(report.status, "pending").toUpperCase(),
         confidence_level: confidenceLevel,
         location: toText(report.location, "N/A"),
+        geo_location: reportDynamic.geo_location,
         date_observed: formatDateLabel(report.date_observed),
       },
       identities: {
