@@ -42,7 +42,11 @@ import {
   WithMetadata,
 } from "../types/types";
 import {getAuthUserById, getAuthUsersByIds, getAuthUserNamesByIds} from "../lib/auth";
-import {batchRetrieveMoldCasesByReportIds, retrieveMoldCaseByReportId} from "./moldCaseService";
+import {
+  batchRetrieveMoldCasesByReportIds,
+  getCultivationLogsFromCase,
+  retrieveMoldCaseByReportId,
+} from "./moldCaseService";
 import {transformToSignedUrl} from "../utils/storageTransform";
 import {normalizeResponseTimestamps} from "../utils/normalizeResponse";
 import {retrieveMoldById, retrieveMoldByName} from "./moldService";
@@ -89,6 +93,48 @@ export interface MoldReportPrintPayload {
     wikimold_used: boolean;
     mold_catalog_id?: string;
     wikimold_id?: string;
+  };
+  follow_ups?: Array<{
+    detail_id: string;
+    observed_at: string;
+    description: string;
+    cover_photo: string[];
+  }>;
+  investigation?: {
+    initial_observation: {
+      microscopic_identification: string;
+      microscopic_confidence: string;
+      macroscopic_summary: string;
+      symptoms: string[];
+      signs: string[];
+      characteristics: string[];
+    };
+    in_vivo_latest: {
+      observed_at: string;
+      identified_mold: string;
+      confidence: string;
+      summary: string;
+      additional_info: string;
+      culture_name: string;
+    } | null;
+    in_vitro_latest: {
+      observed_at: string;
+      identified_mold: string;
+      confidence: string;
+      summary: string;
+      additional_info: string;
+      culture_name: string;
+    } | null;
+    cultivation_logs: Array<{
+      log_id: string;
+      type: string;
+      observed_at: string;
+      identified_mold: string;
+      confidence: string;
+      summary: string;
+      additional_info: string;
+      culture_name: string;
+    }>;
   };
 }
 
@@ -167,6 +213,49 @@ const normalizeConfidencePercent = (rawValue: unknown): string => {
   return `${clamped.toFixed(0)}%`;
 };
 
+const asObject = (value: unknown): Record<string, unknown> => {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return {};
+};
+
+const toMillis = (value: unknown): number => {
+  if (!value) return 0;
+  if (value instanceof Date) return value.getTime();
+  if (typeof value === "object" && value !== null) {
+    if (typeof (value as Record<string, unknown>).toDate === "function") {
+      try {
+        return ((value as Record<string, unknown>).toDate as () => Date)().getTime();
+      } catch {
+        return 0;
+      }
+    }
+    if (typeof (value as Record<string, unknown>)._seconds === "number") {
+      return ((value as Record<string, unknown>)._seconds as number) * 1000;
+    }
+  }
+
+  const parsed = new Date(String(value));
+  return Number.isNaN(parsed.getTime()) ? 0 : parsed.getTime();
+};
+
+const toIsoDateTimeLabel = (value: unknown): string => {
+  const ms = toMillis(value);
+  if (ms === 0) return "N/A";
+  return new Date(ms).toISOString();
+};
+
+const normalizeCultivationType = (value: unknown): "vivo" | "vitro" | "unknown" => {
+  const normalized = String(value || "")
+    .toLowerCase()
+    .replace(/[\s_-]+/g, "");
+
+  if (normalized === "vivo" || normalized === "invivo") return "vivo";
+  if (normalized === "vitro" || normalized === "invitro") return "vitro";
+  return "unknown";
+};
+
 const parseAdditionalInfoEntry = (
   additionalInfo: unknown,
   aliases: string[]
@@ -216,6 +305,13 @@ export const retrieveMoldReportPrintPayload = async (
 
     const moldCase = await retrieveMoldCaseByReportId(reportId, report.user_id);
     const moldCaseDynamic = moldCase as (MoldCase & Record<string, unknown>) | null;
+
+    const caseId = toText(moldCaseDynamic?.id);
+    const cultivationLogsResult = caseId ? await getCultivationLogsFromCase(caseId, 200) : null;
+    const cultivationLogs = Array.isArray(cultivationLogsResult?.snapshot) ?
+      cultivationLogsResult!.snapshot as Array<Record<string, unknown>> :
+      [];
+
     const finalVerdict = moldCase?.final_verdict;
     const lookupTop = Array.isArray(report.lookup_results) && report.lookup_results.length > 0 ? report.lookup_results[0] : null;
 
@@ -318,6 +414,128 @@ export const retrieveMoldReportPrintPayload = async (
       "Unassigned"
     );
 
+    const followUps = (Array.isArray(report.case_details) ? report.case_details : [])
+      .map((detail, index) => {
+        const detailDynamic = detail as MoldReportDetails & Record<string, unknown>;
+        const coverPhotos = Array.isArray(detailDynamic.cover_photo) ?
+          detailDynamic.cover_photo
+            .map((entry) => String(entry ?? "").trim())
+            .filter((entry) => entry.length > 0) :
+          [];
+
+        return {
+          detail_id: toText(detailDynamic.id, `detail-${index + 1}`),
+          observed_at: toIsoDateTimeLabel(
+            detailDynamic.timestamp ??
+              (detailDynamic.metadata as Record<string, unknown> | undefined)?.created_at ??
+              detailDynamic.created_at
+          ),
+          description: toText(detailDynamic.description, "N/A"),
+          cover_photo: coverPhotos,
+        };
+      })
+      .filter((entry) => entry.description !== "N/A" || entry.cover_photo.length > 0);
+
+    const cultivationDetails = asObject(moldCaseDynamic?.cultivation_details);
+    const initialObservation = asObject(cultivationDetails.initial_observations);
+    const microscopicSnapshot = asObject(
+      initialObservation.microscopic_ai_snapshot ?? cultivationDetails.microscopic_ai_snapshot
+    );
+
+    const initialObservationPayload = {
+      microscopic_identification: toText(
+        initialObservation.initial_microscopic,
+        initialObservation.identified_mold,
+        initialObservation.identifiedMold,
+        microscopicSnapshot.identified_mold,
+      ),
+      microscopic_confidence: normalizeConfidencePercent(
+        initialObservation.confidence ?? microscopicSnapshot.confidence
+      ),
+      macroscopic_summary: toText(
+        initialObservation.initial_macroscopic,
+        initialObservation.initial_macroscopic_color,
+        initialObservation.initial_macroscopic_texture,
+      ),
+      symptoms: toStringList(
+        initialObservation.initial_symptoms,
+        initialObservation.initial_macroscopic_symptoms,
+        cultivationDetails.initial_symptoms,
+        cultivationDetails.initial_macroscopic_symptoms,
+      ),
+      signs: toStringList(
+        initialObservation.initial_signs,
+        cultivationDetails.initial_signs,
+      ),
+      characteristics: toStringList(
+        initialObservation.initial_characteristics,
+        initialObservation.initial_macroscopic_characteristics,
+        cultivationDetails.initial_characteristics,
+        cultivationDetails.initial_macroscopic_characteristics,
+      ),
+    };
+
+    const cultivationLogPayload = cultivationLogs
+      .map((rawLog, index) => {
+        const characteristics = asObject(rawLog.characteristics);
+        const type = normalizeCultivationType(rawLog.type);
+
+        return {
+          log_id: toText(rawLog.id, `log-${index + 1}`),
+          type,
+          observed_at: toIsoDateTimeLabel(rawLog.created_at ?? asObject(rawLog.metadata).created_at),
+          identified_mold: toText(
+            characteristics.microscopic_identification,
+            characteristics.identified_mold,
+            characteristics.identifiedMold,
+          ),
+          confidence: normalizeConfidencePercent(characteristics.confidence),
+          summary: toText(
+            characteristics.lesion_size,
+            characteristics.lesion_color,
+            characteristics.lesion_texture,
+            characteristics.colony_diameter,
+            characteristics.colony_color,
+            characteristics.colony_texture,
+            characteristics.color,
+            characteristics.texture,
+          ),
+          additional_info: toText(rawLog.additional_info),
+          culture_name: toText(characteristics.culture_name, characteristics.cultureName),
+          _sort_ms: toMillis(rawLog.created_at ?? asObject(rawLog.metadata).created_at),
+        };
+      })
+      .sort((a, b) => b._sort_ms - a._sort_ms);
+
+    const latestByType = (type: "vivo" | "vitro") => {
+      const matched = cultivationLogPayload.find((entry) => entry.type === type);
+      if (!matched) return null;
+      return {
+        observed_at: matched.observed_at,
+        identified_mold: matched.identified_mold,
+        confidence: matched.confidence,
+        summary: matched.summary,
+        additional_info: matched.additional_info,
+        culture_name: matched.culture_name,
+      };
+    };
+
+    const investigationPayload = {
+      initial_observation: initialObservationPayload,
+      in_vivo_latest: latestByType("vivo"),
+      in_vitro_latest: latestByType("vitro"),
+      cultivation_logs: cultivationLogPayload.map((entry) => ({
+        log_id: entry.log_id,
+        type: entry.type,
+        observed_at: entry.observed_at,
+        identified_mold: entry.identified_mold,
+        confidence: entry.confidence,
+        summary: entry.summary,
+        additional_info: entry.additional_info,
+        culture_name: entry.culture_name,
+      })),
+    };
+
     const moldCatalogDynamic = moldCatalog as (Mold & Record<string, unknown>) | null;
     const wikiDynamic = wiki as (MoldipediaResponse & Record<string, unknown>) | null;
 
@@ -343,6 +561,8 @@ export const retrieveMoldReportPrintPayload = async (
         ...(moldCatalogDynamic?.id ? {mold_catalog_id: String(moldCatalogDynamic.id)} : {}),
         ...(wikiDynamic?.id ? {wikimold_id: String(wikiDynamic.id)} : {}),
       },
+      follow_ups: followUps,
+      investigation: investigationPayload,
     };
   } catch (error) {
     devLog(error, "RETRIEVE_MOLD_REPORT_PRINT_PAYLOAD");

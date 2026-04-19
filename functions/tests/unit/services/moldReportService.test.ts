@@ -14,6 +14,12 @@ const mockGetAuthUserById = jest.fn() as jest.MockedFunction<any>;
 const mockGetAuthUsersByIds = jest.fn() as jest.MockedFunction<any>;
 const mockGenerateNextDailyCaseName = jest.fn() as jest.MockedFunction<any>;
 const mockInvalidateAllLists = jest.fn() as jest.MockedFunction<any>;
+const mockRetrieveMoldById = jest.fn() as jest.MockedFunction<any>;
+const mockRetrieveMoldByName = jest.fn() as jest.MockedFunction<any>;
+const mockRetrieveMoldipediaById = jest.fn() as jest.MockedFunction<any>;
+const mockRetrieveMoldCaseByReportId = jest.fn() as jest.MockedFunction<any>;
+const mockBatchRetrieveMoldCasesByReportIds = jest.fn() as jest.MockedFunction<any>;
+const mockGetCultivationLogsFromCase = jest.fn() as jest.MockedFunction<any>;
 
 jest.mock("../../../src/repositories/moldReportRepository", () => ({
   addMoldReport: (...args: any[]) => mockAddMoldReport(...args),
@@ -52,8 +58,16 @@ jest.mock("../../../src/repositories/caseDetailRepository", () => ({
 }));
 
 jest.mock("../../../src/services/moldCaseService", () => ({
-  retrieveMoldCaseByReportId: jest.fn().mockResolvedValue(null),
-  batchRetrieveMoldCasesByReportIds: jest.fn().mockResolvedValue(new Map()),
+  retrieveMoldCaseByReportId: (...args: any[]) => mockRetrieveMoldCaseByReportId(...args),
+  batchRetrieveMoldCasesByReportIds: (...args: any[]) => mockBatchRetrieveMoldCasesByReportIds(...args),
+  getCultivationLogsFromCase: (...args: any[]) => mockGetCultivationLogsFromCase(...args),
+}));
+jest.mock("../../../src/services/moldService", () => ({
+  retrieveMoldById: (...args: any[]) => mockRetrieveMoldById(...args),
+  retrieveMoldByName: (...args: any[]) => mockRetrieveMoldByName(...args),
+}));
+jest.mock("../../../src/services/moldipediaService", () => ({
+  retrieveMoldipediaById: (...args: any[]) => mockRetrieveMoldipediaById(...args),
 }));
 jest.mock("../../../src/configs/redis", () => ({
   redis: {},
@@ -65,6 +79,12 @@ describe("moldReportService (unit)", () => {
     jest.clearAllMocks();
     mockGenerateNextDailyCaseName.mockResolvedValue("CASE-2026-001");
     mockInvalidateAllLists.mockResolvedValue(undefined);
+    mockRetrieveMoldCaseByReportId.mockResolvedValue(null);
+    mockBatchRetrieveMoldCasesByReportIds.mockResolvedValue(new Map());
+    mockGetCultivationLogsFromCase.mockResolvedValue({snapshot: [], nextPageToken: null});
+    mockRetrieveMoldById.mockResolvedValue(null);
+    mockRetrieveMoldByName.mockResolvedValue(null);
+    mockRetrieveMoldipediaById.mockResolvedValue(null);
   });
 
   describe("addMoldReportToFirestore", () => {
@@ -164,6 +184,141 @@ describe("moldReportService (unit)", () => {
       const result = await moldReportService.getRawCaseCoverPhoto("report123");
 
       expect(result).toBeNull();
+    });
+  });
+
+  describe("retrieveMoldReportPrintPayload", () => {
+    it("includes follow-ups and investigation evidence when case details and logs exist", async () => {
+      const preloadedReport = {
+        id: "report-1",
+        user_id: "farmer-1",
+        status: "resolved",
+        case_name: "MR-2026-0001",
+        host: "Tomato",
+        location: "Laguna",
+        date_observed: "2026-04-01T00:00:00.000Z",
+        case_details: [
+          {
+            id: "detail-1",
+            description: "Farmer follow-up details",
+            cover_photo: ["https://example.com/follow-up.jpg"],
+            metadata: {created_at: {_seconds: 1713436800}},
+          },
+        ],
+        lookup_results: [
+          {
+            moldId: "mold-1",
+            moldName: "Fusarium",
+            confidence: 0.86,
+          },
+        ],
+      } as any;
+
+      mockRetrieveMoldCaseByReportId.mockResolvedValue({
+        id: "case-1",
+        mycologist_id: "myc-1",
+        cultivation_details: {
+          initial_microscopic: "Fusarium",
+          initial_macroscopic: "Brown lesions",
+          initial_symptoms: ["Leaf spots"],
+          initial_signs: ["Dark margins"],
+          initial_characteristics: ["Water-soaked"],
+          microscopic_ai_snapshot: {
+            identified_mold: "Fusarium",
+            confidence: 0.91,
+          },
+        },
+        final_verdict: {
+          moldId: "mold-1",
+          moldName: "Fusarium",
+          confidence: 88,
+        },
+      } as any);
+
+      mockGetCultivationLogsFromCase.mockResolvedValue({
+        snapshot: [
+          {
+            id: "log-vivo",
+            type: "vivo",
+            created_at: "2026-04-18T10:00:00.000Z",
+            additional_info: "Observed in field",
+            characteristics: {
+              lesion_color: "Dark brown",
+              lesion_size: "8",
+              microscopic_identification: "Fusarium",
+              confidence: 0.82,
+            },
+          },
+          {
+            id: "log-vitro",
+            type: "vitro",
+            created_at: "2026-04-17T09:00:00.000Z",
+            additional_info: "Observed in lab",
+            characteristics: {
+              colony_color: "White",
+              colony_diameter: "20",
+              microscopic_identification: "Fusarium",
+              confidence: 0.79,
+            },
+          },
+        ],
+        nextPageToken: null,
+      });
+
+      mockRetrieveMoldById.mockResolvedValue({
+        id: "mold-1",
+        name: "Fusarium",
+        mold_details: {
+          info: {
+            overview: "Overview",
+            description: "Description",
+            health_risks: "Risk",
+            affected_hosts: ["Tomato"],
+            symptoms_and_signs: "Symptoms",
+            prevention_summary: "Prevention",
+            additional_info: [],
+          },
+          prevention: {
+            physicalControl: "Physical",
+            culturalControl: "Cultural",
+            biologicalControl: "Biological",
+            mechanicalControl: "Mechanical",
+            chemicalControl: "Chemical",
+          },
+        },
+      } as any);
+
+      const payload = await moldReportService.retrieveMoldReportPrintPayload(
+        "report-1",
+        preloadedReport,
+      );
+
+      expect(payload).toBeTruthy();
+      expect(payload?.follow_ups).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            detail_id: "detail-1",
+            description: "Farmer follow-up details",
+          }),
+        ]),
+      );
+      expect(payload?.investigation?.initial_observation).toEqual(
+        expect.objectContaining({
+          microscopic_identification: "Fusarium",
+        }),
+      );
+      expect(payload?.investigation?.in_vivo_latest).toEqual(
+        expect.objectContaining({
+          identified_mold: "Fusarium",
+          summary: expect.any(String),
+        }),
+      );
+      expect(payload?.investigation?.in_vitro_latest).toEqual(
+        expect.objectContaining({
+          identified_mold: "Fusarium",
+          summary: expect.any(String),
+        }),
+      );
     });
   });
 
