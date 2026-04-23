@@ -308,9 +308,7 @@ export const retrieveMoldReportPrintPayload = async (
 
     const caseId = toText(moldCaseDynamic?.id);
     const cultivationLogsResult = caseId ? await getCultivationLogsFromCase(caseId, 200) : null;
-    const cultivationLogs = Array.isArray(cultivationLogsResult?.snapshot) ?
-      cultivationLogsResult!.snapshot as Array<Record<string, unknown>> :
-      [];
+    const cultivationLogs = cultivationLogsResult?.snapshot ?? [];
 
     const finalVerdict = moldCase?.final_verdict;
     const lookupTop = Array.isArray(report.lookup_results) && report.lookup_results.length > 0 ? report.lookup_results[0] : null;
@@ -479,11 +477,12 @@ export const retrieveMoldReportPrintPayload = async (
       .map((rawLog, index) => {
         const characteristics = asObject(rawLog.characteristics);
         const type = normalizeCultivationType(rawLog.type);
+        const createdAt = asObject(rawLog.metadata).created_at;
 
         return {
           log_id: toText(rawLog.id, `log-${index + 1}`),
           type,
-          observed_at: toIsoDateTimeLabel(rawLog.created_at ?? asObject(rawLog.metadata).created_at),
+          observed_at: toIsoDateTimeLabel(createdAt),
           identified_mold: toText(
             characteristics.microscopic_identification,
             characteristics.identified_mold,
@@ -502,7 +501,7 @@ export const retrieveMoldReportPrintPayload = async (
           ),
           additional_info: toText(rawLog.additional_info),
           culture_name: toText(characteristics.culture_name, characteristics.cultureName),
-          _sort_ms: toMillis(rawLog.created_at ?? asObject(rawLog.metadata).created_at),
+          _sort_ms: toMillis(createdAt),
         };
       })
       .sort((a, b) => b._sort_ms - a._sort_ms);

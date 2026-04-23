@@ -28,7 +28,7 @@ import {
   findCultivationLogsByCaseId,
   deleteCultivationLog as deleteCultivationLogRepo,
 } from "../repositories/cultivationLogRepository";
-import {CultivationLog, MoldCase, PaginatedResult, WithId, WithMetadata} from "../types/types";
+import {CultivationLog, MoldCase, PaginatedResult, WithMetadata, WithMetadataAndId} from "../types/types";
 import {transformToSignedUrl} from "../utils/storageTransform";
 import {cacheItem, getCachedItem, cacheList, getCachedList, invalidateAllLists} from "../utils/cacheManager";
 import {normalizeResponseTimestamps} from "../utils/normalizeResponse";
@@ -98,7 +98,7 @@ const transformMoldCaseImages = async (moldCase: MoldCase): Promise<MoldCase> =>
 };
 
 // Helper: transform a single cultivation log's image_url to a signed URL
-const transformLogImageUrl = async (log: WithId<CultivationLog>): Promise<WithId<CultivationLog>> => {
+const transformLogImageUrl = async (log: WithMetadataAndId<CultivationLog>): Promise<WithMetadataAndId<CultivationLog>> => {
   if (log.image_url) {
     log.image_url = await transformToSignedUrl(log.image_url, MOLD_CASE_SERVICE_TTL_SECONDS) || log.image_url;
   }
@@ -561,7 +561,7 @@ export const getCultivationLogsFromCase = async (
   caseId: string,
   limit = 50,
   token?: string
-): Promise<PaginatedResult<WithId<CultivationLog>[]> | null> => {
+): Promise<PaginatedResult<WithMetadataAndId<CultivationLog>[]> | null> => {
   try {
     // Ensure the parent case exists
     const moldCase = await findMoldCaseById(caseId);
@@ -570,10 +570,10 @@ export const getCultivationLogsFromCase = async (
     const result = await findCultivationLogsByCaseId(caseId, limit, token);
     if (!result) return {snapshot: [], nextPageToken: null};
 
-    const logs: WithId<CultivationLog>[] = result.docs.map((doc) => ({
+    const logs: WithMetadataAndId<CultivationLog>[] = result.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
-    } as WithId<CultivationLog>));
+    } as WithMetadataAndId<CultivationLog>));
 
     // Transform image URLs
     const transformed = await Promise.all(logs.map(transformLogImageUrl));
@@ -613,14 +613,14 @@ export const removeCultivationLogFromCase = async (
 export const addCultivationLogToCase = async (
   caseId: string,
   log: CultivationLog
-): Promise<WithId<CultivationLog> | null> => {
+): Promise<WithMetadataAndId<CultivationLog> | null> => {
   try {
     const doc = await addCultivationLogRepo(caseId, log);
     if (!doc) throw new Error("Failed to add cultivation log");
 
-    const created: WithId<CultivationLog> = {
+    const created: WithMetadataAndId<CultivationLog> = {
       id: doc.id,
-      ...doc.data() as CultivationLog,
+      ...(doc.data() as WithMetadata<CultivationLog>),
     };
 
     // Transform image URL in the returned log

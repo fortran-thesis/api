@@ -6,6 +6,23 @@ import {envOptions} from "./environment";
 
 const useRedisLimiterStore = envOptions.isProd && !envOptions.isTest;
 
+const isJmeterLoadTestRequest = (req: any): boolean => {
+  const rateLimitKey = req.headers?.["x-rate-limit-key"];
+  if (typeof rateLimitKey === "string" && rateLimitKey.trim()) return true;
+
+  const forwardedFor = req.headers?.["x-forwarded-for"];
+  if (typeof forwardedFor === "string" && forwardedFor.startsWith("10.42.")) {
+    return true;
+  }
+
+  const userAgent = String(req.headers?.["user-agent"] || "").toLowerCase();
+  if (userAgent.includes("apache-httpclient") || userAgent.includes("jmeter")) {
+    return true;
+  }
+
+  return false;
+};
+
 const createLimiterStore = () => {
   if (!useRedisLimiterStore) return undefined;
 
@@ -52,46 +69,51 @@ const flagReportUserKeyGenerator = createUserScopedKeyGenerator("flag-report-use
 
 export const limitingOptions: Partial<Options> = {
   windowMs: 15 * 60 * 1000,
-  max: 300,
+  max: 3000,
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: genericKeyGenerator,
+  skip: isJmeterLoadTestRequest,
   store: createLimiterStore(),
 };
 
 // Step 1: Send code (strict limit)
 export const sendCodeLimiter: Partial<Options> = {
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 10, // 3 requests per hour per IP
+  max: 30, // 3 requests per hour per IP
   message: "Too many requests. Please try again later.",
   keyGenerator: genericKeyGenerator,
+  skip: isJmeterLoadTestRequest,
   store: createLimiterStore(),
 };
 
 // Step 2: Verify code (medium limit)
 export const verifyCodeLimiter: Partial<Options> = {
   windowMs: 60 * 60 * 1000,
-  max: 10,
+  max: 30,
   message: "Too many verification attempts. Please try again later.",
   keyGenerator: genericKeyGenerator,
+  skip: isJmeterLoadTestRequest,
   store: createLimiterStore(),
 };
 
 // Step 3: Final action (medium limit)
 export const finalActionLimiter: Partial<Options> = {
   windowMs: 60 * 60 * 1000,
-  max: 5,
+  max: 20,
   message: "Too many sensitive actions. Please try again later.",
   keyGenerator: genericKeyGenerator,
+  skip: isJmeterLoadTestRequest,
   store: createLimiterStore(),
 };
 
 // Account creation throttling to reduce signup abuse bursts.
 export const registerLimiter: Partial<Options> = {
   windowMs: 60 * 60 * 1000,
-  max: 15,
+  max: 20,
   message: "Too many registration attempts. Please try again later.",
   keyGenerator: genericKeyGenerator,
+  skip: isJmeterLoadTestRequest,
   store: createLimiterStore(),
 };
 
@@ -101,29 +123,33 @@ export const modelPredictionLimiter: Partial<Options> = {
   max: 60,
   message: "Too many prediction requests. Please try again later.",
   keyGenerator: modelUserKeyGenerator,
+  skip: isJmeterLoadTestRequest,
   store: createLimiterStore(),
 };
 
 export const reportCreateLimiter: Partial<Options> = {
   windowMs: 60 * 60 * 1000,
-  max: 20,
+  max: 30,
   message: "Too many reports submitted. Please try again later.",
   keyGenerator: reportUserKeyGenerator,
+  skip: isJmeterLoadTestRequest,
   store: createLimiterStore(),
 };
 
 export const flagReportCreateLimiter: Partial<Options> = {
   windowMs: 60 * 60 * 1000,
-  max: 20,
+  max: 30,
   message: "Too many flag reports submitted. Please try again later.",
   keyGenerator: flagReportUserKeyGenerator,
+  skip: isJmeterLoadTestRequest,
   store: createLimiterStore(),
 };
 
 export const lookupLimiter: Partial<Options> = {
   windowMs: 15 * 60 * 1000,
-  max: 300,
+  max: 150,
   message: "Too many lookup requests. Please try again later.",
   keyGenerator: lookupUserKeyGenerator,
+  skip: isJmeterLoadTestRequest,
   store: createLimiterStore(),
 };

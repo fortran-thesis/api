@@ -63,8 +63,8 @@ export const addDeviceToken = async (
     }
 
     await ref.update({
-      token: data.token,
-      platform: data.platform,
+      "token": data.token,
+      "platform": data.platform,
       "metadata.updated_at": now,
       "metadata.deleted_at": null,
     });
