@@ -482,7 +482,14 @@ export const getUnassignedMoldReports = async (req: Request, res: Response) => {
 export const postCaseDetail = async (req: Request, res: Response) => {
   try {
     const id: string = req.params.id;
-    const details = req.body as { cover_photo?: string[]; description: string };
+    const {cover_photo, description} = req.body as {
+      cover_photo?: string[];
+      description: string;
+    };
+    const details: MoldReportDetails = {
+      description,
+      ...(Array.isArray(cover_photo) ? {cover_photo} : {}),
+    };
     // Fetch report to determine actor and ownership
     const report = await retrieveMoldReportById(id);
     if (!report) return sendError(res, "Report not found", 404);
@@ -504,7 +511,7 @@ export const postCaseDetail = async (req: Request, res: Response) => {
 
       const created = await addCaseDetailToReport(
         id,
-        details as MoldReportDetails
+        details
       );
       if (!created) {
         return sendError(res, "Failed to add case detail to report", 400);
@@ -547,7 +554,7 @@ export const postCaseDetail = async (req: Request, res: Response) => {
     // Otherwise (curator/mycologist/admin), just append the case detail
     const created = await addCaseDetailToReport(
       id,
-      details as MoldReportDetails
+      details
     );
     if (!created) {
       return sendError(res, "Failed to add case detail to report", 400);

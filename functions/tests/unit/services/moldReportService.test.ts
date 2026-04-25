@@ -5,6 +5,7 @@ const mockAddMoldReport = jest.fn() as jest.MockedFunction<any>;
 const mockFindAllMoldReports = jest.fn() as jest.MockedFunction<any>;
 const mockFindMoldReportById = jest.fn() as jest.MockedFunction<any>;
 const mockUpdateMoldReport = jest.fn() as jest.MockedFunction<any>;
+const mockDeleteMoldReport = jest.fn() as jest.MockedFunction<any>;
 const mockSoftDeleteMoldReport = jest.fn() as jest.MockedFunction<any>;
 const mockCountReportsByStatuses = jest.fn() as jest.MockedFunction<any>;
 const mockCountTotalReports = jest.fn() as jest.MockedFunction<any>;
@@ -20,12 +21,18 @@ const mockRetrieveMoldipediaById = jest.fn() as jest.MockedFunction<any>;
 const mockRetrieveMoldCaseByReportId = jest.fn() as jest.MockedFunction<any>;
 const mockBatchRetrieveMoldCasesByReportIds = jest.fn() as jest.MockedFunction<any>;
 const mockGetCultivationLogsFromCase = jest.fn() as jest.MockedFunction<any>;
+const mockUpsertCachedListItem = jest.fn() as jest.MockedFunction<any>;
+const mockReplaceCachedListItem = jest.fn() as jest.MockedFunction<any>;
+const mockRemoveCachedListItem = jest.fn() as jest.MockedFunction<any>;
+const mockGetCachedListDescriptors = jest.fn() as jest.MockedFunction<any>;
+const mockDeleteCache = jest.fn() as jest.MockedFunction<any>;
 
 jest.mock("../../../src/repositories/moldReportRepository", () => ({
   addMoldReport: (...args: any[]) => mockAddMoldReport(...args),
   findAllMoldReports: (...args: any[]) => mockFindAllMoldReports(...args),
   findMoldReportById: (...args: any[]) => mockFindMoldReportById(...args),
   updateMoldReport: (...args: any[]) => mockUpdateMoldReport(...args),
+  deleteMoldReport: (...args: any[]) => mockDeleteMoldReport(...args),
   softDeleteMoldReport: (...args: any[]) => mockSoftDeleteMoldReport(...args),
   countReportsByStatuses: (...args: any[]) =>
     mockCountReportsByStatuses(...args),
@@ -46,6 +53,13 @@ jest.mock("../../../src/utils/cacheManager", () => ({
   getCachedItem: jest.fn(),
   cacheList: jest.fn(),
   getCachedList: jest.fn(),
+  getCachedListDescriptors: (...args: any[]) => mockGetCachedListDescriptors(...args),
+  upsertCachedListItem: (...args: any[]) => mockUpsertCachedListItem(...args),
+  replaceCachedListItem: (...args: any[]) => mockReplaceCachedListItem(...args),
+  removeCachedListItem: (...args: any[]) => mockRemoveCachedListItem(...args),
+}));
+jest.mock("../../../src/utils/redis", () => ({
+  deleteCache: (...args: any[]) => mockDeleteCache(...args),
 }));
 jest.mock("../../../src/utils/dev");
 const mockFindAllCaseDetailsByReportId = jest.fn() as jest.MockedFunction<any>;
@@ -79,6 +93,13 @@ describe("moldReportService (unit)", () => {
     jest.clearAllMocks();
     mockGenerateNextDailyCaseName.mockResolvedValue("CASE-2026-001");
     mockInvalidateAllLists.mockResolvedValue(undefined);
+    mockUpsertCachedListItem.mockResolvedValue({});
+    mockReplaceCachedListItem.mockResolvedValue({});
+    mockRemoveCachedListItem.mockResolvedValue({});
+    mockGetCachedListDescriptors.mockResolvedValue([]);
+    mockDeleteCache.mockResolvedValue(undefined);
+    mockGetAuthUserById.mockResolvedValue(null);
+    mockFindAllCaseDetailsByReportId.mockResolvedValue([]);
     mockRetrieveMoldCaseByReportId.mockResolvedValue(null);
     mockBatchRetrieveMoldCasesByReportIds.mockResolvedValue(new Map());
     mockGetCultivationLogsFromCase.mockResolvedValue({snapshot: [], nextPageToken: null});
@@ -91,8 +112,11 @@ describe("moldReportService (unit)", () => {
     it("should add mold report successfully", async () => {
       const mockDoc = {id: "report123"};
       mockAddMoldReport.mockResolvedValue(mockDoc);
+      mockFindMoldReportById.mockResolvedValue({exists: true, id: "report123"} as any);
       mockDocumentToJson.mockReturnValue({
         id: "report123",
+        user_id: "user123",
+        status: "pending",
         location: "Kitchen",
       });
 
@@ -103,8 +127,17 @@ describe("moldReportService (unit)", () => {
         case_details: [],
       } as any);
 
-      expect(result).toEqual({id: "report123", location: "Kitchen", case_details: [], _caseDetailIds: []});
+      expect(result).toEqual({
+        id: "report123",
+        location: "Kitchen",
+        user_id: "user123",
+        status: "pending",
+        case_details: [],
+        _caseDetailIds: [],
+      });
       expect(mockAddMoldReport).toHaveBeenCalled();
+      expect(mockUpsertCachedListItem).toHaveBeenCalledTimes(4);
+      expect(mockInvalidateAllLists).toHaveBeenCalledWith("mold-reports-search");
     });
 
     it("should return null on error", async () => {
@@ -354,18 +387,46 @@ describe("moldReportService (unit)", () => {
       mockFindMoldReportById.mockResolvedValue(mockDoc);
       mockDocumentToJson.mockReturnValue({
         id: "report123",
-        status: "resolved",
         user_id: "user1",
         date_observed: new Date(),
+        status: "pending",
+        location: "Kitchen",
       });
       mockGetAuthUserById.mockResolvedValue(null);
 
       const result = await moldReportService.updateMoldReportInFirestore(
         "report123",
-        {status: "resolved"}
+        {location: "Kitchen"}
       );
 
-      expect(result?.status).toBe("resolved");
+      expect(result?.location).toBe("Kitchen");
+      expect(mockReplaceCachedListItem).toHaveBeenCalledTimes(4);
+      expect(mockInvalidateAllLists).toHaveBeenCalledWith("mold-reports-search");
+    });
+
+    it("should invalidate report caches when membership changes", async () => {
+      mockUpdateMoldReport.mockResolvedValue({writeTime: "2024-01-01"});
+      mockFindMoldReportById.mockResolvedValue({id: "report123"} as any);
+      mockDocumentToJson.mockReturnValue({
+        id: "report123",
+        user_id: "user1",
+        date_observed: new Date(),
+        status: "rejected",
+        assigned_mycologist_id: null,
+      });
+      mockGetAuthUserById.mockResolvedValue(null);
+
+      await moldReportService.updateMoldReportInFirestore(
+        "report123",
+        {status: "rejected"}
+      );
+
+      expect(mockInvalidateAllLists).toHaveBeenCalledWith("mold-reports-search");
+      expect(mockInvalidateAllLists).toHaveBeenCalledWith("mold-reports-all");
+      expect(mockInvalidateAllLists).toHaveBeenCalledWith("mold-reports-user");
+      expect(mockInvalidateAllLists).toHaveBeenCalledWith("mold-reports-unassigned");
+      expect(mockInvalidateAllLists).toHaveBeenCalledWith("mold-reports-assigned");
+      expect(mockReplaceCachedListItem).not.toHaveBeenCalled();
     });
   });
 
@@ -376,6 +437,22 @@ describe("moldReportService (unit)", () => {
       await moldReportService.softRemoveMoldReport("report123");
 
       expect(mockSoftDeleteMoldReport).toHaveBeenCalledWith("report123");
+      expect(mockInvalidateAllLists).toHaveBeenCalledWith("mold-reports-search");
+      expect(mockInvalidateAllLists).toHaveBeenCalledWith("mold-reports-all");
+      expect(mockInvalidateAllLists).toHaveBeenCalledWith("mold-reports-user");
+      expect(mockInvalidateAllLists).toHaveBeenCalledWith("mold-reports-unassigned");
+      expect(mockInvalidateAllLists).toHaveBeenCalledWith("mold-reports-assigned");
+    });
+  });
+
+  describe("removeMoldReport", () => {
+    it("should remove report from cached lists", async () => {
+      mockDeleteMoldReport.mockResolvedValue({writeTime: "2024-01-01"});
+
+      await moldReportService.removeMoldReport("report123");
+
+      expect(mockRemoveCachedListItem).toHaveBeenCalledTimes(4);
+      expect(mockInvalidateAllLists).toHaveBeenCalledWith("mold-reports-search");
     });
   });
 });

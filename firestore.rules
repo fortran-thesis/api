@@ -55,12 +55,7 @@ service cloud.firestore {
 
       // Case details subcollection: mold_reports/{reportId}/case_details/{detailId}
       match /case_details/{detailId} {
-        allow read: if isAuthenticated() &&
-          (
-            get(/databases/$(database)/documents/mold_reports/$(reportId)).data.user_id == request.auth.uid ||
-            isAdmin() ||
-            isMycologist()
-          );
+        allow read: if isAuthenticated();
         allow write: if isAdmin() || isMycologist();
       }
     }
@@ -77,16 +72,8 @@ service cloud.firestore {
 
       // Cultivation logs subcollection: mold_cases/{caseId}/cultivation_logs/{logId}
       match /cultivation_logs/{logId} {
-        allow read: if isAuthenticated() &&
-          (
-            get(/databases/$(database)/documents/mold_cases/$(caseId)).data.mycologist_id == request.auth.uid ||
-            isAdmin()
-          );
-        allow write: if isAdmin() ||
-          (
-            isMycologist() &&
-            get(/databases/$(database)/documents/mold_cases/$(caseId)).data.mycologist_id == request.auth.uid
-          );
+        allow read: if isAuthenticated() && isMycologist();
+        allow write: if isAdmin() || isMycologist();
       }
     }
 
@@ -158,6 +145,13 @@ service cloud.firestore {
     // Investigations - explicit server-only until client policy is defined
     match /investigations/{document=**} {
       allow read, write: if false;
+    }
+
+    // Cache signals - unauthenticated read (signal updates), server writes via Admin SDK
+    // Used for real-time cache invalidation on mold reports, users, etc.
+    match /cache_signals/{document=**} {
+      allow read: if true;
+      allow write: if false; // Only Cloud Functions (admin SDK) can write
     }
 
     // Deny everything else by default

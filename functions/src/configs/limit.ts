@@ -75,6 +75,7 @@ export const limitingOptions: Partial<Options> = {
   keyGenerator: genericKeyGenerator,
   skip: isJmeterLoadTestRequest,
   store: createLimiterStore(),
+  passOnStoreError: true,
 };
 
 // Step 1: Send code (strict limit)
@@ -85,6 +86,7 @@ export const sendCodeLimiter: Partial<Options> = {
   keyGenerator: genericKeyGenerator,
   skip: isJmeterLoadTestRequest,
   store: createLimiterStore(),
+  passOnStoreError: true,
 };
 
 // Step 2: Verify code (medium limit)
@@ -95,6 +97,7 @@ export const verifyCodeLimiter: Partial<Options> = {
   keyGenerator: genericKeyGenerator,
   skip: isJmeterLoadTestRequest,
   store: createLimiterStore(),
+  passOnStoreError: true,
 };
 
 // Step 3: Final action (medium limit)
@@ -105,6 +108,7 @@ export const finalActionLimiter: Partial<Options> = {
   keyGenerator: genericKeyGenerator,
   skip: isJmeterLoadTestRequest,
   store: createLimiterStore(),
+  passOnStoreError: true,
 };
 
 // Account creation throttling to reduce signup abuse bursts.
@@ -115,6 +119,7 @@ export const registerLimiter: Partial<Options> = {
   keyGenerator: genericKeyGenerator,
   skip: isJmeterLoadTestRequest,
   store: createLimiterStore(),
+  passOnStoreError: true,
 };
 
 // ML prediction endpoints are compute-heavy; apply tighter per-user limits.
@@ -125,6 +130,7 @@ export const modelPredictionLimiter: Partial<Options> = {
   keyGenerator: modelUserKeyGenerator,
   skip: isJmeterLoadTestRequest,
   store: createLimiterStore(),
+  passOnStoreError: true,
 };
 
 export const reportCreateLimiter: Partial<Options> = {
@@ -134,6 +140,7 @@ export const reportCreateLimiter: Partial<Options> = {
   keyGenerator: reportUserKeyGenerator,
   skip: isJmeterLoadTestRequest,
   store: createLimiterStore(),
+  passOnStoreError: true,
 };
 
 export const flagReportCreateLimiter: Partial<Options> = {
@@ -143,6 +150,7 @@ export const flagReportCreateLimiter: Partial<Options> = {
   keyGenerator: flagReportUserKeyGenerator,
   skip: isJmeterLoadTestRequest,
   store: createLimiterStore(),
+  passOnStoreError: true,
 };
 
 export const lookupLimiter: Partial<Options> = {
@@ -152,4 +160,5 @@ export const lookupLimiter: Partial<Options> = {
   keyGenerator: lookupUserKeyGenerator,
   skip: isJmeterLoadTestRequest,
   store: createLimiterStore(),
+  passOnStoreError: true,
 };

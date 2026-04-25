@@ -7,15 +7,17 @@ jest.mock("../../../src/utils/redis", () => ({
   setCache: jest.fn() as jest.MockedFunction<any>,
   deleteCache: jest.fn() as jest.MockedFunction<any>,
   deleteCachePattern: jest.fn() as jest.MockedFunction<any>,
+  getCacheKeys: jest.fn() as jest.MockedFunction<any>,
 }));
 jest.mock("../../../src/utils/dev");
 
-import { getCache, setCache, deleteCache, deleteCachePattern } from "../../../src/utils/redis";
+import { getCache, setCache, deleteCache, deleteCachePattern, getCacheKeys } from "../../../src/utils/redis";
 
 const mockGetCache = getCache as jest.MockedFunction<any>;
 const mockSetCache = setCache as jest.MockedFunction<any>;
 const mockDeleteCache = deleteCache as jest.MockedFunction<any>;
 const mockDeleteCachePattern = deleteCachePattern as jest.MockedFunction<any>;
+const mockGetCacheKeys = getCacheKeys as jest.MockedFunction<any>;
 
 describe("cacheManager utils (unit)", () => {
   beforeEach(() => {
@@ -60,6 +62,20 @@ describe("cacheManager utils (unit)", () => {
     });
   });
 
+  describe("getCachedListMutationPolicy", () => {
+    it("should mark stable report lists as mutable", () => {
+      const policy = cacheManager.getCachedListMutationPolicy("mold-reports-all");
+
+      expect(policy.kind).toBe("mutate");
+    });
+
+    it("should fall back for derived search lists", () => {
+      const policy = cacheManager.getCachedListMutationPolicy("mold-reports-search", {search: "rice"});
+
+      expect(policy.kind).toBe("fallback");
+    });
+  });
+
   describe("cacheList", () => {
     it("should cache list data", async () => {
       mockSetCache.mockResolvedValue(undefined);
@@ -67,7 +83,19 @@ describe("cacheManager utils (unit)", () => {
 
       await cacheManager.cacheList("users", data);
 
+      expect(mockSetCache).toHaveBeenCalledTimes(2);
       expect(mockSetCache).toHaveBeenCalledWith("users:list:all", data, 300);
+      expect(mockSetCache).toHaveBeenCalledWith(
+        cacheManager.generateListMetadataCacheKey("users:list:all"),
+        expect.objectContaining({
+          resource: "users",
+          key: "users:list:all",
+          query: null,
+          ttl: 300,
+          cachedAt: expect.any(Number),
+        }),
+        300
+      );
     });
 
     it("should skip caching if useCache is false", async () => {
@@ -80,7 +108,17 @@ describe("cacheManager utils (unit)", () => {
       mockSetCache.mockResolvedValue(undefined);
       await cacheManager.cacheList("users", { items: [] }, undefined, { ttl: 600 });
 
+      expect(mockSetCache).toHaveBeenCalledTimes(2);
       expect(mockSetCache).toHaveBeenCalledWith("users:list:all", { items: [] }, 600);
+      expect(mockSetCache).toHaveBeenCalledWith(
+        cacheManager.generateListMetadataCacheKey("users:list:all"),
+        expect.objectContaining({
+          resource: "users",
+          key: "users:list:all",
+          ttl: 600,
+        }),
+        600
+      );
     });
   });
 
@@ -107,6 +145,129 @@ describe("cacheManager utils (unit)", () => {
 
       expect(mockGetCache).not.toHaveBeenCalled();
       expect(result).toBeNull();
+    });
+  });
+
+  describe("getCachedListMetadata", () => {
+    it("should return cached list metadata if exists", async () => {
+      const metadata = {
+        resource: "users",
+        key: "users:list:all",
+        query: null,
+        ttl: 300,
+        cachedAt: 123,
+      };
+      mockGetCache.mockResolvedValue(metadata);
+
+      const result = await cacheManager.getCachedListMetadata("users");
+
+      expect(result).toEqual(metadata);
+    });
+  });
+
+  describe("getCachedListKeys", () => {
+    it("should filter out metadata keys", async () => {
+      mockGetCacheKeys.mockResolvedValue([
+        "users:list:all",
+        "users:list:all:meta",
+        "users:list:abc",
+        "users:list:abc:meta",
+      ]);
+
+      const keys = await cacheManager.getCachedListKeys("users");
+
+      expect(keys).toEqual(["users:list:abc", "users:list:all"]);
+    });
+  });
+
+  describe("upsertCachedListItem", () => {
+    it("should insert new item into cached list snapshots", async () => {
+      const listKey = "users:list:all";
+      const metadataKey = cacheManager.generateListMetadataCacheKey(listKey);
+      mockGetCacheKeys.mockResolvedValue([listKey]);
+      mockGetCache
+        .mockResolvedValueOnce({
+          resource: "users",
+          key: listKey,
+          query: null,
+          ttl: 300,
+          cachedAt: 123,
+        })
+        .mockResolvedValueOnce({snapshot: [{id: "1", name: "Alpha"}], nextPageToken: "next"});
+      mockSetCache.mockResolvedValue(undefined);
+
+      const result = await cacheManager.upsertCachedListItem("users", {id: "2", name: "Beta"});
+
+      expect(result.mutatedKeys).toEqual([listKey]);
+      expect(result.paginationImpactedKeys).toEqual([listKey]);
+      expect(mockSetCache).toHaveBeenCalledWith(
+        listKey,
+        {snapshot: [{id: "2", name: "Beta"}, {id: "1", name: "Alpha"}], nextPageToken: "next"},
+        300
+      );
+      expect(mockSetCache).toHaveBeenCalledWith(
+        metadataKey,
+        expect.objectContaining({
+          resource: "users",
+          key: listKey,
+          legacy: false,
+        }),
+        300
+      );
+    });
+  });
+
+  describe("replaceCachedListItem", () => {
+    it("should replace existing item in cached list snapshots", async () => {
+      const listKey = "users:list:all";
+      mockGetCacheKeys.mockResolvedValue([listKey]);
+      mockGetCache
+        .mockResolvedValueOnce({
+          resource: "users",
+          key: listKey,
+          query: null,
+          ttl: 300,
+          cachedAt: 123,
+        })
+        .mockResolvedValueOnce({snapshot: [{id: "1", name: "Alpha"}], nextPageToken: null});
+      mockSetCache.mockResolvedValue(undefined);
+
+      const result = await cacheManager.replaceCachedListItem("users", "1", {id: "1", name: "Updated"});
+
+      expect(result.mutatedKeys).toEqual([listKey]);
+      expect(result.paginationImpactedKeys).toHaveLength(0);
+      expect(mockSetCache).toHaveBeenCalledWith(
+        listKey,
+        {snapshot: [{id: "1", name: "Updated"}], nextPageToken: null},
+        300
+      );
+    });
+  });
+
+  describe("removeCachedListItem", () => {
+    it("should remove item from cached list snapshots", async () => {
+      const listKey = "users:list:all";
+      mockGetCacheKeys.mockResolvedValue([listKey]);
+      mockGetCache
+        .mockResolvedValueOnce({
+          resource: "users",
+          key: listKey,
+          query: null,
+          ttl: 300,
+          cachedAt: 123,
+        })
+        .mockResolvedValueOnce({snapshot: [{id: "1", name: "Alpha"}, {id: "2", name: "Beta"}], nextPageToken: "next"});
+      mockSetCache.mockResolvedValue(undefined);
+
+      const result = await cacheManager.removeCachedListItem("users", "1");
+
+      expect(result.mutatedKeys).toEqual([listKey]);
+      expect(result.paginationImpactedKeys).toEqual([listKey]);
+      expect(mockSetCache).toHaveBeenCalledWith(
+        listKey,
+        {snapshot: [{id: "2", name: "Beta"}], nextPageToken: "next"},
+        300
+      );
     });
   });
 

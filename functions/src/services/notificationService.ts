@@ -41,11 +41,12 @@ import {
   getCachedItem,
   cacheItem,
   handlePatchCache,
-  handleDeleteCache,
   invalidateAllLists,
-  invalidateAllCounts,
   getCachedCount,
   cacheCount,
+  invalidateCount,
+  upsertCachedListItem,
+  removeCachedListItem,
 } from "../utils/cacheManager";
 import {
   addDeviceToken,
@@ -185,6 +186,35 @@ export const resolveTemplate = (
  */
 const RESOURCE = "notifications";
 
+const getUnreadCountCacheKey = (userId: string): string => `unread:${userId}`;
+
+const invalidateUnreadCount = async (userId: string): Promise<void> => {
+  await invalidateCount(RESOURCE, getUnreadCountCacheKey(userId));
+};
+
+const shouldMutateNotificationList = (
+  descriptor: {metadata: {query: Record<string, any> | null}},
+  notification: WithId<Notification>
+): boolean => {
+  const query = descriptor.metadata.query;
+  if (!query) return false;
+  if (query.userId !== notification.recipient_id) return false;
+
+  if (query.pageToken !== undefined && query.pageToken !== null && String(query.pageToken).trim().length > 0) {
+    return false;
+  }
+
+  if (query.is_read === true || query.is_read === "true") {
+    return false;
+  }
+
+  if (query.type && query.type !== notification.type) {
+    return false;
+  }
+
+  return true;
+};
+
 export const createNotification = async (
   recipientId: string,
   type: NotificationType,
@@ -263,10 +293,22 @@ export const createBatchNotifications = async (
       };
     });
 
-    const count = await addBatchNotifications(payloads);
+    const createdNotifications = await addBatchNotifications(payloads);
+
+    await Promise.all(
+      createdNotifications.map(async (notification) => {
+        await Promise.all([
+          upsertCachedListItem(RESOURCE, notification, {
+            shouldMutate: (descriptor) =>
+              shouldMutateNotificationList(descriptor, notification),
+          }),
+          invalidateUnreadCount(notification.recipient_id),
+        ]);
+      })
+    );
 
     // Fire-and-forget FCM pushes for each recipient
-    for (const payload of payloads) {
+    for (const payload of createdNotifications) {
       sendPushToUser(
         payload.recipient_id,
         payload.title,
@@ -279,7 +321,7 @@ export const createBatchNotifications = async (
       ).catch((err) => devLog(err, "createBatchNotifications > sendPushToUser"));
     }
 
-    return count;
+    return createdNotifications.length;
   } catch (error) {
     devLog(error, "createBatchNotifications");
     return 0;
@@ -362,7 +404,7 @@ export const getNotificationById = async (
 };
 
 export const getUnreadCount = async (userId: string): Promise<number> => {
-  const countCacheKey = `unread:${userId}`;
+  const countCacheKey = getUnreadCountCacheKey(userId);
   try {
     const cached = await getCachedCount(RESOURCE, countCacheKey);
     if (cached !== null) return cached;
@@ -393,7 +435,7 @@ export const markNotificationRead = async (
 
     await Promise.all([
       handlePatchCache(RESOURCE, id, true),
-      invalidateAllCounts(RESOURCE),
+      invalidateUnreadCount(userId),
     ]);
 
     return true;
@@ -408,7 +450,7 @@ export const markAllRead = async (userId: string): Promise<number> => {
     const count = await markAllAsReadForRecipient(userId);
     if (count > 0) {
       await Promise.all([
-        invalidateAllCounts(RESOURCE),
+        invalidateUnreadCount(userId),
         // list cache may contain user-specific queries and unread states.
         invalidateAllLists(RESOURCE),
       ]);
@@ -435,8 +477,8 @@ export const deleteNotificationForUser = async (
     if (!result) return false;
 
     await Promise.all([
-      handleDeleteCache(RESOURCE, id),
-      invalidateAllCounts(RESOURCE),
+      removeCachedListItem(RESOURCE, id),
+      invalidateUnreadCount(userId),
     ]);
 
     return true;

@@ -12,12 +12,25 @@ jest.mock("../../../src/utils/dev");
 jest.mock("../../../src/utils/storageTransform", () => ({
   transformToSignedUrl: jest.fn(async (url: string) => url),
 }));
+const mockInvalidateAllLists = jest.fn() as jest.MockedFunction<any>;
+const mockUpsertCachedListItem = jest.fn() as jest.MockedFunction<any>;
+const mockReplaceCachedListItem = jest.fn() as jest.MockedFunction<any>;
+const mockRemoveCachedListItem = jest.fn() as jest.MockedFunction<any>;
+const mockGetCachedListDescriptors = jest.fn() as jest.MockedFunction<any>;
+const mockDeleteCache = jest.fn() as jest.MockedFunction<any>;
 jest.mock("../../../src/utils/cacheManager", () => ({
   cacheItem: jest.fn(),
   getCachedItem: jest.fn(async () => null),
   cacheList: jest.fn(),
   getCachedList: jest.fn(async () => null),
-  invalidateAllLists: jest.fn(async () => undefined),
+  invalidateAllLists: (...args: any[]) => mockInvalidateAllLists(...args),
+  getCachedListDescriptors: (...args: any[]) => mockGetCachedListDescriptors(...args),
+  upsertCachedListItem: (...args: any[]) => mockUpsertCachedListItem(...args),
+  replaceCachedListItem: (...args: any[]) => mockReplaceCachedListItem(...args),
+  removeCachedListItem: (...args: any[]) => mockRemoveCachedListItem(...args),
+}));
+jest.mock("../../../src/utils/redis", () => ({
+  deleteCache: (...args: any[]) => mockDeleteCache(...args),
 }));
 jest.mock("../../../src/utils/normalizeResponse", () => ({
   normalizeResponseTimestamps: jest.fn((v: unknown) => v),
@@ -48,6 +61,12 @@ const mockFirestoreLib = firestoreLib as jest.Mocked<typeof firestoreLib>;
 describe("moldCaseService (unit)", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockInvalidateAllLists.mockResolvedValue(undefined);
+    mockUpsertCachedListItem.mockResolvedValue({});
+    mockReplaceCachedListItem.mockResolvedValue({});
+    mockRemoveCachedListItem.mockResolvedValue({});
+    mockGetCachedListDescriptors.mockResolvedValue([]);
+    mockDeleteCache.mockResolvedValue(undefined);
   });
 
   describe("addMoldCaseToFirestore", () => {
@@ -76,9 +95,21 @@ describe("moldCaseService (unit)", () => {
       mockMoldCaseRepository.addMoldCase.mockResolvedValue(
         mockDocSnapshot as any
       );
+      mockMoldCaseRepository.findMoldCaseById.mockResolvedValue({
+        exists: true,
+        id: "case-123",
+        data: jest.fn().mockReturnValue({
+          id: "case-123",
+          user_id: "user-123",
+          mycologist_id: "myco-1",
+          is_archived: false,
+        }),
+      } as any);
       mockFirestoreLib.documentToJson.mockReturnValue({
         id: "case-123",
-        ...mockMoldCase,
+        user_id: "user-123",
+        mycologist_id: "myco-1",
+        is_archived: false,
       } as any);
 
       const result = await moldCaseService.addMoldCaseToFirestore(
@@ -87,6 +118,16 @@ describe("moldCaseService (unit)", () => {
 
       expect(result).toBeDefined();
       expect(result?.id).toBe("case-123");
+      expect(mockUpsertCachedListItem).toHaveBeenCalledWith(
+        "mold-cases-all",
+        expect.objectContaining({id: "case-123", user_id: "user-123"}),
+        expect.objectContaining({shouldMutate: expect.any(Function)})
+      );
+      expect(mockUpsertCachedListItem).toHaveBeenCalledWith(
+        "mold-cases-assigned",
+        expect.objectContaining({id: "case-123", mycologist_id: "myco-1"}),
+        expect.objectContaining({shouldMutate: expect.any(Function)})
+      );
     });
 
     it("should return null on creation failure", async () => {
@@ -149,8 +190,8 @@ describe("moldCaseService (unit)", () => {
       const result = await moldCaseService.getCultivationLogsFromCase("case-123");
 
       expect(result).not.toBeNull();
-      expect(result!.snapshot).toHaveLength(1);
-      expect(result!.snapshot[0].id).toBe("log-1");
+      expect(result?.snapshot).toHaveLength(1);
+      expect(result?.snapshot?.[0]?.id).toBe("log-1");
     });
 
     it("should return null when parent case is not found", async () => {
@@ -170,7 +211,7 @@ describe("moldCaseService (unit)", () => {
       const result = await moldCaseService.getCultivationLogsFromCase("case-123");
 
       expect(result).not.toBeNull();
-      expect(result!.snapshot).toHaveLength(0);
+      expect(result?.snapshot).toHaveLength(0);
     });
   });
 
@@ -188,8 +229,8 @@ describe("moldCaseService (unit)", () => {
       const result = await moldCaseService.addCultivationLogToCase("case-123", logData as any);
 
       expect(result).not.toBeNull();
-      expect(result!.id).toBe("log-new");
-      expect((result!.characteristics as any).culture_name).toBe("Batch A");
+      expect(result?.id).toBe("log-new");
+      expect((result?.characteristics as any)?.culture_name).toBe("Batch A");
     });
 
     it("should return null when addCultivationLog repository call fails", async () => {
@@ -225,6 +266,98 @@ describe("moldCaseService (unit)", () => {
       const result = await moldCaseService.removeCultivationLogFromCase("case-123", "log-1");
 
       expect(result).toBe(false);
+    });
+  });
+
+  describe("write-path cache mutations", () => {
+    it("should replace cached case entries when membership is unchanged", async () => {
+      mockMoldCaseRepository.updateMoldCase.mockResolvedValue({writeTime: "2024-01-01"} as any);
+      mockMoldCaseRepository.findMoldCaseById.mockResolvedValue({
+        exists: true,
+        id: "case-123",
+        data: jest.fn().mockReturnValue({
+          id: "case-123",
+          user_id: "user-123",
+          mycologist_id: "myco-1",
+          is_archived: false,
+          name: "Updated Case",
+        }),
+      } as any);
+      mockFirestoreLib.documentToJson.mockReturnValue({
+        id: "case-123",
+        user_id: "user-123",
+        mycologist_id: "myco-1",
+        is_archived: false,
+        name: "Updated Case",
+      } as any);
+
+      const result = await moldCaseService.updateMoldCaseInFirestore("case-123", {
+        name: "Updated Case",
+      } as any);
+
+      expect(result?.name).toBe("Updated Case");
+      expect(mockReplaceCachedListItem).toHaveBeenCalledWith(
+        "mold-cases-all",
+        "case-123",
+        expect.objectContaining({id: "case-123", name: "Updated Case"}),
+        expect.objectContaining({shouldMutate: expect.any(Function)})
+      );
+      expect(mockInvalidateAllLists).not.toHaveBeenCalled();
+    });
+
+    it("should invalidate list caches when case membership changes", async () => {
+      mockMoldCaseRepository.updateMoldCase.mockResolvedValue({writeTime: "2024-01-01"} as any);
+      mockMoldCaseRepository.findMoldCaseById.mockResolvedValue({
+        exists: true,
+        id: "case-123",
+        data: jest.fn().mockReturnValue({
+          id: "case-123",
+          user_id: "user-123",
+          mycologist_id: "myco-1",
+          is_archived: true,
+        }),
+      } as any);
+      mockFirestoreLib.documentToJson.mockReturnValue({
+        id: "case-123",
+        user_id: "user-123",
+        mycologist_id: "myco-1",
+        is_archived: true,
+      } as any);
+
+      await moldCaseService.updateMoldCaseInFirestore("case-123", {
+        is_archived: true,
+      } as any);
+
+      expect(mockInvalidateAllLists).toHaveBeenCalledWith("mold-cases-all");
+      expect(mockInvalidateAllLists).toHaveBeenCalledWith("mold-cases-assigned");
+      expect(mockReplaceCachedListItem).not.toHaveBeenCalled();
+    });
+
+    it("should remove deleted cases from cached lists", async () => {
+      mockMoldCaseRepository.findMoldCaseById.mockResolvedValue({
+        exists: true,
+        id: "case-123",
+        data: jest.fn().mockReturnValue({
+          id: "case-123",
+          user_id: "user-123",
+          mycologist_id: "myco-1",
+          is_archived: false,
+        }),
+      } as any);
+      mockMoldCaseRepository.deleteMoldCase.mockResolvedValue({writeTime: "2024-01-01"} as any);
+
+      await moldCaseService.removeMoldCase("case-123");
+
+      expect(mockRemoveCachedListItem).toHaveBeenCalledWith(
+        "mold-cases-all",
+        "case-123",
+        expect.objectContaining({shouldMutate: expect.any(Function)})
+      );
+      expect(mockRemoveCachedListItem).toHaveBeenCalledWith(
+        "mold-cases-assigned",
+        "case-123",
+        expect.objectContaining({shouldMutate: expect.any(Function)})
+      );
     });
   });
 });

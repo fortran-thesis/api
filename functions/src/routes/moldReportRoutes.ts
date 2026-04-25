@@ -48,7 +48,6 @@ import {Role, AuditAction} from "../types/enums";
 import {NotificationType} from "../types/models/notificationTypes";
 import {auditLog} from "../middlewares/auditLogger";
 import {notify} from "../middlewares/notificationMiddleware";
-import {cacheGet, cacheInvalidate} from "../middlewares/cacheMiddleware";
 
 const router = Router();
 
@@ -59,7 +58,6 @@ router.post(
   sanitizeBody,
   validateBody(MoldReportSchema),
   auditLog(AuditAction.CREATE_MOLD_REPORT, "Submitted mold report"),
-  cacheInvalidate("mold-reports", "create"),
   async (req: Request, res: Response) => {
     await createMoldReport(req, res);
   }
@@ -77,7 +75,6 @@ router.get(
   "/",
   verifyUser(),
   validateQuery(PaginationQuerySchema),
-  cacheGet("mold-reports"),
   async (req: Request, res: Response) => {
     await getAllMoldReports(req, res);
   }
@@ -89,7 +86,6 @@ router.post(
   verifyUser(),
   validateParams(ReportIdSchema),
   validateBody(CaseDetailCreateSchema),
-  cacheInvalidate("mold-reports", "update"),
   async (req: Request, res: Response) => {
     await postCaseDetail(req, res);
   }
@@ -136,9 +132,6 @@ router.patch(
     referenceType: "mold_report",
     contextFn: (_req, body) => ({case_name: body?.data?.case_name ?? ""}),
   }),
-  cacheInvalidate("mold-reports", "update"),
-  cacheInvalidate("mold-cases-all", "update"),
-  cacheInvalidate("mold-cases-assigned", "update"),
   async (req: Request, res: Response) => {
     await assignReport(req, res);
   }
@@ -161,9 +154,6 @@ router.patch(
       rejection_reason: req.body?.rejection_reason ?? "",
     }),
   }),
-  cacheInvalidate("mold-reports", "update"),
-  cacheInvalidate("mold-cases-all", "update"),
-  cacheInvalidate("mold-cases-assigned", "update"),
   async (req: Request, res: Response) => {
     await rejectReport(req, res);
   }
@@ -174,9 +164,6 @@ router.patch(
   verifyUser(Role.CURATOR),
   validateParams(ReportIdSchema),
   auditLog(AuditAction.UPDATE_MOLD_REPORT, (req) => `Reviewed report ${req.params.id}`),
-  cacheInvalidate("mold-reports", "update"),
-  cacheInvalidate("mold-cases-all", "update"),
-  cacheInvalidate("mold-cases-assigned", "update"),
   async (req: Request, res: Response) => {
     await reviewReport(req, res);
   }
@@ -304,7 +291,6 @@ router.patch(
   validateParams(ReportIdSchema),
   validateBody(MoldReportUpdateSchema),
   auditLog(AuditAction.UPDATE_MOLD_REPORT, (req) => `Updated report ${req.params.id}`),
-  cacheInvalidate("mold-reports", "update"),
   async (req: Request, res: Response) => {
     await patchMoldReport(req, res);
   }
@@ -315,7 +301,6 @@ router.delete(
   verifyUser(),
   validateParams(ReportIdSchema),
   auditLog(AuditAction.DELETE_MOLD_REPORT, (req) => `Deleted report ${req.params.id}`),
-  cacheInvalidate("mold-reports", "delete"),
   async (req: Request, res: Response) => {
     await deleteMoldReport(req, res);
   }
@@ -326,7 +311,6 @@ router.delete(
   verifyUser(),
   validateParams(ReportIdSchema),
   auditLog(AuditAction.SOFT_DELETE_MOLD_REPORT, (req) => `Closed report ${req.params.id}`),
-  cacheInvalidate("mold-reports", "delete"),
   async (req: Request, res: Response) => {
     await softDeleteMoldReport(req, res);
   }

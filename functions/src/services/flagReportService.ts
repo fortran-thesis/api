@@ -17,6 +17,19 @@ import {
 import {FlagReportBase, PaginatedResult, WithMetadata} from "../types/types";
 import {getAuthUserById, getAuthUserNamesByIds} from "../lib/auth";
 import {retrieveMoldipediaById} from "./moldipediaService";
+import {
+  cacheItem,
+  cacheList,
+  getCachedItem,
+  getCachedList,
+  invalidateItem,
+  removeCachedListItem,
+  replaceCachedListItem,
+  upsertCachedListItem,
+} from "../utils/cacheManager";
+
+const RESOURCE = "flag-reports";
+const TTL = 300;
 
 export const addFlagReportToFirestore = async (
   details: FlagReportBase
@@ -33,7 +46,16 @@ export const addFlagReportToFirestore = async (
     const doc: DocumentSnapshot | null =
       await addFlagReport(detailsWithTimestamp);
     if (!doc) throw new Error("Cannot add flag report.");
-    return documentToJson<FlagReportBase>(doc);
+    const report = documentToJson<FlagReportBase>(doc);
+
+    await Promise.all([
+      cacheItem(RESOURCE, (report as any).id, report, {ttl: TTL}),
+      upsertCachedListItem(RESOURCE, report, {
+        shouldMutate: () => true,
+      }),
+    ]);
+
+    return report;
   } catch (error) {
     devLog(error);
     return null;
@@ -45,6 +67,10 @@ export const retrieveAllFlagReports = async (
   token?: string
 ): Promise<PaginatedResult<FlagReportBase[]> | null> => {
   try {
+    const query = {limit, pageToken: token || null};
+    const cached = await getCachedList<PaginatedResult<FlagReportBase[]>>(RESOURCE, query);
+    if (cached) return cached;
+
     const querySnap: PaginatedResult<QuerySnapshot> | null =
       await findAllFlagReports(limit, token);
     if (!querySnap) {
@@ -110,10 +136,14 @@ export const retrieveAllFlagReports = async (
       return r;
     }));
 
-    return {
+    const response = {
       snapshot: enriched,
       nextPageToken: querySnap.nextPageToken,
     };
+
+    await cacheList(RESOURCE, response, query, {ttl: TTL});
+
+    return response;
   } catch (error) {
     devLog("[flagReportService] Error retrieving flag reports");
     return null;
@@ -122,6 +152,9 @@ export const retrieveAllFlagReports = async (
 
 export const retrieveFlagReportById = async (id: string) => {
   try {
+    const cached = await getCachedItem<any>(RESOURCE, id);
+    if (cached) return cached;
+
     const doc: DocumentSnapshot | null = await findFlagReportById(id);
     if (!doc || !doc.exists) throw new Error("Flag report not found.");
     const obj = documentToJson<FlagReportBase>(doc) as any;
@@ -184,6 +217,8 @@ export const retrieveFlagReportById = async (id: string) => {
       }
     }
 
+    await cacheItem(RESOURCE, id, obj, {ttl: TTL});
+
     return obj;
   } catch (error) {
     devLog(error);
@@ -197,7 +232,17 @@ export const updateFlagReportInFirestore = async (
 ) => {
   try {
     const result: WriteResult | null = await updateFlagReport(id, details);
-    return !!result;
+    if (!result) return false;
+
+    const updated = await retrieveFlagReportById(id);
+    if (updated) {
+      await Promise.all([
+        replaceCachedListItem(RESOURCE, id, updated),
+        cacheItem(RESOURCE, id, updated, {ttl: TTL}),
+      ]);
+    }
+
+    return true;
   } catch (error) {
     devLog(error);
     return false;
@@ -207,7 +252,14 @@ export const updateFlagReportInFirestore = async (
 export const removeFlagReport = async (id: string) => {
   try {
     const result: WriteResult | null = await deleteFlagReport(id);
-    return !!result;
+    if (!result) return false;
+
+    await Promise.all([
+      removeCachedListItem(RESOURCE, id),
+      invalidateItem(RESOURCE, id),
+    ]);
+
+    return true;
   } catch (error) {
     devLog(error);
     return false;
@@ -217,7 +269,14 @@ export const removeFlagReport = async (id: string) => {
 export const softRemoveFlagReport = async (id: string) => {
   try {
     const result: WriteResult | null = await softDeleteFlagReport(id);
-    return !!result;
+    if (!result) return false;
+
+    await Promise.all([
+      removeCachedListItem(RESOURCE, id),
+      invalidateItem(RESOURCE, id),
+    ]);
+
+    return true;
   } catch (error) {
     devLog(error);
     return false;

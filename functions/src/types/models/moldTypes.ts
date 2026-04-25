@@ -85,14 +85,9 @@ export interface CultivationDetails {
   };
   specimen_types?: string[];
   specimen_quantities?: string[];
-  specimen_types_csv?: string;
-  specimen_quantities_csv?: string;
   initial_symptoms?: string[];
-  initial_symptoms_csv?: string;
   initial_signs?: string[];
-  initial_signs_csv?: string;
   initial_characteristics?: string[];
-  initial_characteristics_csv?: string;
   location_gathered?: string;
   initial_microscopic?: string;
   initial_macroscopic?: string;

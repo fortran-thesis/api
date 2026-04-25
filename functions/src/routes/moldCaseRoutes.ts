@@ -20,7 +20,7 @@ import {ReportIdSchema} from "../dto/reportDTO";
 import {AuditAction, Role} from "../types/enums";
 import {NotificationType} from "../types/models/notificationTypes";
 import {upload} from "../middlewares/upload";
-import {cacheGet, cacheInvalidate} from "../middlewares/cacheMiddleware";
+import {cacheGet} from "../middlewares/cacheMiddleware";
 import {auditLog} from "../middlewares/auditLogger";
 import {notify} from "../middlewares/notificationMiddleware";
 import {
@@ -56,8 +56,6 @@ router.post(
   "/",
   verifyUser(),
   validateBody(MoldCaseCreateSchema),
-  cacheInvalidate("mold-cases-all", "create"),
-  cacheInvalidate("mold-cases-assigned", "create"),
   async (req: Request, res: Response) => {
     await createMoldCase(req, res);
   }
@@ -133,8 +131,6 @@ router.patch(
   "/:id/archive",
   verifyUser(),
   validateParams(MoldIdSchema),
-  cacheInvalidate("mold-cases-all", "update"),
-  cacheInvalidate("mold-cases-assigned", "update"),
   async (req: Request, res: Response) => {
     await archiveMoldCase(req, res);
   }
@@ -144,8 +140,6 @@ router.patch(
   "/:id/unarchive",
   verifyUser(),
   validateParams(MoldIdSchema),
-  cacheInvalidate("mold-cases-all", "update"),
-  cacheInvalidate("mold-cases-assigned", "update"),
   async (req: Request, res: Response) => {
     await unarchiveMoldCase(req, res);
   }
@@ -239,8 +233,6 @@ router.patch(
   "/:id",
   verifyUser(),
   validateParams(MoldIdSchema),
-  cacheInvalidate("mold-cases-all", "update"),
-  cacheInvalidate("mold-cases-assigned", "update"),
   async (req: Request, res: Response) => {
     await patchMoldCase(req, res);
   }
@@ -263,8 +255,6 @@ router.post(
     next();
   },
   validateBody(CultivationLogSchema),
-  cacheInvalidate("mold-cases-all", "update"),
-  cacheInvalidate("mold-cases-assigned", "update"),
   async (req: Request, res: Response) => {
     // controller expects param name caseId, the route uses :id so controller will read req.params.id
     await addCultivationLog(req, res);
@@ -277,8 +267,6 @@ router.patch(
   validateParams(MoldIdSchema),
   validateBody(CultivationDetailsSchema),
   auditLog(AuditAction.UPDATE_MOLD_CASE, (req) => `Updated cultivation details for case ${req.params.id}`),
-  cacheInvalidate("mold-cases-all", "update"),
-  cacheInvalidate("mold-cases-assigned", "update"),
   async (req: Request, res: Response) => {
     await updateCultivationDetails(req, res);
   }
@@ -308,8 +296,6 @@ router.patch(
     referenceType: "mold_case",
     contextFn: (_req, body) => ({case_name: body?.data?.case_name ?? ""}),
   }),
-  cacheInvalidate("mold-cases-all", "update"),
-  cacheInvalidate("mold-cases-assigned", "update"),
   async (req: Request, res: Response) => {
     await finalizeVerdict(req, res);
   }
@@ -319,8 +305,6 @@ router.delete(
   "/hard/:id",
   verifyUser(),
   validateParams(MoldIdSchema),
-  cacheInvalidate("mold-cases-all", "delete"),
-  cacheInvalidate("mold-cases-assigned", "delete"),
   async (req: Request, res: Response) => {
     await deleteMoldCase(req, res);
   }
@@ -330,8 +314,6 @@ router.delete(
   "/soft/:id",
   verifyUser(),
   validateParams(MoldIdSchema),
-  cacheInvalidate("mold-cases-all", "delete"),
-  cacheInvalidate("mold-cases-assigned", "delete"),
   async (req: Request, res: Response) => {
     await softDeleteMoldCase(req, res);
   }

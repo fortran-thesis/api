@@ -31,6 +31,13 @@ import {generateCode} from "../utils/code";
 import {transformToSignedUrl} from "../utils/storageTransform";
 import {v4 as uuidv4} from "uuid";
 import {envOptions} from "../configs/environment";
+import {
+  handleDeleteCache,
+  handlePatchCache,
+  invalidateItem,
+} from "../utils/cacheManager";
+
+const RESOURCE = "users";
 
 export const registerUser = async (
   username: string,
@@ -266,6 +273,8 @@ export const updateUser = async (
       throw new Error("Error updating user metadata in Firestore.");
     }
 
+    await invalidateUserCaches(id, {invalidateLists: true});
+
     return true;
   } catch (error) {
     devLog(error);
@@ -356,6 +365,8 @@ export const updateUserProfile = async (
       devLog("[updateUserProfile] No Firestore fields to update");
     }
 
+    await invalidateUserCaches(id, {invalidateLists: true});
+
     return authResult;
   } catch (error) {
     devLog(error);
@@ -368,6 +379,12 @@ export const softRemoveUser = async (id: string): Promise<void> => {
     await getAuth().updateUser(id, {disabled: true});
     const process = await softDeleteFirestoreUser(id);
     if (!process) throw new Error("Error deleting user.");
+
+    await invalidateUserCaches(id, {
+      invalidateLists: true,
+      invalidateDerivedCounts: true,
+      deleteItem: true,
+    });
   } catch (error) {
     devLog(error);
   }
@@ -378,9 +395,48 @@ export const removeUser = async (id: string): Promise<void> => {
     await getAuth().deleteUser(id);
     const process = await deleteFirestoreUser(id);
     if (!process) throw new Error("Error deleting user.");
+
+    await invalidateUserCaches(id, {
+      invalidateLists: true,
+      invalidateDerivedCounts: true,
+      deleteItem: true,
+    });
   } catch (error) {
     devLog(error);
   }
+};
+
+const USER_DERIVED_COUNT_KEYS = ["role-counts", "disabled-counts"] as const;
+
+const invalidateUserDerivedCountCaches = async (): Promise<void> => {
+  await Promise.all(
+    USER_DERIVED_COUNT_KEYS.map((cacheKey) => invalidateItem(RESOURCE, cacheKey))
+  );
+};
+
+export const invalidateUserCaches = async (
+  id: string,
+  options: {
+    invalidateLists?: boolean;
+    invalidateDerivedCounts?: boolean;
+    deleteItem?: boolean;
+  } = {}
+): Promise<void> => {
+  const {
+    invalidateLists = false,
+    invalidateDerivedCounts = false,
+    deleteItem = false,
+  } = options;
+
+  const tasks: Promise<void>[] = [
+    deleteItem ? handleDeleteCache(RESOURCE, id) : handlePatchCache(RESOURCE, id, invalidateLists),
+  ];
+
+  if (invalidateDerivedCounts) {
+    tasks.push(invalidateUserDerivedCountCaches());
+  }
+
+  await Promise.all(tasks);
 };
 
 export const generateVerificationCode = async (

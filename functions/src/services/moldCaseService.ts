@@ -30,8 +30,21 @@ import {
 } from "../repositories/cultivationLogRepository";
 import {CultivationLog, MoldCase, PaginatedResult, WithMetadata, WithMetadataAndId} from "../types/types";
 import {transformToSignedUrl} from "../utils/storageTransform";
-import {cacheItem, getCachedItem, cacheList, getCachedList, invalidateAllLists} from "../utils/cacheManager";
+import {
+  cacheItem,
+  getCachedItem,
+  cacheList,
+  getCachedList,
+  getCachedListDescriptors,
+  generateListMetadataCacheKey,
+  invalidateItem,
+  invalidateAllLists,
+  removeCachedListItem,
+  replaceCachedListItem,
+  upsertCachedListItem,
+} from "../utils/cacheManager";
 import {normalizeResponseTimestamps} from "../utils/normalizeResponse";
+import {deleteCache} from "../utils/redis";
 // Cache TTL for this service (in seconds) — keep signed URLs consistent with cached responses
 const MOLD_CASE_SERVICE_TTL_SECONDS = 300;
 import {getCollectionName, FirestoreCollection} from "../types/models/firestoreCollections";
@@ -107,11 +120,122 @@ const transformLogImageUrl = async (log: WithMetadataAndId<CultivationLog>): Pro
 
 const normalizeCaseResponse = <T>(value: T): T => normalizeResponseTimestamps(value);
 
-const invalidateMoldCaseListCaches = async (): Promise<void> => {
+const CASE_LIST_RESOURCES = ["mold-cases-all", "mold-cases-assigned"] as const;
+
+const isCursorQuery = (query?: Record<string, any> | null): boolean => {
+  if (!query) return false;
+
+  const cursor = query.token ?? query.pageToken;
+  if (typeof cursor === "string") {
+    return cursor.trim().length > 0;
+  }
+
+  return cursor !== undefined && cursor !== null;
+};
+
+const isFirstPageQuery = (query?: Record<string, any> | null): boolean => !isCursorQuery(query);
+
+const deleteListDescriptorCache = async (key: string): Promise<void> => {
   await Promise.all([
-    invalidateAllLists("mold-cases-all"),
-    invalidateAllLists("mold-cases-assigned"),
+    deleteCache(key),
+    deleteCache(generateListMetadataCacheKey(key)),
   ]);
+};
+
+const invalidateCaseCursorPages = async (resource: string): Promise<void> => {
+  const descriptors = await getCachedListDescriptors(resource);
+  await Promise.all(
+    descriptors
+      .filter((descriptor) => isCursorQuery(descriptor.metadata.query))
+      .map((descriptor) => deleteListDescriptorCache(descriptor.key))
+  );
+};
+
+const invalidateMoldCaseListCaches = async (): Promise<void> => {
+  await Promise.all(CASE_LIST_RESOURCES.map((resource) => invalidateAllLists(resource)));
+};
+
+const invalidateMoldCaseSummaryCaches = async (): Promise<void> => {
+  await Promise.all([
+    invalidateItem("dashboard", "combined-total-counts"),
+    invalidateItem("dashboard", "mold-cases-count-metadata"),
+    invalidateItem("mold-cases", "priority-breakdown"),
+  ]);
+};
+
+const caseMatchesAllList = (
+  moldCase: Pick<MoldCase, "user_id" | "is_archived">,
+  query?: Record<string, any> | null
+): boolean => {
+  const uid = typeof query?.uid === "string" ? query.uid.trim() : "";
+  if (!uid || moldCase.user_id !== uid) return false;
+
+  const isArchived = Boolean(query?.isArchived);
+  return Boolean(moldCase.is_archived) === isArchived;
+};
+
+const caseMatchesAssignedList = (
+  moldCase: Pick<MoldCase, "mycologist_id" | "is_archived">,
+  query?: Record<string, any> | null
+): boolean => {
+  const mycologistId = typeof query?.mycologistId === "string" ? query.mycologistId.trim() : "";
+  if (!mycologistId || moldCase.mycologist_id !== mycologistId) return false;
+
+  return moldCase.is_archived === false;
+};
+
+const caseMatchesDescriptor = (
+  moldCase: MoldCase,
+  descriptor: {key: string; metadata: {resource: string; query: Record<string, any> | null}}
+): boolean => {
+  switch (descriptor.metadata.resource) {
+  case "mold-cases-all":
+    return caseMatchesAllList(moldCase, descriptor.metadata.query);
+  case "mold-cases-assigned":
+    return caseMatchesAssignedList(moldCase, descriptor.metadata.query);
+  default:
+    return false;
+  }
+};
+
+const createCaseCache = async (moldCase: MoldCase): Promise<void> => {
+  await Promise.all(
+    CASE_LIST_RESOURCES.map((resource) =>
+      upsertCachedListItem(resource, moldCase, {
+        shouldMutate: (descriptor) => isFirstPageQuery(descriptor.metadata.query) && caseMatchesDescriptor(moldCase, descriptor),
+      })
+    )
+  );
+
+  await Promise.all(CASE_LIST_RESOURCES.map((resource) => invalidateCaseCursorPages(resource)));
+};
+
+const replaceCaseCaches = async (moldCaseId: string, moldCase: MoldCase): Promise<void> => {
+  await Promise.all(
+    CASE_LIST_RESOURCES.map((resource) =>
+      replaceCachedListItem(resource, moldCaseId, moldCase, {
+        shouldMutate: (descriptor) => caseMatchesDescriptor(moldCase, descriptor),
+      })
+    )
+  );
+};
+
+const removeCaseCaches = async (moldCaseId: string, moldCase: MoldCase): Promise<void> => {
+  await Promise.all(
+    CASE_LIST_RESOURCES.map((resource) =>
+      removeCachedListItem(resource, moldCaseId, {
+        shouldMutate: (descriptor) => isFirstPageQuery(descriptor.metadata.query) && caseMatchesDescriptor(moldCase, descriptor),
+      })
+    )
+  );
+
+  await Promise.all(CASE_LIST_RESOURCES.map((resource) => invalidateCaseCursorPages(resource)));
+};
+
+const caseUpdateAffectsMembership = (details: Partial<MoldCase>): boolean => {
+  return Object.prototype.hasOwnProperty.call(details, "user_id") ||
+    Object.prototype.hasOwnProperty.call(details, "mycologist_id") ||
+    Object.prototype.hasOwnProperty.call(details, "is_archived");
 };
 
 export const addMoldCaseToFirestore = async (
@@ -162,6 +286,15 @@ export const addMoldCaseToFirestore = async (
     const moldCase: DocumentSnapshot | null =
       await addMoldCase(detailsWithMetadata);
     if (!moldCase) throw new Error("Cannot add mold case.");
+
+    const createdCase = await retrieveMoldCaseById(moldCase.id);
+    if (createdCase) {
+      await createCaseCache(createdCase);
+    } else {
+      await invalidateMoldCaseListCaches();
+    }
+
+    await invalidateMoldCaseSummaryCaches();
 
     return documentToJson<MoldCase>(moldCase);
   } catch (error) {
@@ -523,9 +656,21 @@ export const updateMoldCaseInFirestore = async (
     );
     if (!result) throw new Error("Failed to update mold case.");
 
-    await invalidateMoldCaseListCaches();
-
     const updatedCase = await retrieveMoldCaseById(id);
+    if (!updatedCase) {
+      await invalidateMoldCaseListCaches();
+      await invalidateMoldCaseSummaryCaches();
+      return null;
+    }
+
+    if (caseUpdateAffectsMembership(updatedDetails)) {
+      await invalidateMoldCaseListCaches();
+    } else {
+      await replaceCaseCaches(id, updatedCase);
+    }
+
+    await invalidateMoldCaseSummaryCaches();
+
     return updatedCase;
   } catch (error) {
     devLog(error);
@@ -535,9 +680,14 @@ export const updateMoldCaseInFirestore = async (
 
 export const softRemoveMoldCase = async (id: string): Promise<void> => {
   try {
+    const current = await retrieveMoldCaseById(id);
+    if (!current) throw new Error("No case found.");
+
     const result: WriteResult | null = await softDeleteMoldCase(id);
     if (!result) throw new Error("Failed to soft delete mold case");
-    await invalidateMoldCaseListCaches();
+
+    await removeCaseCaches(id, current);
+    await invalidateMoldCaseSummaryCaches();
   } catch (error) {
     devLog(error);
   }
@@ -545,9 +695,14 @@ export const softRemoveMoldCase = async (id: string): Promise<void> => {
 
 export const removeMoldCase = async (id: string): Promise<void> => {
   try {
+    const current = await retrieveMoldCaseById(id);
+    if (!current) throw new Error("No case found.");
+
     const result: WriteResult | null = await deleteMoldCase(id);
     if (!result) throw new Error("Failed to delete mold case");
-    await invalidateMoldCaseListCaches();
+
+    await removeCaseCaches(id, current);
+    await invalidateMoldCaseSummaryCaches();
   } catch (error) {
     devLog(error);
   }
@@ -645,7 +800,12 @@ export const updateCultivationDetailsInCase = async (
     if (!result) throw new Error("Failed to update cultivation details");
 
     const updated = await retrieveMoldCaseById(caseId);
-    await invalidateMoldCaseListCaches();
+    if (updated) {
+      await replaceCaseCaches(caseId, updated);
+    } else {
+      await invalidateMoldCaseListCaches();
+    }
+    await invalidateMoldCaseSummaryCaches();
     return updated;
   } catch (error) {
     devLog(error);

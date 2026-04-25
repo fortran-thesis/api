@@ -3,10 +3,23 @@ import {
   QuerySnapshot,
   Timestamp,
   WriteResult,
+  FieldValue,
+  getFirestore,
 } from "firebase-admin/firestore";
+import {firebase} from "../configs/firebase";
 import {documentToJson, queryToJson} from "../lib/firestore";
 import {devLog} from "../utils/dev";
-import {cacheItem, getCachedItem, cacheList, getCachedList, invalidateAllLists} from "../utils/cacheManager";
+import {
+  cacheItem,
+  getCachedItem,
+  cacheList,
+  getCachedList,
+  getCachedListDescriptors,
+  invalidateAllLists,
+  removeCachedListItem,
+  replaceCachedListItem,
+  upsertCachedListItem,
+} from "../utils/cacheManager";
 import {
   addMoldReport,
   deleteMoldReport,
@@ -51,9 +64,208 @@ import {transformToSignedUrl} from "../utils/storageTransform";
 import {normalizeResponseTimestamps} from "../utils/normalizeResponse";
 import {retrieveMoldById, retrieveMoldByName} from "./moldService";
 import {retrieveMoldipediaById} from "./moldipediaService";
+import {deleteCache} from "../utils/redis";
 
 // Cache TTL for this service (in seconds) — signed URLs should match cached responses
 const MOLD_REPORT_SERVICE_TTL_SECONDS = 300;
+const MOLD_REPORT_LIST_RESOURCES = [
+  "mold-reports-all",
+  "mold-reports-user",
+  "mold-reports-unassigned",
+  "mold-reports-assigned",
+] as const;
+const MOLD_REPORT_SEARCH_RESOURCE = "mold-reports-search";
+
+const isCursorQuery = (query?: Record<string, any> | null): boolean => {
+  if (!query) return false;
+
+  const cursor = query.token ?? query.pageToken;
+  if (cursor == null) return false;
+
+  return String(cursor).trim().length > 0;
+};
+
+const isFirstPageQuery = (query?: Record<string, any> | null): boolean => !isCursorQuery(query);
+
+const deleteListDescriptorCache = async (key: string): Promise<void> => {
+  await Promise.all([
+    deleteCache(key),
+    deleteCache(`${key}:meta`),
+  ]);
+};
+
+const invalidateReportCursorPages = async (resource: string): Promise<void> => {
+  const descriptors = await getCachedListDescriptors(resource);
+  await Promise.all(
+    descriptors
+      .filter((descriptor) => isCursorQuery(descriptor.metadata.query))
+      .map((descriptor) => deleteListDescriptorCache(descriptor.key))
+  );
+};
+
+const reportListReporterName = (reporter: any): string => {
+  if (!reporter || typeof reporter !== "object") return "";
+
+  const displayName = reporter?.details?.displayName;
+  if (typeof displayName === "string" && displayName.trim()) {
+    return displayName.trim();
+  }
+
+  const firstName = typeof reporter?.user?.first_name === "string" ? reporter.user.first_name.trim() : "";
+  const lastName = typeof reporter?.user?.last_name === "string" ? reporter.user.last_name.trim() : "";
+  return `${firstName} ${lastName}`.trim();
+};
+
+const prepareReportListItem = (
+  report: MoldReport,
+  resource: typeof MOLD_REPORT_LIST_RESOURCES[number]
+): MoldReport => {
+  const prepared: any = {...report};
+  delete prepared.case_details;
+
+  if (resource === "mold-reports-unassigned") {
+    delete prepared.user_id;
+    if (prepared.reporter && typeof prepared.reporter === "object") {
+      prepared.reporter = {
+        name: reportListReporterName(prepared.reporter),
+      };
+    }
+    return prepared as MoldReport;
+  }
+
+  if (prepared.reporter && typeof prepared.reporter === "object") {
+    prepared.reporter = {
+      id: prepared.reporter.id,
+      name: reportListReporterName(prepared.reporter),
+    };
+  }
+
+  return prepared as MoldReport;
+};
+
+const reportMatchesResource = (
+  resource: typeof MOLD_REPORT_LIST_RESOURCES[number],
+  query: Record<string, any> | null,
+  report: Pick<MoldReport, "status" | "user_id" | "assigned_mycologist_id">
+): boolean => {
+  switch (resource) {
+  case "mold-reports-all": {
+    const statusFilter = typeof query?.statusFilter === "string" ? query.statusFilter : "all";
+    if (statusFilter === "closed") return report.status === "resolved" || report.status === "rejected" || report.status === "closed";
+    if (statusFilter === "rejected") return report.status === "rejected";
+    if (statusFilter === "open") return report.status === "pending" || report.status === "in progress" || report.status === "resolved";
+    return true;
+  }
+  case "mold-reports-user": {
+    const uid = typeof query?.uid === "string" ? query.uid.trim() : "";
+    if (!uid || report.user_id !== uid) return false;
+
+    const isArchived = query?.isArchived === true;
+    return isArchived ? report.status === "resolved" || report.status === "rejected" || report.status === "closed" :
+      report.status === "pending" || report.status === "in progress" || report.status === "resolved";
+  }
+  case "mold-reports-unassigned":
+    return !report.assigned_mycologist_id && (report.status === "pending" || report.status === "in progress" || report.status === "resolved");
+  case "mold-reports-assigned": {
+    const mycologistId = typeof query?.mycologistId === "string" ? query.mycologistId.trim() : "";
+    if (!mycologistId || report.assigned_mycologist_id !== mycologistId) return false;
+
+    return query?.includeHistory === true ?
+      report.status === "resolved" || report.status === "rejected" || report.status === "closed" :
+      report.status === "pending" || report.status === "in progress" || report.status === "resolved";
+  }
+  default:
+    return false;
+  }
+};
+
+const createReportCache = async (report: MoldReport): Promise<void> => {
+  // For creates, invalidate first-page lists to ensure new item appears
+  // Upsert fails if list hasn't been cached yet, so we invalidate instead
+  await Promise.all(
+    MOLD_REPORT_LIST_RESOURCES.map((resource) => invalidateAllLists(resource))
+  );
+
+  // Invalidate search
+  await invalidateAllLists(MOLD_REPORT_SEARCH_RESOURCE);
+};
+
+const replaceReportCache = async (report: MoldReport): Promise<void> => {
+  // Replace in-place in all matching lists (fast path for non-membership changes)
+  await Promise.all(
+    MOLD_REPORT_LIST_RESOURCES.map((resource) =>
+      replaceCachedListItem(resource, (report as any).id, prepareReportListItem(report, resource), {
+        shouldMutate: (descriptor) => reportMatchesResource(resource, descriptor.metadata.query, report),
+      })
+    )
+  );
+
+  // Invalidate search (searchable fields may have changed)
+  await invalidateAllLists(MOLD_REPORT_SEARCH_RESOURCE);
+};
+
+const smartUpdateReportCacheOnMembership = async (
+  reportId: string,
+  newReport: MoldReport
+): Promise<void> => {
+  // Remove from all lists, then re-add to matching lists
+  // This handles membership changes like: unassigned→assigned, pending→in progress, etc
+
+  await Promise.all(
+    MOLD_REPORT_LIST_RESOURCES.map((resource) => removeCachedListItem(resource, reportId))
+  );
+
+  await Promise.all(
+    MOLD_REPORT_LIST_RESOURCES.map((resource) =>
+      upsertCachedListItem(resource, prepareReportListItem(newReport, resource), {
+        shouldMutate: (descriptor) =>
+          isFirstPageQuery(descriptor.metadata.query) &&
+          reportMatchesResource(resource, descriptor.metadata.query, newReport),
+      })
+    )
+  );
+
+  await Promise.all(
+    MOLD_REPORT_LIST_RESOURCES.map((resource) => invalidateReportCursorPages(resource))
+  );
+
+  await invalidateAllLists(MOLD_REPORT_SEARCH_RESOURCE);
+};
+
+const removeReportCache = async (reportId: string): Promise<void> => {
+  // Remove from all lists
+  await Promise.all(
+    MOLD_REPORT_LIST_RESOURCES.map((resource) => removeCachedListItem(resource, reportId))
+  );
+
+  // Invalidate paginated queries (total count changed)
+  await Promise.all(
+    MOLD_REPORT_LIST_RESOURCES.map((resource) => invalidateReportCursorPages(resource))
+  );
+
+  // Invalidate search
+  await invalidateAllLists(MOLD_REPORT_SEARCH_RESOURCE);
+};
+
+const updateMoldReportsCacheSignal = async (): Promise<void> => {
+  try {
+    const db = getFirestore(firebase);
+    await db
+      .doc('cache_signals/mold-reports')
+      .set({
+        last_update: FieldValue.serverTimestamp(),
+        version: FieldValue.increment(1),
+      }, { merge: true });
+    devLog('[SmartCache] Updated Firestore signal for mold-reports');
+  } catch (err) {
+    devLog(`[SmartCache] Error updating signal: ${err}`);
+  }
+};
+
+const reportUpdateAffectsMembership = (details: Partial<MoldReport>): boolean => {
+  return Object.prototype.hasOwnProperty.call(details, "status") ||
+    Object.prototype.hasOwnProperty.call(details, "assigned_mycologist_id");
+};
 
 export interface MoldReportPrintSectionPayload {
   fungus_name: string;
@@ -581,7 +793,7 @@ const transformCoverPhotos = async (
   devLog(`transformCoverPhotos: Processing ${caseDetails.length} case details`);
 
   return Promise.all(
-    caseDetails.map(async (detail, idx) => {
+    caseDetails.map(async (detail) => {
       if (!detail.cover_photo) {
         return detail;
       }
@@ -697,14 +909,14 @@ export const addMoldReportToFirestore = async (
       devLog(`addMoldReportToFirestore: ✅ ${caseDetailsArray.length} case details written to subcollection with IDs: ${caseDetailIds.join(", ")}`);
     }
 
-    // Invalidate report list caches that can reflect the new document.
-    await invalidateAllLists("mold-reports-search");
-    await invalidateAllLists("mold-reports-all");
-    await invalidateAllLists("mold-reports-user");
-    await invalidateAllLists("mold-reports-unassigned");
-    if (details.assigned_mycologist_id) {
-      await invalidateAllLists("mold-reports-assigned");
+    const createdReport = await retrieveMoldReportById(reportId);
+    if (!createdReport) {
+      throw new Error("Failed to retrieve created report for caching");
     }
+
+    // Smart cache: upsert into matching first-page lists
+    await createReportCache(createdReport);
+    await updateMoldReportsCacheSignal();
 
     // Return with case_details included in response for backward compat
     const result = documentToJson<MoldReport>(doc);
@@ -1146,7 +1358,13 @@ export const updateMoldReportInFirestore = async (
   details: Partial<MoldReport>
 ): Promise<MoldReport | null> => {
   try {
-    // convert date_observed string to Timestamp if present
+    // Fetch old state before update
+    const oldReport = await retrieveMoldReportById(id);
+    if (!oldReport) {
+      return null;
+    }
+
+    // Normalize date_observed if present
     const updatedDetails: any = {...details};
     if (updatedDetails.date_observed) {
       const raw = updatedDetails.date_observed;
@@ -1157,24 +1375,26 @@ export const updateMoldReportInFirestore = async (
           updatedDetails.date_observed;
     }
 
-    const result: WriteResult | null = await updateMoldReportRepo(
-      id,
-      updatedDetails
-    );
-    if (!result) throw new Error("Failed to update mold report.");
+    // Update database
+    const result: WriteResult | null = await updateMoldReportRepo(id, updatedDetails);
+    if (!result) throw new Error("Failed to update mold report in Firestore");
 
-    // Invalidate all report caches since report was updated
-    await invalidateAllLists("mold-reports-search");
-    await invalidateAllLists("mold-reports-all");
-    await invalidateAllLists("mold-reports-user");
-    await invalidateAllLists("mold-reports-unassigned");
-    await invalidateAllLists("mold-reports-assigned");
-
+    // Fetch updated state
     const updated = await retrieveMoldReportById(id);
+    if (!updated) throw new Error("Could not retrieve updated report after update");
+
+    // Handle cache updates - smart mutations only, no fallbacks
+    if (reportUpdateAffectsMembership(details)) {
+      await smartUpdateReportCacheOnMembership(id, updated);
+    } else {
+      await replaceReportCache(updated);
+    }
+    await updateMoldReportsCacheSignal();
+
     return updated;
   } catch (error) {
     devLog(error);
-    return null;
+    throw error;
   }
 };
 
@@ -1183,12 +1403,11 @@ export const softRemoveMoldReport = async (id: string): Promise<void> => {
     const result: WriteResult | null = await softDeleteMoldReport(id);
     if (!result) throw new Error("Failed to close mold report");
 
-    // Invalidate all report caches since report status was closed
-    await invalidateAllLists("mold-reports-search");
-    await invalidateAllLists("mold-reports-all");
-    await invalidateAllLists("mold-reports-user");
-    await invalidateAllLists("mold-reports-unassigned");
-    await invalidateAllLists("mold-reports-assigned");
+    await Promise.all([
+      invalidateAllLists(MOLD_REPORT_SEARCH_RESOURCE),
+      ...MOLD_REPORT_LIST_RESOURCES.map((resource) => invalidateAllLists(resource)),
+    ]);
+    await updateMoldReportsCacheSignal();
   } catch (error) {
     devLog(error);
   }
@@ -1199,12 +1418,8 @@ export const removeMoldReport = async (id: string): Promise<void> => {
     const result: WriteResult | null = await deleteMoldReport(id);
     if (!result) throw new Error("Failed to delete mold report");
 
-    // Invalidate all report caches since report was deleted
-    await invalidateAllLists("mold-reports-search");
-    await invalidateAllLists("mold-reports-all");
-    await invalidateAllLists("mold-reports-user");
-    await invalidateAllLists("mold-reports-unassigned");
-    await invalidateAllLists("mold-reports-assigned");
+    await removeReportCache(id);
+    await updateMoldReportsCacheSignal();
   } catch (error) {
     devLog(error);
   }

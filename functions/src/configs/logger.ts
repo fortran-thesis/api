@@ -62,15 +62,13 @@ export const logger = pino({
         target: "pino-pretty",
         options: {
           colorize: true,
-          translateTime: "HH:MM:ss.l",
-          ignore: "pid,hostname",
-          // Render `err` / `error` fields as proper stack-trace blocks
+          translateTime: "SYS:standard",
+          ignore: "pid,hostname,ctx,req,res,responseTime",
+          // Render error objects as proper stack-trace blocks (NOT single-line)
           errorLikeObjectKeys: ["err", "error"],
           errorProps: "message,stack",
-          // Surface the context tag inline with the message for quick scanning
-          messageFormat: "{ctx} | {message}",
-          // Print every extra field on its own line (not squashed into one)
-          singleLine: false,
+          // Keep normal logs compact on one line; errors will expand automatically
+          singleLine: true,
         },
       },
     } :
