@@ -72,6 +72,19 @@ export const globalErrorHandler = (
 
   const anyErr = err as any;
 
+  if (
+    anyErr?.name === "AbortError" ||
+    anyErr?.name === "TimeoutError" ||
+    anyErr?.code === "ETIMEDOUT" ||
+    anyErr?.code === "ECONNABORTED"
+  ) {
+    res.status(504).json({
+      success: false,
+      error: "Request timed out. Please try again.",
+    });
+    return;
+  }
+
   // Busboy / multipart stream errors (client disconnect, incomplete upload).
   if (
     anyErr?.message === "Unexpected end of form" ||

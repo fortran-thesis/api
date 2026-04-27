@@ -57,6 +57,7 @@ export const retrieveAllUsers = async (
           first_name: firestoreUser.first_name,
           last_name: firestoreUser.last_name,
           address: firestoreUser.address,
+          geo_location: firestoreUser.geo_location,
           role: normalizeRole(firestoreUser.role),
           is_banned: firestoreUser.is_banned,
           occupation: firestoreUser.occupation,
@@ -110,7 +111,7 @@ export const retrieveUsersByRole = async (
 
     const result = await findUsersByRole(role, limit, token);
     if (!result || !result.snapshot) throw new Error("No users found.");
-    const firestoreList: any[] = queryToJson<any>(result.snapshot);
+    const firestoreList: WithId<User>[] = queryToJson<User>(result.snapshot);
     const identifiers = firestoreList.map((user) => ({uid: user.id}));
     const authUsers = await getAuth().getUsers(identifiers);
 
@@ -125,6 +126,7 @@ export const retrieveUsersByRole = async (
           first_name: firestoreUser.first_name,
           last_name: firestoreUser.last_name,
           address: firestoreUser.address,
+          geo_location: firestoreUser.geo_location,
           role: normalizeRole(firestoreUser.role),
           is_banned: firestoreUser.is_banned,
           occupation: firestoreUser.occupation,
@@ -351,6 +353,7 @@ export const searchAndFilterUsers = async (
           first_name: firestoreUser.first_name,
           last_name: firestoreUser.last_name,
           address: firestoreUser.address,
+          geo_location: firestoreUser.geo_location,
           role: normalizeRole(firestoreUser.role),
           is_banned: firestoreUser.is_banned,
           occupation: firestoreUser.occupation,

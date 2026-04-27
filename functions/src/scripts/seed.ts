@@ -450,7 +450,7 @@ const MOLDIPEDIA_SEED = [
     },
   },
   {
-    title: "Aspergillus Niger",
+    title: "Aspergillus Nigri",
     body: "<p><em>A. niger</em> is a filamentous ascomycete fungus placed under <em>Aspergillus</em>, Section <em>Nigri</em>. Macroscopically, colonies are initially white, then develop into a compact white or yellow basal felt covered by a dense layer of dark-brown to black conidial heads. Microscopically, conidia are globose to subglobose (3.5–5 µm in diameter), dark brown to black and rough-walled.</p>",
     affected_hosts: "<p>A. niger is by far the most common Aspergillus species responsible for post-harvest decay of fresh fruit, including grapes, apples, pears, peaches, citrus, figs, strawberries, mangoes and melons, and causes black mould rot of onions and crown rot in peanuts.</p>",
     symptoms: "<p>In peanuts (crown rot): when seeds germinate, the elongated shoots become infected, causing the hypocotyl to become water-soaked. Sudden wilting of seedlings occurs, with rotation of the hypocotyl and cotyledon. Once infected, the hypocotyl and rotting roots are covered by black masses of conidia and mycelia. In onions (black mold rot): powdery mould spores appear on the surface or between bulb scales. Affected bulbs display varying degrees of soft rot. In postharvest fruit: lesions enlarge rapidly and separate easily from healthy tissue. Infected tissues are pale and water soaked with dark, powdery fungal spores easily liberated when mature.</p>",
@@ -659,7 +659,7 @@ const MOLDS_SEED = [
       "Dark rough-walled conidia",
     ],
     mold_details: {
-      name: "Aspergillus Niger",
+      name: "Aspergillus Nigri",
       info: {
         overview:
           "A. niger is a filamentous ascomycete fungus placed under Aspergillus, Section Nigri. Macroscopically, colonies are initially white, then develop into a compact white or yellow basal felt covered by a dense layer of dark-brown to black conidial heads. Conidiophore stipes are smooth-walled, hyaline or turning dark toward the vesicle, with biseriate phialides borne on brown, often septate metulae. Microscopically, conidia are globose to subglobose (3.5–5 µm in diameter), dark brown to black and rough-walled.",

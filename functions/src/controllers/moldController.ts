@@ -51,8 +51,8 @@ const SUPPORTED_CORRECTION_GENERA = [
     predicted_class_name: "Aspergillus_section_Flavi",
   },
   {
-    display_name: "Aspergillus Section Nigri",
-    normalized_key: "aspergillus section nigri",
+    display_name: "Aspergillus Nigri",
+    normalized_key: "aspergillus nigri",
     predicted_class_name: "Aspergillus_section_Nigri",
   },
   {

@@ -1,6 +1,14 @@
 import {z} from "zod";
 import {FirebaseAuthIdSchema} from "./shared";
 
+export const GeoLocationSchema = z.object({
+  latitude: z.coerce.number().optional(),
+  longitude: z.coerce.number().optional(),
+  altitude: z.coerce.number().optional(),
+  accuracy: z.coerce.number().optional(),
+  source: z.string().optional(),
+});
+
 export const PasswordSchema = z
   .string({required_error: "Password is required"})
   .nonempty({message: "Password is required"})
@@ -31,7 +39,12 @@ export const RegisterSchema = z.object({
   phoneNumber: z
     .string()
     .optional(),
-});
+  geo_location: GeoLocationSchema.optional(),
+  geoLocation: GeoLocationSchema.optional(),
+}).transform((data) => ({
+  ...data,
+  geoLocation: data.geo_location ?? data.geoLocation,
+}));
 
 export const LoginSchema = z.object({
   username: z
@@ -116,6 +129,8 @@ export const UserProfileUpdateSchema = z.object({
   phoneNumber: z.string().optional(),
   phone_number: z.string().optional(),
   photo_url: z.string().optional(),
+  geo_location: GeoLocationSchema.optional(),
+  geoLocation: GeoLocationSchema.optional(),
 }).transform((data) => ({
   username: data.username,
   firstName: data.firstName ?? data.first_name,
@@ -125,6 +140,7 @@ export const UserProfileUpdateSchema = z.object({
   address: data.address,
   phoneNumber: data.phoneNumber ?? data.phone_number,
   photo_url: data.photo_url,
+  geoLocation: data.geo_location ?? data.geoLocation,
 }));
 
 export const SearchUsersQuerySchema = z.object({

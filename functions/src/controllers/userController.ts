@@ -201,6 +201,7 @@ export const patchUserProfile = async (req: Request, res: Response) => {
       displayName: details.displayName,
       address: details.address,
       phoneNumber: details.phoneNumber,
+      geoLocation: details.geoLocation ?? details.geo_location,
       photo_url: uploadedPhotoPath || details.photo_url,
     };
 

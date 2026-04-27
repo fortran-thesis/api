@@ -32,6 +32,34 @@ export const swaggerSchemas = {
     },
   },
 
+  GeoLocation: {
+    type: "object",
+    properties: {
+      latitude: {
+        type: "number",
+        example: 7.0731,
+      },
+      longitude: {
+        type: "number",
+        example: 125.6124,
+      },
+      altitude: {
+        type: "number",
+        nullable: true,
+        example: 12.3,
+      },
+      accuracy: {
+        type: "number",
+        nullable: true,
+        example: 15.0,
+      },
+      source: {
+        type: "string",
+        example: "gps",
+      },
+    },
+  },
+
   // Auth Schemas
   RegisterRequest: {
     type: "object",
@@ -82,6 +110,10 @@ export const swaggerSchemas = {
         type: "string",
         description: "Contact phone number (optional)",
         example: "+1234567890",
+      },
+      geo_location: {
+        $ref: "#/components/schemas/GeoLocation",
+        description: "Optional device-derived coordinates captured during signup.",
       },
     },
   },
@@ -386,6 +418,9 @@ export const swaggerSchemas = {
         type: "string",
         example: "123 Main St",
       },
+      geo_location: {
+        $ref: "#/components/schemas/GeoLocation",
+      },
       is_banned: {
         type: "boolean",
         example: false,
@@ -432,6 +467,9 @@ export const swaggerSchemas = {
       phoneNumber: {
         type: "string",
         description: "Philippine numbers are normalized to E.164 (+63...) before storage. Pass any local format (09XX, 639XX, +639XX).",
+      },
+      geo_location: {
+        $ref: "#/components/schemas/GeoLocation",
       },
     },
   },
@@ -573,6 +611,10 @@ export const swaggerSchemas = {
         type: "string",
         description: "Location where mold was found",
         example: "Kitchen wall near sink",
+      },
+      geo_location: {
+        $ref: "#/components/schemas/GeoLocation",
+        description: "Optional GPS metadata captured on the device.",
       },
       status: {
         type: "string",
