@@ -8,84 +8,65 @@ import {
 
 describe("CultivationDetailsSchema (DTO validation)", () => {
   describe("cultivation_details fields", () => {
-    it("should accept basic cultivation_details with growth_medium", () => {
+    it("should accept specimen_type and specimen_quantity", () => {
       const payload = {
         cultivation_details: {
-          growth_medium: "Potato Dextrose Agar",
+          specimen_type: "Leaf",
+          specimen_quantity: 5,
         },
       };
 
       const result = CultivationDetailsSchema.safeParse(payload);
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.cultivation_details?.growth_medium).toBe(
-          "Potato Dextrose Agar"
-        );
+        expect(result.data.cultivation_details?.specimen_type).toBe("Leaf");
+        expect(result.data.cultivation_details?.specimen_quantity).toBe(5);
       }
     });
 
-    it("should accept specimen_types and specimen_quantities arrays", () => {
+    it("should accept nested initial_observations", () => {
       const payload = {
         cultivation_details: {
-          growth_medium: "PDA",
-          specimen_types: ["Leaf", "Stem"],
-          specimen_quantities: ["5", "3"],
+          initial_observations: {
+            microscopic_description: "Microscopic description",
+            microscopic_color: "Green",
+            microscopic_texture: "Velvety",
+            microscopic_image_path: "gs://bucket/micro.jpg",
+            macroscopic_description: "Macroscopic description",
+            macroscopic_color: "White",
+            macroscopic_texture: "Powdery",
+            macroscopic_symptoms: "Visible lesions",
+            macroscopic_characteristics: "Fuzzy growth",
+            macroscopic_image_path: "gs://bucket/macro.jpg",
+            symptoms: ["Leaf spots", "Wilting"],
+            signs: ["Powdery residue"],
+            characteristics: ["Cottony", "Powdery"],
+            ai_snapshot: {
+              identified_mold: "Aspergillus niger",
+              mold_id: "mold-1",
+              confidence: 98,
+              confidence_display: "98%",
+              model_source: "lookup_refresh",
+              captured_at: new Date().toISOString(),
+              used_ann: true,
+              used_fusion: false,
+              top_predictions: [
+                {moldId: "mold-1", moldName: "Aspergillus niger", confidence: 98},
+              ],
+            },
+          },
         },
       };
 
       const result = CultivationDetailsSchema.safeParse(payload);
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.cultivation_details?.specimen_types).toEqual([
-          "Leaf",
-          "Stem",
-        ]);
-        expect(result.data.cultivation_details?.specimen_quantities).toEqual([
-          "5",
-          "3",
-        ]);
-      }
-    });
-
-    it("should accept initial_symptoms and initial_characteristics arrays", () => {
-      const payload = {
-        cultivation_details: {
-          growth_medium: "PDA",
-          initial_symptoms: ["Leaf spots", "Wilting"],
-          initial_characteristics: ["Cottony", "Powdery"],
-        },
-      };
-
-      const result = CultivationDetailsSchema.safeParse(payload);
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.cultivation_details?.initial_symptoms).toEqual([
+        expect(result.data.cultivation_details?.initial_observations?.symptoms).toEqual([
           "Leaf spots",
           "Wilting",
         ]);
-        expect(result.data.cultivation_details?.initial_characteristics).toEqual(
-          ["Cottony", "Powdery"]
-        );
-      }
-    });
-
-    it("should accept initial_signs and initial_signs_csv", () => {
-      const payload = {
-        cultivation_details: {
-          initial_signs: ["Dark sporulation", "Powdery residue"],
-          initial_signs_csv: "Dark sporulation,Powdery residue",
-        },
-      };
-
-      const result = CultivationDetailsSchema.safeParse(payload);
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.cultivation_details?.initial_signs).toEqual([
-          "Dark sporulation",
-          "Powdery residue",
-        ]);
-        expect(result.data.cultivation_details?.initial_signs_csv).toBe(
-          "Dark sporulation,Powdery residue"
+        expect(result.data.cultivation_details?.initial_observations?.ai_snapshot?.identified_mold).toBe(
+          "Aspergillus niger"
         );
       }
     });
@@ -93,7 +74,7 @@ describe("CultivationDetailsSchema (DTO validation)", () => {
     it("should accept location_gathered as optional string", () => {
       const payload = {
         cultivation_details: {
-          growth_medium: "PDA",
+          specimen_type: "Leaf",
           location_gathered: "Farm field A, plot 3",
         },
       };
@@ -110,14 +91,24 @@ describe("CultivationDetailsSchema (DTO validation)", () => {
     it("should accept all new fields together (full monitoring setup)", () => {
       const payload = {
         cultivation_details: {
-          growth_medium: "PDA",
-          specimen_types: ["Leaf", "Stem", "Root"],
-          specimen_quantities: ["5", "3", "2"],
-          initial_symptoms: ["Leaf spots", "Yellowing"],
-          initial_characteristics: ["Cottony", "Fuzzy"],
+          specimen_type: "Stem",
+          specimen_quantity: 3,
           location_gathered: "Northwest field",
-          in_vivo_details: {environmental_temperature: 25},
-          in_vitro_details: {incubation_temperature: 28},
+          scanned_microscopic_ids: ["scan-micro-1"],
+          scanned_macroscopic_ids: ["scan-macro-1"],
+          initial_observations: {
+            microscopic_description: "Microscopic note",
+            microscopic_color: "Green",
+            microscopic_texture: "Velvety",
+            macroscopic_description: "Macroscopic note",
+            macroscopic_color: "White",
+            macroscopic_texture: "Powdery",
+            macroscopic_symptoms: "Visible lesions",
+            macroscopic_characteristics: "Fuzzy growth",
+            symptoms: ["Leaf spots", "Yellowing"],
+            signs: ["Powdery residue"],
+            characteristics: ["Cottony", "Fuzzy"],
+          },
         },
         start_date: new Date().toISOString(),
         end_date: new Date(Date.now() + 86400000).toISOString(),
@@ -127,13 +118,13 @@ describe("CultivationDetailsSchema (DTO validation)", () => {
       expect(result.success).toBe(true);
       if (result.success) {
         const cultDetails = result.data.cultivation_details!;
-        expect(cultDetails.specimen_types).toHaveLength(3);
-        expect(cultDetails.specimen_quantities).toHaveLength(3);
-        expect(cultDetails.initial_symptoms).toHaveLength(2);
-        expect(cultDetails.initial_characteristics).toHaveLength(2);
-        expect(cultDetails.location_gathered).toBeDefined();
-        expect(cultDetails.in_vivo_details).toBeDefined();
-        expect(cultDetails.in_vitro_details).toBeDefined();
+        expect(cultDetails.specimen_type).toBe("Stem");
+        expect(cultDetails.specimen_quantity).toBe(3);
+        expect(cultDetails.scanned_microscopic_ids).toEqual(["scan-micro-1"]);
+        expect(cultDetails.scanned_macroscopic_ids).toEqual(["scan-macro-1"]);
+        expect(cultDetails.initial_observations?.symptoms).toHaveLength(2);
+        expect(cultDetails.initial_observations?.signs).toHaveLength(1);
+        expect(cultDetails.initial_observations?.characteristics).toHaveLength(2);
       }
     });
 
@@ -165,28 +156,6 @@ describe("CultivationDetailsSchema (DTO validation)", () => {
       expect(result.success).toBe(true);
     });
 
-    it("should reject non-string values in specimen_types array", () => {
-      const payload = {
-        cultivation_details: {
-          specimen_types: ["Leaf", 123],
-        },
-      };
-
-      const result = CultivationDetailsSchema.safeParse(payload);
-      expect(result.success).toBe(false);
-    });
-
-    it("should reject specimen_quantities without specimen_types (but still valid)", () => {
-      // This is allowed since arrays are independent
-      const payload = {
-        cultivation_details: {
-          specimen_quantities: ["5", "3"],
-        },
-      };
-
-      const result = CultivationDetailsSchema.safeParse(payload);
-      expect(result.success).toBe(true);
-    });
   });
 
   describe("culture session schemas", () => {

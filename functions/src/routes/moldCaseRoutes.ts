@@ -56,8 +56,8 @@ router.post(
   "/",
   verifyUser(),
   validateBody(MoldCaseCreateSchema),
-  cacheInvalidate("mold-cases-all", "create"),
-  cacheInvalidate("mold-cases-assigned", "create"),
+  cacheInvalidate("v2:mold-cases-all", "create"),
+  cacheInvalidate("v2:mold-cases-assigned", "create"),
   async (req: Request, res: Response) => {
     await createMoldCase(req, res);
   }
@@ -67,7 +67,7 @@ router.get(
   "/",
   verifyUser(),
   validateQuery(PaginationQuerySchema),
-  cacheGet("mold-cases-all"),
+  cacheGet("v2:mold-cases-all"),
   async (req: Request, res: Response) => {
     await getAllMoldCases(req, res);
   }
@@ -85,7 +85,7 @@ router.get(
   "/assigned",
   verifyUser(Role.CURATOR),
   validateQuery(PaginationQuerySchema),
-  cacheGet("mold-cases-assigned"),
+  cacheGet("v2:mold-cases-assigned"),
   async (req: Request, res: Response) => {
     await getAssignedMoldCases(req, res);
   }
@@ -133,8 +133,8 @@ router.patch(
   "/:id/archive",
   verifyUser(),
   validateParams(MoldIdSchema),
-  cacheInvalidate("mold-cases-all", "update"),
-  cacheInvalidate("mold-cases-assigned", "update"),
+  cacheInvalidate("v2:mold-cases-all", "update"),
+  cacheInvalidate("v2:mold-cases-assigned", "update"),
   async (req: Request, res: Response) => {
     await archiveMoldCase(req, res);
   }
@@ -144,8 +144,8 @@ router.patch(
   "/:id/unarchive",
   verifyUser(),
   validateParams(MoldIdSchema),
-  cacheInvalidate("mold-cases-all", "update"),
-  cacheInvalidate("mold-cases-assigned", "update"),
+  cacheInvalidate("v2:mold-cases-all", "update"),
+  cacheInvalidate("v2:mold-cases-assigned", "update"),
   async (req: Request, res: Response) => {
     await unarchiveMoldCase(req, res);
   }
@@ -165,6 +165,8 @@ router.delete(
   "/:id/logs/:logId",
   verifyUser(),
   validateParams(MoldIdSchema),
+  cacheInvalidate("v2:mold-cases-all", "update"),
+  cacheInvalidate("v2:mold-cases-assigned", "update"),
   async (req: Request, res: Response) => {
     await removeCultivationLog(req, res);
   }
@@ -239,8 +241,8 @@ router.patch(
   "/:id",
   verifyUser(),
   validateParams(MoldIdSchema),
-  cacheInvalidate("mold-cases-all", "update"),
-  cacheInvalidate("mold-cases-assigned", "update"),
+  cacheInvalidate("v2:mold-cases-all", "update"),
+  cacheInvalidate("v2:mold-cases-assigned", "update"),
   async (req: Request, res: Response) => {
     await patchMoldCase(req, res);
   }
@@ -263,8 +265,8 @@ router.post(
     next();
   },
   validateBody(CultivationLogSchema),
-  cacheInvalidate("mold-cases-all", "update"),
-  cacheInvalidate("mold-cases-assigned", "update"),
+  cacheInvalidate("v2:mold-cases-all", "update"),
+  cacheInvalidate("v2:mold-cases-assigned", "update"),
   async (req: Request, res: Response) => {
     // controller expects param name caseId, the route uses :id so controller will read req.params.id
     await addCultivationLog(req, res);
@@ -277,8 +279,8 @@ router.patch(
   validateParams(MoldIdSchema),
   validateBody(CultivationDetailsSchema),
   auditLog(AuditAction.UPDATE_MOLD_CASE, (req) => `Updated cultivation details for case ${req.params.id}`),
-  cacheInvalidate("mold-cases-all", "update"),
-  cacheInvalidate("mold-cases-assigned", "update"),
+  cacheInvalidate("v2:mold-cases-all", "update"),
+  cacheInvalidate("v2:mold-cases-assigned", "update"),
   async (req: Request, res: Response) => {
     await updateCultivationDetails(req, res);
   }
@@ -308,8 +310,8 @@ router.patch(
     referenceType: "mold_case",
     contextFn: (_req, body) => ({case_name: body?.data?.case_name ?? ""}),
   }),
-  cacheInvalidate("mold-cases-all", "update"),
-  cacheInvalidate("mold-cases-assigned", "update"),
+  cacheInvalidate("v2:mold-cases-all", "update"),
+  cacheInvalidate("v2:mold-cases-assigned", "update"),
   async (req: Request, res: Response) => {
     await finalizeVerdict(req, res);
   }
@@ -319,8 +321,8 @@ router.delete(
   "/hard/:id",
   verifyUser(),
   validateParams(MoldIdSchema),
-  cacheInvalidate("mold-cases-all", "delete"),
-  cacheInvalidate("mold-cases-assigned", "delete"),
+  cacheInvalidate("v2:mold-cases-all", "delete"),
+  cacheInvalidate("v2:mold-cases-assigned", "delete"),
   async (req: Request, res: Response) => {
     await deleteMoldCase(req, res);
   }
@@ -330,8 +332,8 @@ router.delete(
   "/soft/:id",
   verifyUser(),
   validateParams(MoldIdSchema),
-  cacheInvalidate("mold-cases-all", "delete"),
-  cacheInvalidate("mold-cases-assigned", "delete"),
+  cacheInvalidate("v2:mold-cases-all", "delete"),
+  cacheInvalidate("v2:mold-cases-assigned", "delete"),
   async (req: Request, res: Response) => {
     await softDeleteMoldCase(req, res);
   }

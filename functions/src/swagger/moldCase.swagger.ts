@@ -23,60 +23,63 @@
   *               name:
   *                 type: string
   *               mold_report_id:
-  *                 type: string
+  *                 description: Merged with existing cultivation_details in Firestore. Nested initial_observations objects are deep-merged, not replaced.
   *               photo_url:
-  *                 type: string
-  *               priority:
-  *                 type: string
-  *                 enum: [low, medium, high]
-  *               start_date:
-  *                 type: string
-  *                 format: date-time
-  *               end_date:
-  *                 type: string
-  *                 format: date-time
-  *     responses:
-  *       200:
-  *         description: Successfully created mold folder
-  *         content:
-  *           application/json:
-  *             schema:
-  *               type: object
-  *               properties:
-  *                 success:
-  *                   type: boolean
-  *                   example: true
-  *                 data:
-  *                   type: object
-  *                   properties:
-  *                     mycologist_id:
-  *                       type: string
-  *                     name:
-  *                       type: string
+  *                   specimen_type:
+  *                     type: string
+  *                   specimen_quantity:
+  *                     type: number
   *                     mold_report_id:
-  *                       type: string
-  *                     photo_url:
-  *                       type: string
-  *                       nullable: true
-  *                       description: Signed Google Cloud Storage URL. Valid for 2 hours from the time of the response. Do not cache this URL beyond that window.
-  *                     priority:
-  *                       type: string
-  *                       enum: [low, medium, high]
-  *                     start_date:
   *                       type: string
   *                       format: date-time
   *                     end_date:
+  *                   scanned_microscopic_ids:
+  *                     type: array
+  *                     items:
   *                       type: string
+  *                   scanned_macroscopic_ids:
+  *                     type: array
+  *                     items:
+  *                       type: string
+  *                   initial_observations:
   *                       format: date-time
-  *                     is_archived:
-  *                       type: boolean
-  *       400:
-  *         description: Validation error
-  *         content:
-  *           application/json:
-  *             schema:
-  *               type: object
-  *               properties:
+  *                     description: Nested microscopic and macroscopic observations.
+  *                     properties:
+  *                       microscopic_description:
+  *                         type: string
+  *                       microscopic_color:
+  *                         type: string
+  *                       microscopic_texture:
+  *                         type: string
+  *                       microscopic_image_path:
+  *                         type: string
+  *                       macroscopic_description:
+  *                         type: string
+  *                       macroscopic_color:
+  *                         type: string
+  *                       macroscopic_texture:
+  *                         type: string
+  *                       macroscopic_symptoms:
+  *                         type: string
+  *                       macroscopic_characteristics:
+  *                         type: string
+  *                       macroscopic_image_path:
+  *                         type: string
+  *                       symptoms:
+  *                         type: array
+  *                         items:
+  *                           type: string
+  *                       signs:
+  *                         type: array
+  *                         items:
+  *                           type: string
+  *                       characteristics:
+  *                         type: array
+  *                         items:
+  *                           type: string
+  *                       ai_snapshot:
+  *                         type: object
+  *                         description: AI-generated identification snapshot.
   *                 success:
   *                   type: boolean
   *                   example: false
@@ -249,12 +252,17 @@
   *                             type: string
   *                           mold_report_id:
   *                             type: string
+  *                           mycologist_name:
+  *                             type: string
+  *                             nullable: true
+  *                             description: Resolved on read from users/{mycologist_id}; not persisted in Firestore.
   *                           user_id:
   *                             type: string
   *                             nullable: true
   *                           user_name:
   *                             type: string
   *                             nullable: true
+  *                             description: Resolved on read from users/{user_id}; not persisted in Firestore.
   *                           photo_url:
   *                             type: string
   *                             nullable: true
@@ -654,6 +662,10 @@
   *                   properties:
   *                     mycologist_id:
   *                       type: string
+  *                     mycologist_name:
+  *                       type: string
+  *                       nullable: true
+  *                       description: Resolved on read from users/{mycologist_id}; not persisted in Firestore.
   *                     name:
   *                       type: string
   *                     mold_report_id:
@@ -665,7 +677,7 @@
   *                     user_name:
   *                       type: string
   *                       nullable: true
-  *                       description: Display name of the farmer/user
+  *                       description: Resolved on read from users/{user_id}; not persisted in Firestore.
   *                     photo_url:
   *                       type: string
   *                       nullable: true
@@ -684,67 +696,16 @@
   *                     cultivation_details:
   *                       type: object
   *                       nullable: true
-  *                       description: Detailed cultivation information including growth conditions and observations
+  *                       description: Detailed cultivation information including specimen metadata and nested initial observations
   *                       properties:
-  *                         growth_medium:
+  *                         specimen_type:
   *                           type: string
-  *                         in_vivo_details:
-  *                           type: object
-  *                           properties:
-  *                             environmental_temperature:
-  *                               type: number
-  *                         in_vitro_details:
-  *                           type: object
-  *                           properties:
-  *                             incubation_temperature:
-  *                               type: number
-  *                         specimen_types:
-  *                           type: array
-  *                           items:
-  *                             type: string
-  *                         specimen_quantities:
-  *                           type: array
-  *                           items:
-  *                             type: string
-  *                         initial_symptoms:
-  *                           type: array
-  *                           items:
-  *                             type: string
-  *                         initial_characteristics:
-  *                           type: array
-  *                           items:
-  *                             type: string
+  *                         specimen_quantity:
+  *                           type: number
   *                         location_gathered:
   *                           type: string
-  *                         initial_microscopic:
-  *                           type: string
-  *                         initial_macroscopic:
-  *                           type: string
-  *                         initial_microscopic_color:
-  *                           type: string
-  *                         initial_microscopic_texture:
-  *                           type: string
-  *                         initial_macroscopic_color:
-  *                           type: string
-  *                         initial_macroscopic_texture:
-  *                           type: string
-  *                         initial_macroscopic_symptoms:
-  *                           type: string
-  *                         initial_macroscopic_characteristics:
-  *                           type: string
-  *                         initial_microscopic_image_url:
-  *                           type: string
-  *                           nullable: true
-  *                           description: Signed URL for microscopic image. Valid for 2 hours.
-  *                         initial_macroscopic_image_url:
-  *                           type: string
-  *                           nullable: true
-  *                           description: Signed URL for macroscopic image. Valid for 2 hours.
   *                         date_observation:
   *                           type: string
-  *                         microscopic_ai_snapshot:
-  *                           type: object
-  *                           description: AI-generated identification snapshot
   *                         scanned_microscopic_ids:
   *                           type: array
   *                           items:
@@ -753,6 +714,53 @@
   *                           type: array
   *                           items:
   *                             type: string
+  *                         initial_observations:
+  *                           type: object
+  *                           description: Nested initial microscopic and macroscopic observations
+  *                           properties:
+  *                             microscopic_description:
+  *                               type: string
+  *                             microscopic_color:
+  *                               type: string
+  *                             microscopic_texture:
+  *                               type: string
+  *                             microscopic_image_path:
+  *                               type: string
+  *                             microscopic_image_url:
+  *                               type: string
+  *                               nullable: true
+  *                               description: Signed URL for microscopic image. Valid for 2 hours.
+  *                             macroscopic_description:
+  *                               type: string
+  *                             macroscopic_color:
+  *                               type: string
+  *                             macroscopic_texture:
+  *                               type: string
+  *                             macroscopic_symptoms:
+  *                               type: string
+  *                             macroscopic_characteristics:
+  *                               type: string
+  *                             macroscopic_image_path:
+  *                               type: string
+  *                             macroscopic_image_url:
+  *                               type: string
+  *                               nullable: true
+  *                               description: Signed URL for macroscopic image. Valid for 2 hours.
+  *                             symptoms:
+  *                               type: array
+  *                               items:
+  *                                 type: string
+  *                             signs:
+  *                               type: array
+  *                               items:
+  *                                 type: string
+  *                             characteristics:
+  *                               type: array
+  *                               items:
+  *                                 type: string
+  *                             ai_snapshot:
+  *                               type: object
+  *                               description: AI-generated identification snapshot
   *                     final_verdict:
   *                       type: object
   *                       nullable: true
@@ -760,13 +768,18 @@
   *                       properties:
   *                         moldId:
   *                           type: string
-  *                           description: ID of the identified mold
+  *                           nullable: true
+  *                           description: Nullable FK to the identified mold document
   *                         moldName:
   *                           type: string
-  *                           description: Name of the identified mold
+  *                           description: Resolved on read from molds/{moldId}.name; not persisted in Firestore.
   *                         confidence:
   *                           type: number
   *                           description: Confidence score of the identification
+  *                         verdict_fallback_name:
+  *                           type: string
+  *                           nullable: true
+  *                           description: Stored only when moldId is null
   *                         moldipedia_id:
   *                           type: string
   *                           nullable: true
@@ -922,7 +935,7 @@
   *     description: |
   *       Updates cultivation details on a mold case using deep-merge semantics.
   *
-  *       Side effect: if the linked MoldReport contains `reported_symptoms`, `reported_signs`, or `reported_characteristics`, a background mold lookup is re-run after this update. Characteristics from `in_vivo_details.lesion_color` and `in_vitro_details.colony_color` and any available microscopic identification names from initial/in vivo/in vitro observations are appended to the lookup inputs. On completion, `lookup_results` on the MoldReport is updated and `cultivation_details.microscopic_ai_snapshot` on this case is overwritten with the top lookup result.
+  *       Side effect: if the linked MoldReport contains `reported_symptoms`, `reported_signs`, or `reported_characteristics`, a background mold lookup is re-run after this update. Characteristics from `initial_observations.characteristics` are appended to the lookup inputs, and any available microscopic identification names from initial observations are used as lookup seeds. On completion, `lookup_results` on the MoldReport is updated and `cultivation_details.initial_observations.ai_snapshot` on this case is overwritten with the top lookup result.
   *     parameters:
   *       - in: path
   *         name: id
@@ -939,57 +952,62 @@
   *             properties:
   *               cultivation_details:
   *                 type: object
-  *                 description: Merged with existing cultivation_details in Firestore. Nested objects (in_vivo_details, in_vitro_details, initial_observations, microscopic_ai_snapshot) are deep-merged, not replaced.
+  *                 description: Merged with existing cultivation_details in Firestore. Nested initial_observations objects are deep-merged, not replaced.
   *                 properties:
-  *                   growth_medium:
+  *                   specimen_type:
   *                     type: string
-  *                   in_vivo_details:
-  *                     type: object
-  *                     properties:
-  *                       environmental_temperature:
-  *                         type: number
-  *                   in_vitro_details:
-  *                     type: object
-  *                     properties:
-  *                       incubation_temperature:
-  *                         type: number
-  *                   specimen_types:
-  *                     type: array
-  *                     items:
-  *                       type: string
-  *                   specimen_quantities:
-  *                     type: array
-  *                     items:
-  *                       type: string
-  *                   initial_symptoms:
-  *                     type: array
-  *                     items:
-  *                       type: string
-  *                   initial_characteristics:
-  *                     type: array
-  *                     items:
-  *                       type: string
+  *                   specimen_quantity:
+  *                     type: number
   *                   location_gathered:
-  *                     type: string
-  *                   initial_microscopic:
-  *                     type: string
-  *                     description: If provided and `microscopic_ai_snapshot.identified_mold` is absent, this value is copied into the snapshot as a fallback.
-  *                   initial_macroscopic:
-  *                     type: string
-  *                   initial_microscopic_image_url:
-  *                     type: string
-  *                   initial_macroscopic_image_url:
   *                     type: string
   *                   date_observation:
   *                     type: string
-  *                   microscopic_ai_snapshot:
-  *                     type: object
-  *                     description: AI-generated identification snapshot.
   *                   scanned_microscopic_ids:
   *                     type: array
   *                     items:
   *                       type: string
-  *                     description: Deduplicated on write.
+  *                   scanned_macroscopic_ids:
+  *                     type: array
+  *                     items:
+  *                       type: string
+  *                   initial_observations:
+  *                     type: object
+  *                     properties:
+  *                       microscopic_description:
+  *                         type: string
+  *                       microscopic_color:
+  *                         type: string
+  *                       microscopic_texture:
+  *                         type: string
+  *                       microscopic_image_path:
+  *                         type: string
+  *                       macroscopic_description:
+  *                         type: string
+  *                       macroscopic_color:
+  *                         type: string
+  *                       macroscopic_texture:
+  *                         type: string
+  *                       macroscopic_symptoms:
+  *                         type: string
+  *                       macroscopic_characteristics:
+  *                         type: string
+  *                       macroscopic_image_path:
+  *                         type: string
+  *                       symptoms:
+  *                         type: array
+  *                         items:
+  *                           type: string
+  *                       signs:
+  *                         type: array
+  *                         items:
+  *                           type: string
+  *                       characteristics:
+  *                         type: array
+  *                         items:
+  *                           type: string
+  *                       ai_snapshot:
+  *                         type: object
+  *                         description: AI-generated identification snapshot.
   *                   scanned_macroscopic_ids:
   *                     type: array
   *                     items:
@@ -1040,13 +1058,62 @@
   *                       type: boolean
   *                     cultivation_details:
   *                       type: object
+  *                       nullable: true
+  *                       description: Nested specimen metadata and observations.
   *                       properties:
-  *                         growth_medium:
+  *                         specimen_type:
   *                           type: string
-  *                         in_vivo_details:
+  *                         specimen_quantity:
+  *                           type: number
+  *                         location_gathered:
+  *                           type: string
+  *                         date_observation:
+  *                           type: string
+  *                         scanned_microscopic_ids:
+  *                           type: array
+  *                           items:
+  *                             type: string
+  *                         scanned_macroscopic_ids:
+  *                           type: array
+  *                           items:
+  *                             type: string
+  *                         initial_observations:
   *                           type: object
-  *                         in_vitro_details:
-  *                           type: object
+  *                           properties:
+  *                             microscopic_description:
+  *                               type: string
+  *                             microscopic_color:
+  *                               type: string
+  *                             microscopic_texture:
+  *                               type: string
+  *                             microscopic_image_path:
+  *                               type: string
+  *                             macroscopic_description:
+  *                               type: string
+  *                             macroscopic_color:
+  *                               type: string
+  *                             macroscopic_texture:
+  *                               type: string
+  *                             macroscopic_symptoms:
+  *                               type: string
+  *                             macroscopic_characteristics:
+  *                               type: string
+  *                             macroscopic_image_path:
+  *                               type: string
+  *                             symptoms:
+  *                               type: array
+  *                               items:
+  *                                 type: string
+  *                             signs:
+  *                               type: array
+  *                               items:
+  *                                 type: string
+  *                             characteristics:
+  *                               type: array
+  *                               items:
+  *                                 type: string
+  *                             ai_snapshot:
+  *                               type: object
   *       400:
   *         description: Failed to update cultivation details
   *         content:

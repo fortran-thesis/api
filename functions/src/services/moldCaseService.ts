@@ -28,19 +28,34 @@ import {
   findCultivationLogsByCaseId,
   deleteCultivationLog as deleteCultivationLogRepo,
 } from "../repositories/cultivationLogRepository";
-import {CultivationLog, MoldCase, PaginatedResult, WithMetadata, WithMetadataAndId} from "../types/types";
+import {CultivationLog, MoldCase, MoldCaseResponse, PaginatedResult, WithMetadata, WithMetadataAndId} from "../types/types";
 import {transformToSignedUrl} from "../utils/storageTransform";
-import {cacheItem, getCachedItem, cacheList, getCachedList, invalidateAllLists} from "../utils/cacheManager";
+import {
+  cacheItem,
+  getCachedItem,
+  cacheList,
+  getCachedList,
+  getCachedListDescriptors,
+  generateListMetadataCacheKey,
+  invalidateItem,
+  invalidateAllLists,
+  removeCachedListItem,
+  replaceCachedListItem,
+  upsertCachedListItem,
+} from "../utils/cacheManager";
 import {normalizeResponseTimestamps} from "../utils/normalizeResponse";
+import {deleteCache} from "../utils/redis";
 // Cache TTL for this service (in seconds) — keep signed URLs consistent with cached responses
 const MOLD_CASE_SERVICE_TTL_SECONDS = 300;
 import {getCollectionName, FirestoreCollection} from "../types/models/firestoreCollections";
 import {getRoleCounts, getDisabledCounts} from "./userService";
 import {getMoldReportStatusCounts} from "./moldReportService";
-import {getAuthUserById} from "../lib/auth";
+import {getAuthUserById, getAuthUserNamesByIds} from "../lib/auth";
+import {findMoldById} from "../repositories/moldRepository";
+import {CultivationDetailsUpdate} from "../repositories/moldCaseRepository";
 
 // Helper function to transform MoldCase photo_url to signed URL
-const transformMoldCaseImages = async (moldCase: MoldCase): Promise<MoldCase> => {
+const transformMoldCaseImages = async (moldCase: MoldCaseResponse): Promise<MoldCaseResponse> => {
   const transformed = {...moldCase};
 
   // Ensure photo_url is a string before attempting to transform
@@ -60,37 +75,15 @@ const transformMoldCaseImages = async (moldCase: MoldCase): Promise<MoldCase> =>
       return (await transformToSignedUrl(value, MOLD_CASE_SERVICE_TTL_SECONDS)) || value;
     };
 
-    const [initialMicroscopicUrl, initialMacroscopicUrl] = await Promise.all([
-      signIfString(details.initial_microscopic_image_url),
-      signIfString(details.initial_macroscopic_image_url),
-    ]);
-    details.initial_microscopic_image_url = initialMicroscopicUrl;
-    details.initial_macroscopic_image_url = initialMacroscopicUrl;
-
     const initialObservations = details.initial_observations;
     if (initialObservations && typeof initialObservations === "object") {
-      const [
-        initialObsMicroscopicUrl,
-        initialObsMacroscopicUrl,
-        microscopicUrl,
-        macroscopicUrl,
-        microscopicPath,
-        macroscopicPath,
-      ] = await Promise.all([
-        signIfString(initialObservations.initial_microscopic_image_url),
-        signIfString(initialObservations.initial_macroscopic_image_url),
-        signIfString(initialObservations.microscopic_image_url),
-        signIfString(initialObservations.macroscopic_image_url),
+      const [microscopicUrl, macroscopicUrl] = await Promise.all([
         signIfString(initialObservations.microscopic_image_path),
         signIfString(initialObservations.macroscopic_image_path),
       ]);
 
-      initialObservations.initial_microscopic_image_url = initialObsMicroscopicUrl;
-      initialObservations.initial_macroscopic_image_url = initialObsMacroscopicUrl;
       initialObservations.microscopic_image_url = microscopicUrl;
       initialObservations.macroscopic_image_url = macroscopicUrl;
-      initialObservations.microscopic_image_path = microscopicPath;
-      initialObservations.macroscopic_image_path = macroscopicPath;
     }
   }
 
@@ -107,35 +100,261 @@ const transformLogImageUrl = async (log: WithMetadataAndId<CultivationLog>): Pro
 
 const normalizeCaseResponse = <T>(value: T): T => normalizeResponseTimestamps(value);
 
-const invalidateMoldCaseListCaches = async (): Promise<void> => {
+const resolveAuthUserDisplayName = (authUser: any): string => {
+  if (!authUser) return "";
+
+  return authUser.details?.displayName ||
+    `${authUser.user?.first_name || ""} ${authUser.user?.last_name || ""}`.trim();
+};
+
+const rehydrateCaseNames = async (moldCase: MoldCaseResponse): Promise<MoldCaseResponse> => {
+  if (moldCase?.user_id && !moldCase.user_name) {
+    try {
+      const authUser = await getAuthUserById(moldCase.user_id);
+      if (authUser) {
+        moldCase.user_name = resolveAuthUserDisplayName(authUser);
+      }
+    } catch (e) {
+      devLog(e, "REHYDRATE_USER_NAME");
+    }
+  }
+
+  if (moldCase?.mycologist_id && !moldCase.mycologist_name) {
+    try {
+      const authUser = await getAuthUserById(moldCase.mycologist_id);
+      if (authUser) {
+        moldCase.mycologist_name = resolveAuthUserDisplayName(authUser);
+      }
+    } catch (e) {
+      devLog(e, "REHYDRATE_MYCOLOGIST_NAME");
+    }
+  }
+
+  const verdict = moldCase?.final_verdict;
+  if (verdict) {
+    if (verdict.moldId) {
+      try {
+        const snap = await findMoldById(verdict.moldId);
+        const data = snap?.exists ? (snap.data() as any) : null;
+        if (data?.name) {
+          verdict.moldName = data.name;
+        }
+      } catch (e) {
+        devLog(e, "REHYDRATE_MOLD_NAME");
+      }
+    }
+
+    if (!verdict.moldName && verdict.verdict_fallback_name) {
+      verdict.moldName = verdict.verdict_fallback_name;
+    }
+  }
+
+  return moldCase;
+};
+
+const rehydrateCaseNamesBatch = async (moldCases: MoldCaseResponse[]): Promise<MoldCaseResponse[]> => {
+  if (!Array.isArray(moldCases) || moldCases.length === 0) {
+    return moldCases;
+  }
+
+  const userIds = new Set<string>();
+  const moldIds = new Set<string>();
+
+  for (const moldCase of moldCases) {
+    if (typeof moldCase.user_id === "string" && moldCase.user_id.trim()) {
+      userIds.add(moldCase.user_id.trim());
+    }
+    if (typeof moldCase.mycologist_id === "string" && moldCase.mycologist_id.trim()) {
+      userIds.add(moldCase.mycologist_id.trim());
+    }
+
+    const moldId = moldCase.final_verdict?.moldId;
+    if (typeof moldId === "string" && moldId.trim()) {
+      moldIds.add(moldId.trim());
+    }
+  }
+
+  const authNameMap = userIds.size > 0 ? await getAuthUserNamesByIds(Array.from(userIds)) : new Map<string, string>();
+  const moldNameMap = new Map<string, string>();
+
+  await Promise.all(Array.from(moldIds).map(async (moldId) => {
+    try {
+      const snap = await findMoldById(moldId);
+      const data = snap?.exists ? (snap.data() as any) : null;
+      if (data?.name) {
+        moldNameMap.set(moldId, String(data.name));
+      }
+    } catch (e) {
+      devLog(e, "REHYDRATE_MOLD_NAME_BATCH");
+    }
+  }));
+
+  return moldCases.map((moldCase) => {
+    const hydrated = {...moldCase};
+
+    if (hydrated.user_id && !hydrated.user_name) {
+      const userName = authNameMap.get(hydrated.user_id);
+      if (userName) {
+        hydrated.user_name = userName;
+      }
+    }
+
+    if (hydrated.mycologist_id && !hydrated.mycologist_name) {
+      const mycologistName = authNameMap.get(hydrated.mycologist_id);
+      if (mycologistName) {
+        hydrated.mycologist_name = mycologistName;
+      }
+    }
+
+    const verdict = hydrated.final_verdict;
+    if (verdict) {
+      if (verdict.moldId) {
+        const moldName = moldNameMap.get(verdict.moldId);
+        if (moldName) {
+          verdict.moldName = moldName;
+        }
+      }
+
+      if (!verdict.moldName && verdict.verdict_fallback_name) {
+        verdict.moldName = verdict.verdict_fallback_name;
+      }
+    }
+
+    return hydrated;
+  });
+};
+
+const CASE_LIST_RESOURCES = ["v2:mold-cases-all", "v2:mold-cases-assigned"] as const;
+
+const isCursorQuery = (query?: Record<string, any> | null): boolean => {
+  if (!query) return false;
+
+  const cursor = query.token ?? query.pageToken;
+  if (typeof cursor === "string") {
+    return cursor.trim().length > 0;
+  }
+
+  return cursor !== undefined && cursor !== null;
+};
+
+const isFirstPageQuery = (query?: Record<string, any> | null): boolean => !isCursorQuery(query);
+
+const deleteListDescriptorCache = async (key: string): Promise<void> => {
   await Promise.all([
-    invalidateAllLists("mold-cases-all"),
-    invalidateAllLists("mold-cases-assigned"),
+    deleteCache(key),
+    deleteCache(generateListMetadataCacheKey(key)),
   ]);
+};
+
+const invalidateCaseCursorPages = async (resource: string): Promise<void> => {
+  const descriptors = await getCachedListDescriptors(resource);
+  await Promise.all(
+    descriptors
+      .filter((descriptor) => isCursorQuery(descriptor.metadata.query))
+      .map((descriptor) => deleteListDescriptorCache(descriptor.key))
+  );
+};
+
+const invalidateMoldCaseListCaches = async (): Promise<void> => {
+  await Promise.all(CASE_LIST_RESOURCES.map((resource) => invalidateAllLists(resource)));
+};
+
+const invalidateMoldCaseSummaryCaches = async (): Promise<void> => {
+  await Promise.all([
+    invalidateItem("dashboard", "combined-total-counts"),
+    invalidateItem("dashboard", "mold-cases-count-metadata"),
+    invalidateItem("mold-cases", "priority-breakdown"),
+  ]);
+};
+
+const caseMatchesAllList = (
+  moldCase: Pick<MoldCase, "user_id" | "is_archived">,
+  query?: Record<string, any> | null
+): boolean => {
+  const uid = typeof query?.uid === "string" ? query.uid.trim() : "";
+  if (!uid || moldCase.user_id !== uid) return false;
+
+  const isArchived = Boolean(query?.isArchived);
+  return Boolean(moldCase.is_archived) === isArchived;
+};
+
+const caseMatchesAssignedList = (
+  moldCase: Pick<MoldCase, "mycologist_id" | "is_archived">,
+  query?: Record<string, any> | null
+): boolean => {
+  const mycologistId = typeof query?.mycologistId === "string" ? query.mycologistId.trim() : "";
+  if (!mycologistId || moldCase.mycologist_id !== mycologistId) return false;
+
+  return moldCase.is_archived === false;
+};
+
+const caseMatchesDescriptor = (
+  moldCase: MoldCase,
+  descriptor: {key: string; metadata: {resource: string; query: Record<string, any> | null}}
+): boolean => {
+  switch (descriptor.metadata.resource) {
+  case "v2:mold-cases-all":
+    return caseMatchesAllList(moldCase, descriptor.metadata.query);
+  case "v2:mold-cases-assigned":
+    return caseMatchesAssignedList(moldCase, descriptor.metadata.query);
+  default:
+    return false;
+  }
+};
+
+const createCaseCache = async (moldCase: MoldCase): Promise<void> => {
+  await Promise.all(
+    CASE_LIST_RESOURCES.map((resource) =>
+      upsertCachedListItem(resource, moldCase, {
+        shouldMutate: (descriptor) => isFirstPageQuery(descriptor.metadata.query) && caseMatchesDescriptor(moldCase, descriptor),
+      })
+    )
+  );
+
+  await Promise.all(CASE_LIST_RESOURCES.map((resource) => invalidateCaseCursorPages(resource)));
+};
+
+const replaceCaseCaches = async (moldCaseId: string, moldCase: MoldCase): Promise<void> => {
+  await Promise.all(
+    CASE_LIST_RESOURCES.map((resource) =>
+      replaceCachedListItem(resource, moldCaseId, moldCase, {
+        shouldMutate: (descriptor) => caseMatchesDescriptor(moldCase, descriptor),
+      })
+    )
+  );
+};
+
+const removeCaseCaches = async (moldCaseId: string, moldCase: MoldCase): Promise<void> => {
+  await Promise.all(
+    CASE_LIST_RESOURCES.map((resource) =>
+      removeCachedListItem(resource, moldCaseId, {
+        shouldMutate: (descriptor) => isFirstPageQuery(descriptor.metadata.query) && caseMatchesDescriptor(moldCase, descriptor),
+      })
+    )
+  );
+
+  await Promise.all(CASE_LIST_RESOURCES.map((resource) => invalidateCaseCursorPages(resource)));
+};
+
+const caseUpdateAffectsMembership = (details: Partial<MoldCase>): boolean => {
+  return Object.prototype.hasOwnProperty.call(details, "user_id") ||
+    Object.prototype.hasOwnProperty.call(details, "mycologist_id") ||
+    Object.prototype.hasOwnProperty.call(details, "is_archived");
 };
 
 export const addMoldCaseToFirestore = async (
   details: MoldCase
-): Promise<MoldCase | null> => {
+): Promise<MoldCaseResponse | null> => {
   try {
-    // Resolve user_name from user_id if not provided
-    let userName = (details as any).user_name;
-    if (!userName && details.user_id) {
-      try {
-        const authUser = await getAuthUserById(details.user_id);
-        if (authUser) {
-          userName =
-            authUser.details.displayName ||
-            `${authUser.user.first_name} ${authUser.user.last_name}`.trim();
-        }
-      } catch (e) {
-        devLog(e, "ENRICH_CASE_USER");
-      }
-    }
+    const {
+      user_name: _userName,
+      mycologist_name: _mycologistName,
+      ...persistableDetails
+    } = details as MoldCaseResponse & Record<string, unknown>;
 
     // convert start_date/end_date (strings from DTO) to Firestore Timestamp
-    const rawStart = (details as any).start_date;
-    const rawEnd = (details as any).end_date;
+    const rawStart = (persistableDetails as any).start_date;
+    const rawEnd = (persistableDetails as any).end_date;
     const parsedStart =
       typeof rawStart === "string" ? new Date(rawStart) : rawStart;
     const parsedEnd = typeof rawEnd === "string" ? new Date(rawEnd) : rawEnd;
@@ -149,8 +368,7 @@ export const addMoldCaseToFirestore = async (
         parsedEnd;
 
     const detailsWithMetadata: WithMetadata<MoldCase> = {
-      ...details,
-      ...(userName ? {user_name: userName} : {}),
+      ...persistableDetails,
       start_date: startTimestamp as any,
       end_date: endTimestamp as any,
       metadata: {
@@ -163,7 +381,16 @@ export const addMoldCaseToFirestore = async (
       await addMoldCase(detailsWithMetadata);
     if (!moldCase) throw new Error("Cannot add mold case.");
 
-    return documentToJson<MoldCase>(moldCase);
+    const createdCase = await retrieveMoldCaseById(moldCase.id);
+    if (createdCase) {
+      await createCaseCache(createdCase);
+    } else {
+      await invalidateMoldCaseListCaches();
+    }
+
+    await invalidateMoldCaseSummaryCaches();
+
+    return createdCase ?? (documentToJson<MoldCase>(moldCase) as MoldCaseResponse);
   } catch (error) {
     devLog(error);
     return null;
@@ -175,7 +402,7 @@ export const retrieveAllMoldCasesByUser = async (
   limit: number,
   isArchived: boolean,
   token?: string
-): Promise<PaginatedResult<MoldCase[]> | null> => {
+): Promise<PaginatedResult<MoldCaseResponse[]> | null> => {
   try {
     // Build cache key (INCLUDE token for pagination)
     const cacheQuery = {
@@ -186,7 +413,7 @@ export const retrieveAllMoldCasesByUser = async (
     };
 
     // Try to get from cache
-    const cached = await getCachedList<PaginatedResult<MoldCase[]>>("mold-cases-all", cacheQuery, {useCache: true});
+    const cached = await getCachedList<PaginatedResult<MoldCaseResponse[]>>("v2:mold-cases-all", cacheQuery, {useCache: true});
     if (cached) return cached;
 
     const cases: PaginatedResult<QuerySnapshot> | null = await findAllMoldCases(
@@ -198,10 +425,11 @@ export const retrieveAllMoldCasesByUser = async (
     if (!cases) throw new Error("No cases found.");
     const raw = queryToJson<MoldCase>(cases.snapshot);
     const normalized = raw.map((c) => normalizeCaseResponse(c));
+    const hydrated = await rehydrateCaseNamesBatch(normalized as MoldCaseResponse[]);
 
     // Transform photo URLs and cultivation log image URLs
     const transformed = await Promise.all(
-      normalized.map((c) => transformMoldCaseImages(c))
+      hydrated.map((c) => transformMoldCaseImages(c))
     );
 
     const response = {
@@ -210,7 +438,7 @@ export const retrieveAllMoldCasesByUser = async (
     };
 
     // Cache the results
-    await cacheList("mold-cases-all", response, cacheQuery, {ttl: MOLD_CASE_SERVICE_TTL_SECONDS});
+    await cacheList("v2:mold-cases-all", response, cacheQuery, {ttl: MOLD_CASE_SERVICE_TTL_SECONDS});
 
     return response;
   } catch (error) {
@@ -223,7 +451,7 @@ export const retrieveAssignedMoldCases = async (
   mycologistId: string,
   limit: number,
   token?: string
-): Promise<PaginatedResult<MoldCase[]> | null> => {
+): Promise<PaginatedResult<MoldCaseResponse[]> | null> => {
   try {
     // Build cache key (INCLUDE token for pagination)
     const cacheQuery = {
@@ -233,7 +461,7 @@ export const retrieveAssignedMoldCases = async (
     };
 
     // Try to get from cache
-    const cached = await getCachedList<PaginatedResult<MoldCase[]>>("mold-cases-assigned", cacheQuery, {useCache: true});
+    const cached = await getCachedList<PaginatedResult<MoldCaseResponse[]>>("v2:mold-cases-assigned", cacheQuery, {useCache: true});
     if (cached) {
       devLog(`[CACHE] Hit assigned mold cases for mycologist=${mycologistId}`);
       return cached;
@@ -244,10 +472,11 @@ export const retrieveAssignedMoldCases = async (
     if (!cases) throw new Error("No assigned cases found.");
     const raw = queryToJson<MoldCase>(cases.snapshot);
     const normalized = raw.map((c) => normalizeCaseResponse(c));
+    const hydrated = await rehydrateCaseNamesBatch(normalized as MoldCaseResponse[]);
 
     // Transform photo URLs and cultivation log image URLs
     const transformed = await Promise.all(
-      normalized.map((c) => transformMoldCaseImages(c))
+      hydrated.map((c) => transformMoldCaseImages(c))
     );
 
     const response = {
@@ -256,7 +485,7 @@ export const retrieveAssignedMoldCases = async (
     };
 
     // Cache the results
-    await cacheList("mold-cases-assigned", response, cacheQuery, {ttl: MOLD_CASE_SERVICE_TTL_SECONDS});
+    await cacheList("v2:mold-cases-assigned", response, cacheQuery, {ttl: MOLD_CASE_SERVICE_TTL_SECONDS});
 
     return response;
   } catch (error) {
@@ -271,7 +500,7 @@ export const searchAssignedMoldCasesByMycologist = async (
   priority?: string,
   limit = 10,
   token?: string
-): Promise<PaginatedResult<MoldCase[]> | null> => {
+): Promise<PaginatedResult<MoldCaseResponse[]> | null> => {
   try {
     const result = await findAssignedMoldCasesWithSearch(mycologistId, searchQuery, priority, limit, token);
     if (!result) throw new Error("No results found.");
@@ -282,8 +511,9 @@ export const searchAssignedMoldCasesByMycologist = async (
     } as unknown as MoldCase));
 
     const normalized = raw.map((c) => normalizeCaseResponse(c));
+    const hydrated = await rehydrateCaseNamesBatch(normalized as MoldCaseResponse[]);
 
-    const transformed = await Promise.all(normalized.map((c) => transformMoldCaseImages(c)));
+    const transformed = await Promise.all(hydrated.map((c) => transformMoldCaseImages(c)));
 
     return {
       snapshot: transformed,
@@ -297,15 +527,17 @@ export const searchAssignedMoldCasesByMycologist = async (
 
 export const retrieveMoldCaseById = async (
   id: string
-): Promise<MoldCase | null> => {
+): Promise<MoldCaseResponse | null> => {
   try {
     const moldCase: DocumentSnapshot | null = await findMoldCaseById(id);
     if (!moldCase) throw new Error("No case found.");
     const cases = documentToJson<MoldCase>(moldCase);
     const copy: any = normalizeCaseResponse(cases);
 
+    const hydrated = await rehydrateCaseNames(copy as MoldCaseResponse);
+
     // Transform photo URL and cultivation log image URLs
-    return await transformMoldCaseImages(copy as MoldCase);
+    return await transformMoldCaseImages(hydrated);
   } catch (error) {
     devLog(error);
     return null;
@@ -328,7 +560,7 @@ export const retrieveMoldCaseByName = async (
 
 export const retrieveMoldCasesByMoldipediaId = async (
   moldipediaId: string
-): Promise<MoldCase[] | null> => {
+): Promise<MoldCaseResponse[] | null> => {
   try {
     const moldCaseSnap: QuerySnapshot | null = await findMoldCasesByMoldipediaId(moldipediaId);
     if (!moldCaseSnap) return null;
@@ -336,7 +568,8 @@ export const retrieveMoldCasesByMoldipediaId = async (
     if (cases.length === 0) return null;
 
     const normalized = cases.map((c) => normalizeCaseResponse(c));
-    const transformed = await Promise.all(normalized.map((c) => transformMoldCaseImages(c)));
+    const hydrated = await rehydrateCaseNamesBatch(normalized as MoldCaseResponse[]);
+    const transformed = await Promise.all(hydrated.map((c) => transformMoldCaseImages(c)));
     return transformed;
   } catch (error) {
     devLog(error);
@@ -347,7 +580,7 @@ export const retrieveMoldCasesByMoldipediaId = async (
 export const retrieveMoldCaseByReportId = async (
   reportId: string,
   preferredUserId?: string
-): Promise<MoldCase | null> => {
+): Promise<MoldCaseResponse | null> => {
   try {
     const moldCaseSnap: QuerySnapshot | null =
       await findMoldCaseByReportId(reportId);
@@ -401,22 +634,10 @@ export const retrieveMoldCaseByReportId = async (
     normalized.start_date = (dateNormalized as any).start_date;
     normalized.end_date = (dateNormalized as any).end_date;
 
-    // Enrich with mycologist display name
-    if (normalized.mycologist_id) {
-      try {
-        const authUser = await getAuthUserById(normalized.mycologist_id);
-        if (authUser) {
-          normalized.mycologist_name =
-            authUser.details.displayName ||
-            authUser.user.first_name + " " + authUser.user.last_name;
-        }
-      } catch (e) {
-        devLog(e, "ENRICH_CASE_MYCOLOGIST");
-      }
-    }
+    const hydrated = await rehydrateCaseNames(normalizeCaseResponse(normalized as MoldCaseResponse));
 
     // Transform photo URL and cultivation log image URLs
-    return await transformMoldCaseImages(normalizeCaseResponse(normalized as MoldCase));
+    return await transformMoldCaseImages(hydrated);
   } catch (error) {
     devLog(error);
     return null;
@@ -475,7 +696,7 @@ export const batchRetrieveMoldCasesByReportIds = async (
 export const updateMoldCaseInFirestore = async (
   id: string,
   details: Partial<MoldCase>
-): Promise<MoldCase | null> => {
+): Promise<MoldCaseResponse | null> => {
   try {
     // convert start_date/end_date strings to Timestamps if present
     const updatedDetails: any = {...details};
@@ -496,36 +717,27 @@ export const updateMoldCaseInFirestore = async (
           updatedDetails.end_date;
     }
 
-    // Handle cultivation_details if it's provided as a nested object
-    // Convert it to use dot notation for proper nesting in Firestore
-    if (updatedDetails.cultivation_details !== undefined) {
-      const cultivationDetails = updatedDetails.cultivation_details;
-      delete updatedDetails.cultivation_details; // Remove the nested object
-
-      // Add each field with dot notation
-      if (cultivationDetails.growth_medium !== undefined) {
-        updatedDetails["cultivation_details.growth_medium"] =
-          cultivationDetails.growth_medium;
-      }
-      if (cultivationDetails.in_vivo_details !== undefined) {
-        updatedDetails["cultivation_details.in_vivo_details"] =
-          cultivationDetails.in_vivo_details;
-      }
-      if (cultivationDetails.in_vitro_details !== undefined) {
-        updatedDetails["cultivation_details.in_vitro_details"] =
-          cultivationDetails.in_vitro_details;
-      }
-    }
-
     const result: WriteResult | null = await updateMoldCaseRepo(
       id,
       updatedDetails
     );
     if (!result) throw new Error("Failed to update mold case.");
 
-    await invalidateMoldCaseListCaches();
-
     const updatedCase = await retrieveMoldCaseById(id);
+    if (!updatedCase) {
+      await invalidateMoldCaseListCaches();
+      await invalidateMoldCaseSummaryCaches();
+      return null;
+    }
+
+    if (caseUpdateAffectsMembership(updatedDetails)) {
+      await invalidateMoldCaseListCaches();
+    } else {
+      await replaceCaseCaches(id, updatedCase);
+    }
+
+    await invalidateMoldCaseSummaryCaches();
+
     return updatedCase;
   } catch (error) {
     devLog(error);
@@ -535,9 +747,14 @@ export const updateMoldCaseInFirestore = async (
 
 export const softRemoveMoldCase = async (id: string): Promise<void> => {
   try {
+    const current = await retrieveMoldCaseById(id);
+    if (!current) throw new Error("No case found.");
+
     const result: WriteResult | null = await softDeleteMoldCase(id);
     if (!result) throw new Error("Failed to soft delete mold case");
-    await invalidateMoldCaseListCaches();
+
+    await removeCaseCaches(id, current);
+    await invalidateMoldCaseSummaryCaches();
   } catch (error) {
     devLog(error);
   }
@@ -545,9 +762,14 @@ export const softRemoveMoldCase = async (id: string): Promise<void> => {
 
 export const removeMoldCase = async (id: string): Promise<void> => {
   try {
+    const current = await retrieveMoldCaseById(id);
+    if (!current) throw new Error("No case found.");
+
     const result: WriteResult | null = await deleteMoldCase(id);
     if (!result) throw new Error("Failed to delete mold case");
-    await invalidateMoldCaseListCaches();
+
+    await removeCaseCaches(id, current);
+    await invalidateMoldCaseSummaryCaches();
   } catch (error) {
     devLog(error);
   }
@@ -633,19 +855,19 @@ export const addCultivationLogToCase = async (
 
 export const updateCultivationDetailsInCase = async (
   caseId: string,
-  details: {
-    cultivation_details?: Record<string, unknown>;
-    in_vivo_details?: Record<string, unknown>;
-    in_vitro_details?: Record<string, unknown>;
-    [key: string]: unknown;
-  }
-): Promise<MoldCase | null> => {
+  details: CultivationDetailsUpdate
+): Promise<MoldCaseResponse | null> => {
   try {
-    const result = await updateCultivationDetails(caseId, details as any);
+    const result = await updateCultivationDetails(caseId, details);
     if (!result) throw new Error("Failed to update cultivation details");
 
     const updated = await retrieveMoldCaseById(caseId);
-    await invalidateMoldCaseListCaches();
+    if (updated) {
+      await replaceCaseCaches(caseId, updated);
+    } else {
+      await invalidateMoldCaseListCaches();
+    }
+    await invalidateMoldCaseSummaryCaches();
     return updated;
   } catch (error) {
     devLog(error);

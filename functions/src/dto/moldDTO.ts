@@ -62,47 +62,40 @@ export const NameParamSchema = z.object({
 
 export const MoldUpdateSchema = MoldSchema.partial();
 
+const InitialObservationsSchema = z.object({
+  microscopic_description: z.string().optional(),
+  microscopic_color: z.string().optional(),
+  microscopic_texture: z.string().optional(),
+  microscopic_image_path: z.string().optional(),
+  macroscopic_description: z.string().optional(),
+  macroscopic_color: z.string().optional(),
+  macroscopic_texture: z.string().optional(),
+  macroscopic_symptoms: z.string().optional(),
+  macroscopic_characteristics: z.string().optional(),
+  macroscopic_image_path: z.string().optional(),
+  symptoms: z.array(z.string()).optional(),
+  signs: z.array(z.string()).optional(),
+  characteristics: z.array(z.string()).optional(),
+  ai_snapshot: z.record(z.any()).optional(),
+});
+
 export const CultivationLogSchema = z.object({
   type: z.enum(["vivo", "vitro"], {required_error: "Type is required (vivo or vitro)"}),
   characteristics: z.record(z.any()).optional(),
   additional_info: z.string().optional(),
   image_url: z.string().optional(),
+  growth_medium: z.string().optional(),
 });
 
 export const CultivationDetailsSchema = z.object({
   cultivation_details: z.object({
-    growth_medium: z.string().optional(),
-    in_vivo_details: z.record(z.any()).optional(),
-    in_vitro_details: z.record(z.any()).optional(),
-    // ── Specimen & Evidence Fields ────────────────────────────────────────
-    // Reserved for monitoring setup data captured by mobile client.
-    // These fields are persisted but not currently merged into MoldReport.reported_*
-    // fields. Future versions may wire these into lookup logic.
-    specimen_types: z.array(z.string()).optional(),
-    specimen_quantities: z.array(z.string()).optional(),
-    specimen_types_csv: z.string().optional(),
-    specimen_quantities_csv: z.string().optional(),
-    initial_symptoms: z.array(z.string()).optional(),
-    initial_symptoms_csv: z.string().optional(),
-    initial_signs: z.array(z.string()).optional(),
-    initial_signs_csv: z.string().optional(),
-    initial_characteristics: z.array(z.string()).optional(),
-    initial_characteristics_csv: z.string().optional(),
+    specimen_type: z.string().optional(),
+    specimen_quantity: z.number().optional(),
     location_gathered: z.string().optional(),
-    initial_microscopic: z.string().optional(),
-    initial_macroscopic: z.string().optional(),
-    initial_microscopic_color: z.string().optional(),
-    initial_microscopic_texture: z.string().optional(),
-    initial_macroscopic_color: z.string().optional(),
-    initial_macroscopic_texture: z.string().optional(),
-    initial_macroscopic_symptoms: z.string().optional(),
-    initial_macroscopic_characteristics: z.string().optional(),
-    initial_microscopic_image_url: z.string().optional(),
-    initial_macroscopic_image_url: z.string().optional(),
     date_observation: zTimestamp.optional(),
-    microscopic_ai_snapshot: z.record(z.any()).optional(),
     scanned_microscopic_ids: z.array(z.string()).optional(),
     scanned_macroscopic_ids: z.array(z.string()).optional(),
+    initial_observations: InitialObservationsSchema.optional(),
   }).optional(),
   start_date: zTimestamp.optional(),
   end_date: zTimestamp.optional(),
@@ -154,7 +147,7 @@ export const MoldCaseCreateSchema = z.object({
   priority: z.enum(["low", "medium", "high"]).optional(),
   start_date: zTimestamp.optional(),
   end_date: zTimestamp.optional(),
-}).passthrough();
+}).strip();
 
 export const SearchMoldCasesQuerySchema = z.object({
   search: z.string().optional(),

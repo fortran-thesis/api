@@ -6,7 +6,7 @@ import {
   updateFirestoreUser,
 } from "../repositories/userRepository";
 import {sendEmail} from "../utils/email";
-import {handlePatchCache} from "../utils/cacheManager";
+import {invalidateUserCaches} from "./authService";
 
 export const toggleUser = async (
   id: string,
@@ -41,7 +41,10 @@ export const toggleUser = async (
     }
 
     // Invalidate user cache (disabled status doesn't affect ordering, but affects filtering)
-    await handlePatchCache("users", id, true);
+    await invalidateUserCaches(id, {
+      invalidateLists: true,
+      invalidateDerivedCounts: true,
+    });
 
     return {success: true, data: `Successfully ${message} user.`};
   } catch (error) {
@@ -86,7 +89,10 @@ export const banUser = async (
     }
 
     // Invalidate user cache (is_banned affects filtering, needs list invalidation)
-    await handlePatchCache("users", id, true);
+    await invalidateUserCaches(id, {
+      invalidateLists: true,
+      invalidateDerivedCounts: true,
+    });
 
     return {success: true, data: "Successfully banned user."};
   } catch (error) {
@@ -116,7 +122,10 @@ export const approveCurator = async (
     await sendEmail(user?.email, "Curator Application Approved", html);
 
     // Invalidate user cache (is_verified affects role-based filtering)
-    await handlePatchCache("users", id, true);
+    await invalidateUserCaches(id, {
+      invalidateLists: true,
+      invalidateDerivedCounts: true,
+    });
 
     return {success: true, data: "Successfully approved curator"};
   } catch (error) {
@@ -146,7 +155,10 @@ export const rejectCurator = async (
     await sendEmail(user?.email, "Curator Application Rejected", html);
 
     // Invalidate user cache (is_verified affects role-based filtering)
-    await handlePatchCache("users", id, true);
+    await invalidateUserCaches(id, {
+      invalidateLists: true,
+      invalidateDerivedCounts: true,
+    });
 
     return {success: true, data: "Successfully rejected curator"};
   } catch (error) {

@@ -30,6 +30,7 @@ describe("moldCaseController.finalizeVerdict", () => {
     mockReq = {
       params: {id: "case-1"},
       body: {
+        moldId: "mold-1",
         moldName: "Aspergillus niger",
         confidence: 98,
       },
@@ -93,16 +94,26 @@ describe("moldCaseController.finalizeVerdict", () => {
       "case-1",
       expect.objectContaining({
         final_verdict: expect.objectContaining({
-          moldName: "Aspergillus niger",
+          moldId: "mold-1",
           confidence: 98,
         }),
         is_archived: false,
       })
     );
 
+    expect(mockMoldCaseService.updateMoldCaseInFirestore.mock.calls[0]?.[1].final_verdict).not.toHaveProperty("moldName");
+
     expect(mockMoldReportService.updateMoldReportInFirestore).toHaveBeenCalledWith(
       "report-1",
       {status: "resolved"}
+    );
+    expect(mockResponseUtils.sendSuccess).toHaveBeenCalledWith(
+      mockRes,
+      expect.objectContaining({
+        final_verdict: expect.objectContaining({
+          moldName: "Aspergillus niger",
+        }),
+      })
     );
     expect(mockResponseUtils.sendSuccess).toHaveBeenCalled();
   });

@@ -137,8 +137,8 @@ router.patch(
     contextFn: (_req, body) => ({case_name: body?.data?.case_name ?? ""}),
   }),
   cacheInvalidate("mold-reports", "update"),
-  cacheInvalidate("mold-cases-all", "update"),
-  cacheInvalidate("mold-cases-assigned", "update"),
+  cacheInvalidate("v2:mold-cases-all", "update"),
+  cacheInvalidate("v2:mold-cases-assigned", "update"),
   async (req: Request, res: Response) => {
     await assignReport(req, res);
   }
@@ -162,8 +162,8 @@ router.patch(
     }),
   }),
   cacheInvalidate("mold-reports", "update"),
-  cacheInvalidate("mold-cases-all", "update"),
-  cacheInvalidate("mold-cases-assigned", "update"),
+  cacheInvalidate("v2:mold-cases-all", "update"),
+  cacheInvalidate("v2:mold-cases-assigned", "update"),
   async (req: Request, res: Response) => {
     await rejectReport(req, res);
   }
@@ -175,8 +175,8 @@ router.patch(
   validateParams(ReportIdSchema),
   auditLog(AuditAction.UPDATE_MOLD_REPORT, (req) => `Reviewed report ${req.params.id}`),
   cacheInvalidate("mold-reports", "update"),
-  cacheInvalidate("mold-cases-all", "update"),
-  cacheInvalidate("mold-cases-assigned", "update"),
+  cacheInvalidate("v2:mold-cases-all", "update"),
+  cacheInvalidate("v2:mold-cases-assigned", "update"),
   async (req: Request, res: Response) => {
     await reviewReport(req, res);
   }

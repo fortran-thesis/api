@@ -443,13 +443,11 @@ export const retrieveMoldReportPrintPayload = async (
 
     const cultivationDetails = asObject(moldCaseDynamic?.cultivation_details);
     const initialObservation = asObject(cultivationDetails.initial_observations);
-    const microscopicSnapshot = asObject(
-      initialObservation.microscopic_ai_snapshot ?? cultivationDetails.microscopic_ai_snapshot
-    );
+    const microscopicSnapshot = asObject(initialObservation.ai_snapshot);
 
     const initialObservationPayload = {
       microscopic_identification: toText(
-        initialObservation.initial_microscopic,
+        initialObservation.microscopic_description,
         initialObservation.identified_mold,
         initialObservation.identifiedMold,
         microscopicSnapshot.identified_mold,
@@ -458,25 +456,20 @@ export const retrieveMoldReportPrintPayload = async (
         initialObservation.confidence ?? microscopicSnapshot.confidence
       ),
       macroscopic_summary: toText(
-        initialObservation.initial_macroscopic,
-        initialObservation.initial_macroscopic_color,
-        initialObservation.initial_macroscopic_texture,
+        initialObservation.macroscopic_description,
+        initialObservation.macroscopic_color,
+        initialObservation.macroscopic_texture,
+        initialObservation.macroscopic_symptoms,
+        initialObservation.macroscopic_characteristics,
       ),
       symptoms: toStringList(
-        initialObservation.initial_symptoms,
-        initialObservation.initial_macroscopic_symptoms,
-        cultivationDetails.initial_symptoms,
-        cultivationDetails.initial_macroscopic_symptoms,
+        initialObservation.symptoms,
       ),
       signs: toStringList(
-        initialObservation.initial_signs,
-        cultivationDetails.initial_signs,
+        initialObservation.signs,
       ),
       characteristics: toStringList(
-        initialObservation.initial_characteristics,
-        initialObservation.initial_macroscopic_characteristics,
-        cultivationDetails.initial_characteristics,
-        cultivationDetails.initial_macroscopic_characteristics,
+        initialObservation.characteristics,
       ),
     };
 

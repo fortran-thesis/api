@@ -27,7 +27,6 @@ import {
 import {PaginationQuerySchema} from "../dto/paginationDTO";
 import {sanitizeBody, sanitizeParams} from "../middlewares/sanitation";
 import {upload} from "../middlewares/upload";
-import {cacheGet, cacheInvalidate} from "../middlewares/cacheMiddleware";
 
 const router = Router();
 
@@ -35,7 +34,6 @@ router.get(
   "/",
   verifyUser(Role.ADMIN),
   validateQuery(PaginationQuerySchema),
-  cacheGet("users"),
   async (req: Request, res: Response) => {
     await getAllUsers(req, res);
   }
@@ -70,8 +68,6 @@ router.patch(
   sanitizeBody,
   validateBody(UserProfileUpdateSchema),
   auditLog(AuditAction.PROFILE_UPDATE, "Updated own profile"),
-  cacheInvalidate("users", "update"),
-  cacheInvalidate("mycologists", "update"),
   async (req: Request, res: Response) => {
     await patchUserProfile(req, res);
   }
@@ -89,7 +85,6 @@ router.get(
   "/mycologists",
   verifyUser(Role.ADMIN),
   validateQuery(PaginationQuerySchema),
-  cacheGet("mycologists"),
   async (req: Request, res: Response) => {
     await getAllMycologists(req, res);
   }
@@ -140,8 +135,6 @@ router.patch(
   sanitizeBody,
   validateBody(UserDetailsUpdateSchema),
   auditLog(AuditAction.UPDATE_USER, (req) => `Admin updated user ${req.params.id}`),
-  cacheInvalidate("users", "update"),
-  cacheInvalidate("mycologists", "update"),
   async (req: Request, res: Response) => {
     await patchUser(req, res);
   }
@@ -152,8 +145,6 @@ router.delete(
   verifyUser(Role.ADMIN),
   sanitizeParams,
   validateParams(UserIdSchema),
-  cacheInvalidate("users", "delete"),
-  cacheInvalidate("mycologists", "delete"),
   async (req: Request, res: Response) => {
     await deleteUser(req, res);
   }
@@ -164,8 +155,6 @@ router.delete(
   verifyUser(),
   sanitizeParams,
   validateParams(UserIdSchema),
-  cacheInvalidate("users", "delete"),
-  cacheInvalidate("mycologists", "delete"),
   async (req: Request, res: Response) => {
     await softDeleteUser(req, res);
   }

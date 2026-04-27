@@ -14,7 +14,7 @@ import {
   softDeleteDocument,
   getDb,
 } from "../lib/firestore";
-import {Notification, WithMetadata} from "../types/types";
+import {Notification, WithId, WithMetadata} from "../types/types";
 
 import {OrderField} from "../utils/pagination";
 import {
@@ -69,13 +69,15 @@ export const findNotificationsByRecipient = async (
  */
 export const addBatchNotifications = async (
   notifications: WithMetadata<Notification>[]
-): Promise<number> => {
+): Promise<WithId<Notification>[]> => {
   const db = getDb();
   const batch = db.batch();
   const col = db.collection(collection);
+  const written: WithId<Notification>[] = [];
 
   for (const notif of notifications) {
     const ref = col.doc(); // auto-ID
+    written.push({id: ref.id, ...notif});
     batch.set(ref, {
       ...notif,
       metadata: {
@@ -87,7 +89,7 @@ export const addBatchNotifications = async (
   }
 
   await batch.commit();
-  return notifications.length;
+  return written;
 };
 
 // ── Aggregation queries ──────────────────────────────────────────────────────

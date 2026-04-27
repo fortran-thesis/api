@@ -266,31 +266,50 @@ export const updateCultivationDetails = async (req: Request, res: Response) => {
       return sendError(res, "Forbidden", 403);
     }
 
-    const details = req.body;
+    const details = (req.body ?? {}) as Record<string, any>;
+    const {
+      cultivation_details: cultivationDetailsPayload,
+      start_date: startDate,
+      end_date: endDate,
+      ...fallbackDetails
+    } = details;
     const normalizedCultivationDetails =
-      (details?.cultivation_details ?? details ?? {}) as Record<string, any>;
+      (cultivationDetailsPayload ?? fallbackDetails ?? {}) as Record<string, any>;
+
+    const initialObservations =
+      normalizedCultivationDetails.initial_observations &&
+      typeof normalizedCultivationDetails.initial_observations === "object" &&
+      !Array.isArray(normalizedCultivationDetails.initial_observations) ?
+        {...normalizedCultivationDetails.initial_observations} as Record<string, any> :
+        {};
 
     const initialMicroscopic =
-      typeof normalizedCultivationDetails.initial_microscopic === "string" ?
-        normalizedCultivationDetails.initial_microscopic.trim() :
+      typeof initialObservations.microscopic_description === "string" ?
+        initialObservations.microscopic_description.trim() :
         "";
 
-    if (!normalizedCultivationDetails.microscopic_ai_snapshot && initialMicroscopic) {
-      normalizedCultivationDetails.microscopic_ai_snapshot = {
+    if (!initialObservations.ai_snapshot && initialMicroscopic) {
+      initialObservations.ai_snapshot = {
         identified_mold: initialMicroscopic,
         model_source: "fallback_from_initial_microscopic",
         captured_at: new Date().toISOString(),
       };
-    } else if (normalizedCultivationDetails.microscopic_ai_snapshot && initialMicroscopic) {
-      const snapshot = normalizedCultivationDetails.microscopic_ai_snapshot as Record<string, any>;
+    } else if (initialObservations.ai_snapshot && initialMicroscopic) {
+      const snapshot = initialObservations.ai_snapshot as Record<string, any>;
       if (!snapshot.identified_mold || String(snapshot.identified_mold).trim().length === 0) {
         snapshot.identified_mold = initialMicroscopic;
       }
     }
 
-    const normalizedDetails = details?.cultivation_details ?
-      {...details, cultivation_details: normalizedCultivationDetails} :
-      normalizedCultivationDetails;
+    if (Object.keys(initialObservations).length > 0) {
+      normalizedCultivationDetails.initial_observations = initialObservations;
+    }
+
+    const normalizedDetails = {
+      ...(startDate !== undefined ? {start_date: startDate} : {}),
+      ...(endDate !== undefined ? {end_date: endDate} : {}),
+      cultivation_details: normalizedCultivationDetails,
+    };
 
     const updated = await updateCultivationDetailsInCase(caseId, normalizedDetails);
     if (!updated) return sendError(res, "Failed to update cultivation details", 400);
@@ -308,15 +327,9 @@ export const updateCultivationDetails = async (req: Request, res: Response) => {
         // Mobile sends nested `cultivation_details`, while some clients may send flat shape.
         const detailsPayload = normalizedCultivationDetails;
         const additionalCharacteristics: string[] = [];
-        if (detailsPayload.in_vivo_details?.lesion_color) {
-          additionalCharacteristics.push(String(detailsPayload.in_vivo_details.lesion_color));
-        }
-        if (detailsPayload.in_vitro_details?.colony_color) {
-          additionalCharacteristics.push(String(detailsPayload.in_vitro_details.colony_color));
-        }
-        if (Array.isArray(detailsPayload.initial_characteristics)) {
+        if (Array.isArray(detailsPayload.initial_observations?.characteristics)) {
           additionalCharacteristics.push(
-            ...detailsPayload.initial_characteristics.map((v: unknown) => String(v))
+            ...detailsPayload.initial_observations.characteristics.map((v: unknown) => String(v))
           );
         }
 
@@ -326,19 +339,9 @@ export const updateCultivationDetails = async (req: Request, res: Response) => {
           reportedMoldNames.push(initialMicroscopic);
         }
 
-        const snapshotIdentified = (detailsPayload.microscopic_ai_snapshot as any)?.identified_mold;
+        const snapshotIdentified = (detailsPayload.initial_observations?.ai_snapshot as any)?.identified_mold;
         if (typeof snapshotIdentified === "string" && snapshotIdentified.trim()) {
           reportedMoldNames.push(snapshotIdentified.trim());
-        }
-
-        const inVivoIdentified = detailsPayload.in_vivo_details?.identified_mold;
-        if (typeof inVivoIdentified === "string" && inVivoIdentified.trim()) {
-          reportedMoldNames.push(inVivoIdentified.trim());
-        }
-
-        const inVitroIdentified = detailsPayload.in_vitro_details?.identified_mold;
-        if (typeof inVitroIdentified === "string" && inVitroIdentified.trim()) {
-          reportedMoldNames.push(inVitroIdentified.trim());
         }
 
         const allCharacteristics = [...reportedCharacteristics, ...additionalCharacteristics];
@@ -370,21 +373,23 @@ export const updateCultivationDetails = async (req: Request, res: Response) => {
 
                 await updateCultivationDetailsInCase(caseId, {
                   cultivation_details: {
-                    microscopic_ai_snapshot: {
-                      identified_mold:
-                        topResult.moldName ||
-                        topResult.mold_name ||
-                        topResult.identified_mold ||
-                        "",
-                      mold_id:
-                        topResult.moldId ||
-                        topResult.mold_id ||
-                        "",
-                      confidence: normalizedConfidence,
-                      confidence_display: confidenceDisplay,
-                      model_source: "lookup_refresh",
-                      captured_at: new Date().toISOString(),
-                      top_predictions: lookupResults,
+                    initial_observations: {
+                      ai_snapshot: {
+                        identified_mold:
+                          topResult.moldName ||
+                          topResult.mold_name ||
+                          topResult.identified_mold ||
+                          "",
+                        mold_id:
+                          topResult.moldId ||
+                          topResult.mold_id ||
+                          "",
+                        confidence: normalizedConfidence === null ? undefined : normalizedConfidence,
+                        confidence_display: confidenceDisplay,
+                        model_source: "lookup_refresh",
+                        captured_at: new Date().toISOString(),
+                        top_predictions: lookupResults,
+                      },
                     },
                   },
                 });
@@ -741,6 +746,7 @@ export const finalizeVerdict = async (req: Request, res: Response) => {
     if (typeof confidence !== "number" || confidence < 0 || confidence > 100) {
       return sendError(res, "confidence must be a number between 0 and 100", 400);
     }
+    const normalizedMoldName = moldName.trim();
 
     // Retrieve the case to get the report ID
     const moldCase = await retrieveMoldCaseById(caseId);
@@ -761,11 +767,11 @@ export const finalizeVerdict = async (req: Request, res: Response) => {
         undefined;
     try {
       if (!matchedWikiMoldId && moldName && moldName.trim()) {
-        matchedWikiMold = await retrieveMoldipediaByTitle(moldName.trim());
+        matchedWikiMold = await retrieveMoldipediaByTitle(normalizedMoldName);
         matchedWikiMoldId = (matchedWikiMold as any)?.id;
 
         if (!matchedWikiMoldId) {
-          const moldipediaResponse = await retrieveAllMoldipedia(10, undefined, moldName.trim());
+          const moldipediaResponse = await retrieveAllMoldipedia(10, undefined, normalizedMoldName);
           const candidates = moldipediaResponse?.snapshot || [];
           if (Array.isArray(candidates) && candidates.length > 0) {
             matchedWikiMold = candidates[0];
@@ -778,13 +784,13 @@ export const finalizeVerdict = async (req: Request, res: Response) => {
     }
 
     // moldId may be null for verdicts from predicted classes not in the database
-    const verdict: any = {
+    const verdict: NonNullable<MoldCase["final_verdict"]> = {
       moldId: moldId ?? null,
-      moldName,
       confidence,
       verdict_timestamp: Timestamp.now(),
       ...(mycologistNotes !== undefined ? {mycologist_notes: mycologistNotes} : {}),
       ...(matchedWikiMoldId ? {moldipedia_id: matchedWikiMoldId} : {}),
+      ...(moldId == null ? {verdict_fallback_name: normalizedMoldName} : {}),
     };
 
     const updatedCase = await updateMoldCaseInFirestore(caseId, {
@@ -833,7 +839,10 @@ export const finalizeVerdict = async (req: Request, res: Response) => {
       moldCaseId: caseId,
       report_owner_id: moldCase.user_id ?? null,
       case_name: moldCase.name ?? "",
-      final_verdict: verdict,
+      final_verdict: {
+        ...verdict,
+        moldName: normalizedMoldName,
+      },
       report_sync_warning: reportSyncWarning,
       matched_wikimold: matchedWikiMold,
     });
@@ -928,14 +937,17 @@ export const getMoldCasesByMoldipediaId = async (req: Request, res: Response) =>
         };
 
         const initial = (entry?.cultivation_details && typeof entry.cultivation_details === "object") ?
-          entry.cultivation_details :
+          entry.cultivation_details as Record<string, any> :
+          {};
+        const initialObservations = (initial.initial_observations && typeof initial.initial_observations === "object") ?
+          initial.initial_observations as Record<string, any> :
           {};
 
         const initialSummary = {
-          symptoms: toTextList(initial.initial_symptoms || initial.initial_macroscopic_symptoms),
-          characteristics: toTextList(initial.initial_characteristics || initial.initial_macroscopic_characteristics),
-          microscopic: String(initial.initial_microscopic || "").trim(),
-          macroscopic: String(initial.initial_macroscopic || "").trim(),
+          symptoms: toTextList(initialObservations.symptoms),
+          characteristics: toTextList(initialObservations.characteristics),
+          microscopic: String(initialObservations.microscopic_description || "").trim(),
+          macroscopic: String(initialObservations.macroscopic_description || "").trim(),
         };
 
         const vivo = latestByType("vivo");

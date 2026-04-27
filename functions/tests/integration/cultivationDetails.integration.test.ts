@@ -41,8 +41,10 @@ describe("Cultivation Details & Culture Session Integration Tests", () => {
       is_archived: false,
       start_date: new Date(),
       cultivation_details: {
-        growth_medium: "PDA",
-        initial_symptoms: ["Leaf spots"],
+        specimen_type: "Leaf",
+        initial_observations: {
+          symptoms: ["Leaf spots"],
+        },
       },
     });
   });

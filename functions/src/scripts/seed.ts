@@ -402,7 +402,6 @@ export const seedMoldReports = async (farmerUid: string, mycologistUid?: string,
             is_archived: false,
             final_verdict: {
               moldId: "",
-              moldName: "",
               confidence: 0.95,
               moldipedia_id: moldipediaId,
               mycologist_notes: "Resolved during seeding",

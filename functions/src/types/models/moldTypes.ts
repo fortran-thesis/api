@@ -55,7 +55,6 @@ export interface MoldPrevention {
 
 export interface MoldCase {
   user_id?: string;
-  user_name?: string;
   mycologist_id: string;
   name: string;
   mold_report_id: string;
@@ -66,56 +65,91 @@ export interface MoldCase {
   cultivation_details?: CultivationDetails;
   is_archived: boolean;
   final_verdict?: {
-    moldId: string;
-    moldName: string;
+    moldId: string | null;
     confidence: number;
     moldipedia_id?: string;
     mycologist_notes?: string;
     verdict_timestamp?: Timestamp;
+    verdict_fallback_name?: string;
   };
 }
 
+export type MoldCaseResponse = MoldCase & {
+  user_name?: string;
+  mycologist_name?: string;
+  final_verdict?: NonNullable<MoldCase["final_verdict"]> & {
+    moldName?: string;
+  };
+};
+
 export interface CultivationDetails {
-  growth_medium: string;
-  in_vivo_details: {
-    environmental_temperature: number;
-  };
-  in_vitro_details: {
-    incubation_temperature: number;
-  };
-  specimen_types?: string[];
-  specimen_quantities?: string[];
-  specimen_types_csv?: string;
-  specimen_quantities_csv?: string;
-  initial_symptoms?: string[];
-  initial_symptoms_csv?: string;
-  initial_signs?: string[];
-  initial_signs_csv?: string;
-  initial_characteristics?: string[];
-  initial_characteristics_csv?: string;
+  specimen_type?: string;
+  specimen_quantity?: number;
   location_gathered?: string;
-  initial_microscopic?: string;
-  initial_macroscopic?: string;
-  initial_microscopic_color?: string;
-  initial_microscopic_texture?: string;
-  initial_macroscopic_color?: string;
-  initial_macroscopic_texture?: string;
-  initial_macroscopic_symptoms?: string;
-  initial_macroscopic_characteristics?: string;
-  initial_microscopic_image_url?: string;
-  initial_macroscopic_image_url?: string;
   date_observation?: string;
-  microscopic_ai_snapshot?: Record<string, unknown>;
   scanned_microscopic_ids?: string[];
   scanned_macroscopic_ids?: string[];
+  initial_observations?: InitialObservations;
+}
+
+export interface InitialObservations {
+  microscopic_description?: string;
+  microscopic_color?: string;
+  microscopic_texture?: string;
+  microscopic_image_path?: string;
+  macroscopic_description?: string;
+  macroscopic_color?: string;
+  macroscopic_texture?: string;
+  macroscopic_symptoms?: string;
+  macroscopic_characteristics?: string;
+  macroscopic_image_path?: string;
+  symptoms?: string[];
+  signs?: string[];
+  characteristics?: string[];
+  ai_snapshot?: MicroscopicAiSnapshot;
+}
+
+export interface MicroscopicAiSnapshot {
+  identified_mold?: string;
+  mold_id?: string;
+  confidence?: number;
+  confidence_display?: string;
+  model_source?: string;
+  captured_at?: string;
+  used_ann?: boolean;
+  used_fusion?: boolean;
+  top_predictions?: Array<{
+    moldId: string;
+    moldName: string;
+    confidence: number;
+  }>;
+}
+
+export interface CultivationLogCharacteristics {
+  size?: string;
+  color?: string;
+  texture?: string;
+  symptoms?: string[] | string;
+  signs?: string[] | string;
+  characteristics?: string[] | string;
+  lesion_size?: number;
+  lesion_color?: string;
+  lesion_texture?: string;
+  environmental_temperature?: number;
+  colony_diameter?: number;
+  colony_color?: string;
+  colony_texture?: string;
+  incubation_temperature?: number;
+  culture_id?: string;
+  culture_name?: string;
+  [key: string]: unknown;
 }
 
 export interface CultivationLog {
   type: "vivo" | "vitro";
   image_url: string;
-  characteristics:
-    | { lesion_size: number; lesion_color: string }
-    | { colony_diameter: number; colony_color: string }; // respective places: vivo | vitro
+  growth_medium?: string;
+  characteristics: CultivationLogCharacteristics;
   additional_info: string;
 }
 
