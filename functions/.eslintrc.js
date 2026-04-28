@@ -21,6 +21,7 @@ module.exports = {
     "/lib/**/*", // Ignore built files.
     "/generated/**/*", // Ignore generated files.
     "/tests/**/*", // Ignore test files.
+    "/loadtests/**/*", // Ignore load test files.
     "/src/local.ts",
   ],
   plugins: [

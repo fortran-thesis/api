@@ -114,6 +114,68 @@ describe("moldReportController transitions (unit)", () => {
     );
   });
 
+  it("postCaseDetail keeps assignment when owner follow-up reopens an assigned report", async () => {
+    mockReq.user = {
+      id: "farmer-1",
+      user: {
+        role: "farmer",
+      },
+    } as any;
+    mockReq.body = {description: "new symptoms"};
+
+    mockMoldReportService.retrieveMoldReportById.mockResolvedValue({
+      id: "report-1",
+      user_id: "farmer-1",
+      status: "resolved",
+      assigned_mycologist_id: "myc-1",
+    } as any);
+    mockMoldReportService.addCaseDetailToReport.mockResolvedValue({
+      id: "detail-1",
+      description: "new symptoms",
+    } as any);
+    mockMoldReportService.updateMoldReportInFirestore.mockResolvedValue({
+      id: "report-1",
+      status: "in progress",
+      assigned_mycologist_id: "myc-1",
+    } as any);
+
+    await moldReportController.postCaseDetail(mockReq as Request, mockRes as Response);
+
+    expect(mockMoldReportService.updateMoldReportInFirestore).toHaveBeenCalledWith(
+      "report-1",
+      {status: "in progress"}
+    );
+    expect(mockResponseUtils.sendSuccess).toHaveBeenCalledWith(
+      mockRes,
+      expect.objectContaining({id: "detail-1"})
+    );
+  });
+
+  it("postCaseDetail blocks owner follow-up on closed reports", async () => {
+    mockReq.user = {
+      id: "farmer-1",
+      user: {
+        role: "farmer",
+      },
+    } as any;
+    mockReq.body = {description: "new symptoms"};
+
+    mockMoldReportService.retrieveMoldReportById.mockResolvedValue({
+      id: "report-1",
+      user_id: "farmer-1",
+      status: "closed",
+      assigned_mycologist_id: null,
+    } as any);
+
+    await moldReportController.postCaseDetail(mockReq as Request, mockRes as Response);
+
+    expect(mockResponseUtils.sendError).toHaveBeenCalledWith(
+      mockRes,
+      "Cannot add follow-up while report is 'closed'",
+      409
+    );
+  });
+
   it("blocks direct patch for rejected transition", async () => {
     mockReq.body = {status: "rejected"};
     mockMoldReportService.retrieveMoldReportById.mockResolvedValue({

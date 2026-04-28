@@ -27,6 +27,7 @@ import {
   invalidateItem,
   invalidateAllCounts,
 } from "../utils/cacheManager";
+import {invalidateLookupCorpusCache} from "./lookupService";
 
 const RESOURCE = "molds";
 const TTL = 300; // 5 minutes

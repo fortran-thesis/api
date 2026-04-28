@@ -852,7 +852,7 @@
   *                 format: binary
   *                 description: Optional cultivation log image
   *     responses:
-  *       200:
+  *       201:
   *         description: Cultivation log added successfully
   *         content:
   *           application/json:
@@ -1823,6 +1823,8 @@
   *     responses:
   *       200:
   *         description: Culture session created successfully
+  *       201:
+  *         description: Culture session created successfully
   *       403:
   *         description: Forbidden
   *       404:
@@ -1858,6 +1860,30 @@
   * @swagger
   * /api/v1/mold-case/{id}/culture-sessions/{cultureId}/end-early:
   *   patch:
+  *     summary: End a culture session early
+  *     tags: [MoldCases]
+  *     security:
+  *       - bearerAuth: []
+  *       - cookieAuth: []
+  *     parameters:
+  *       - in: path
+  *         name: id
+  *         required: true
+  *         schema:
+  *           type: string
+  *       - in: path
+  *         name: cultureId
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       200:
+  *         description: Culture session ended early
+  *       403:
+  *         description: Forbidden
+  *       404:
+  *         description: Mold case or culture session not found
+  *   post:
   *     summary: End a culture session early
   *     tags: [MoldCases]
   *     security:

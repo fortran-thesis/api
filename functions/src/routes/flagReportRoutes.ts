@@ -29,8 +29,8 @@ const router = Router();
 // Create flag report
 router.post(
   "/",
-  rateLimit(flagReportCreateLimiter),
   verifyUser(),
+  rateLimit(flagReportCreateLimiter),
   validateBody(CreateFlagReportSchema),
   auditLog(AuditAction.CREATE_FLAG_REPORT, "Flagged content"),
   notify({

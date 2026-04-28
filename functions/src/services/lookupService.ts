@@ -122,6 +122,7 @@ export async function performMoldLookup(
   reportedCharacteristics: string[] = [],
   reportedMoldNames: string[] = []
 ): Promise<LookupResult[]> {
+  const totalStartedAt = Date.now();
   try {
     // 1. Normalize input (lowercase for case-insensitive matching)
     const normalizedSymptoms = reportedSymptoms.map((s) => String(s).toLowerCase());
@@ -200,9 +201,18 @@ export async function performMoldLookup(
     const filtered = results.filter((r) => r.confidence > 0);
     const sorted = filtered.sort((a, b) => b.confidence - a.confidence);
 
+    const scoringDurationMs = Date.now() - scoringStartedAt;
+    const totalDurationMs = Date.now() - totalStartedAt;
+
     console.log(`[performMoldLookup] ✅ Found ${sorted.length} matches from ${molds.length} molds`);
     devLog(
       `[performMoldLookup] ✅ Found ${sorted.length} matches from ${molds.length} molds`
+    );
+    console.log(
+      `[performMoldLookup] Timing: fetch=${fetchDurationMs}ms scoring=${scoringDurationMs}ms total=${totalDurationMs}ms`
+    );
+    devLog(
+      `[performMoldLookup] Timing: fetch=${fetchDurationMs}ms scoring=${scoringDurationMs}ms total=${totalDurationMs}ms`
     );
     if (sorted.length > 0) {
       console.log(`[performMoldLookup] Top result: ${sorted[0].moldName} (${sorted[0].confidence}%)`);

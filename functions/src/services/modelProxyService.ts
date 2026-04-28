@@ -148,6 +148,7 @@ export const proxyJsonPredict = async (
   payload: Record<string, unknown>,
   queryParams?: Record<string, string>
 ): Promise<ProxyResult> => {
+  const proxyStartedAt = Date.now();
   if (!LAMBDA_URL) {
     logger.error({ctx: "modelProxy", endpoint: "api/v3/predict"}, "MODEL_LAMBDA_URL is empty");
     return {status: 500, body: {error: "Model service URL not configured"}};
@@ -206,6 +207,16 @@ export const proxyJsonPredict = async (
         continue;
       }
 
+      logger.info(
+        {
+          ctx: "modelProxy",
+          endpoint: "api/v3/predict",
+          attempts: index + 1,
+          totalLatencyMs: Date.now() - proxyStartedAt,
+        },
+        "Model proxy request finished"
+      );
+
       return {status: res.status, body: tagBody(upstreamBody, "fusion")};
     }
 
@@ -236,6 +247,7 @@ export const proxyMultipartPredict = async (
   formFields: Record<string, string>,
   queryParams?: Record<string, string>
 ): Promise<ProxyResult> => {
+  const proxyStartedAt = Date.now();
   if (!LAMBDA_URL) {
     logger.error({ctx: "modelProxy", endpoint: "api/v3/predict-multipart"}, "MODEL_LAMBDA_URL is empty");
     return {status: 500, body: {error: "Model service URL not configured"}};
@@ -302,6 +314,16 @@ export const proxyMultipartPredict = async (
         );
         continue;
       }
+
+      logger.info(
+        {
+          ctx: "modelProxy",
+          endpoint: "api/v3/predict-multipart",
+          attempts: index + 1,
+          totalLatencyMs: Date.now() - proxyStartedAt,
+        },
+        "Model proxy request finished"
+      );
 
       return {status: res.status, body: tagBody(upstreamBody, "fusion")};
     }
