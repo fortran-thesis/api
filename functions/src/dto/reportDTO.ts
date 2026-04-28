@@ -48,58 +48,7 @@ export const AssignMoldReportSchema = z.object({
   assigned_mycologist_id: z.string({required_error: "Assigned mycologist ID is required."}).min(1),
   status: z.enum(["in progress"]).optional(),
   end_date: zTimestampOptional,
-}).refine(
-  (data) => {
-    if (!data.end_date) {
-      return true; // No validation if end_date is not provided
-    }
-
-    const endDateMs = data.end_date.toMillis?.() || (data.end_date as any).seconds * 1000;
-    const endDate = new Date(endDateMs);
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-    // Must be at least 3 working days from today
-    const MIN_WORKING_DAYS = 3;
-    let workingDaysFromNow = 0;
-    const checkDate = new Date(today);
-
-    while (workingDaysFromNow < MIN_WORKING_DAYS) {
-      checkDate.setDate(checkDate.getDate() + 1);
-      const dayOfWeek = checkDate.getDay();
-      // Skip weekends (Saturday = 6, Sunday = 0)
-      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
-        workingDaysFromNow++;
-      }
-    }
-
-    // End date must be on or after the minimum working date
-    const endDateOnly = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
-
-    return endDateOnly >= checkDate;
-  },
-  {
-    message: "end_date must be at least 3 working days from today and cannot fall on a weekend",
-    path: ["end_date"],
-  }
-).refine(
-  (data) => {
-    if (!data.end_date) {
-      return true;
-    }
-
-    const endDateMs = data.end_date.toMillis?.() || (data.end_date as any).seconds * 1000;
-    const endDate = new Date(endDateMs);
-    const dayOfWeek = endDate.getDay();
-
-    // Must not fall on a weekend
-    return dayOfWeek !== 0 && dayOfWeek !== 6;
-  },
-  {
-    message: "end_date cannot fall on a weekend (Saturday or Sunday)",
-    path: ["end_date"],
-  }
-);
+});
 
 export const RejectMoldReportSchema = z.object({
   rejection_reason: z.string().trim().min(1, {message: "Rejection reason is required."}),
