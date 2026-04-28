@@ -51,8 +51,8 @@ const SUPPORTED_CORRECTION_GENERA = [
     predicted_class_name: "Aspergillus_section_Flavi",
   },
   {
-    display_name: "Aspergillus Section Nigri",
-    normalized_key: "aspergillus section nigri",
+    display_name: "Aspergillus Niger",
+    normalized_key: "aspergillus niger",
     predicted_class_name: "Aspergillus_section_Nigri",
   },
   {
@@ -245,21 +245,22 @@ export const getSupportedCorrectionGenera = async (
         const mold = await retrieveMoldByPredictedClassName(
           item.predicted_class_name
         );
+        const displayName = mold?.name?.trim() || item.display_name;
         return {
-          ...item,
+          display_name: displayName,
+          normalized_key: normalizeLabel(displayName),
+          predicted_class_name: item.predicted_class_name,
           exists_in_system: !!mold,
           status: mold?.status ?? null,
         };
       })
     );
 
-    const responseItems = enriched.map(
-      (item) => ({
-        display_name: item.display_name,
-        normalized_key: item.normalized_key,
-        predicted_class_name: item.predicted_class_name,
-      })
-    );
+    const responseItems = enriched.map((item) => ({
+      display_name: item.display_name,
+      normalized_key: item.normalized_key,
+      predicted_class_name: item.predicted_class_name,
+    }));
 
     return sendSuccess(res, {genera: responseItems});
   } catch (error) {
