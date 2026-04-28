@@ -8,6 +8,9 @@ build/
 # Coverage reports
 coverage/
 
+# Load tests
+loadtests/
+
 # Config files
 jest.config.js
 jest.integration.config.js

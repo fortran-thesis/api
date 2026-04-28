@@ -207,6 +207,15 @@ router.patch(
   }
 );
 
+router.post(
+  "/:id/culture-sessions/:cultureId/end-early",
+  verifyUser(),
+  validateParams(CultureSessionIdSchema),
+  async (req: Request, res: Response) => {
+    await endCultureSessionEarly(req, res);
+  }
+);
+
 router.patch(
   "/:id/culture-sessions/:cultureId/reassign",
   verifyUser(),

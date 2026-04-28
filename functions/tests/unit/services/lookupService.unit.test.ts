@@ -5,6 +5,12 @@ jest.mock("firebase-admin/firestore", () => ({
   getFirestore: jest.fn(),
 }));
 
+jest.mock("../../../src/utils/cacheManager", () => ({
+  getCachedList: jest.fn().mockResolvedValue(null),
+  cacheList: jest.fn().mockResolvedValue(undefined),
+  invalidateAllLists: jest.fn().mockResolvedValue(undefined),
+}));
+
 import {getFirestore} from "firebase-admin/firestore";
 import {performMoldLookup} from "../../../src/services/lookupService";
 
@@ -29,9 +35,11 @@ describe("lookupService (unit)", () => {
   });
 
   it("matches a mold by symptom and returns 100% confidence", async () => {
-    // Mock Firestore collection get
+    const mockSelect = {
+      get: jest.fn().mockResolvedValue({docs: [makeDoc("m1", {name: "Aspergillus Flavus", symptoms: ["yellowing"], signs: [], characteristics: []})]}),
+    };
     const mockCollection = {
-      get: jest.fn().mockResolvedValue({docs: [makeDoc("m1", {name: "Aspergillus Flavus", symptoms: ["yellowing"], signs: [], characteristics: []})]})
+      select: jest.fn().mockReturnValue(mockSelect),
     };
 
     mockGetFirestore.mockReturnValue({
@@ -45,8 +53,11 @@ describe("lookupService (unit)", () => {
   });
 
   it("calculates correct confidence with mixed matches", async () => {
+    const mockSelect = {
+      get: jest.fn().mockResolvedValue({docs: [makeDoc("m1", {name: "Fusarium", symptoms: ["wilting"], signs: ["brown vascular discoloration"], characteristics: ["survives in soil"]})]}),
+    };
     const mockCollection = {
-      get: jest.fn().mockResolvedValue({docs: [makeDoc("m1", {name: "Fusarium", symptoms: ["wilting"], signs: ["brown vascular discoloration"], characteristics: ["survives in soil"]})]})
+      select: jest.fn().mockReturnValue(mockSelect),
     };
 
     mockGetFirestore.mockReturnValue({

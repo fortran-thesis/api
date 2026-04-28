@@ -33,7 +33,7 @@ import {StorageFolder, generateStoragePath} from "../configs/storage";
 import {Timestamp} from "firebase-admin/firestore";
 import {retrieveMoldReportById, updateMoldReportInFirestore} from "../services/moldReportService";
 import {performMoldLookup} from "../services/lookupService";
-import {retrieveAllMoldipedia} from "../services/moldipediaService";
+import {retrieveAllMoldipedia, retrieveMoldipediaByTitle} from "../services/moldipediaService";
 
 const getActorContext = (req: Request) => {
   const userId = req.user?.id;
@@ -244,7 +244,7 @@ export const addCultivationLog = async (req: Request, res: Response) => {
 
     const created = await addCultivationLogToCase(caseId, logData);
     if (!created) return sendError(res, "Failed to add cultivation log", 400);
-    return sendSuccess(res, created);
+    return sendSuccess(res, created, 201);
   } catch (error) {
     devLog(error);
     return defaultError(res);
@@ -646,7 +646,7 @@ export const createCultureSession = async (req: Request, res: Response) => {
       target_at: req.body.target_at,
     });
     if (!created) return sendError(res, "Failed to create culture session", 400);
-    return sendSuccess(res, created);
+    return sendSuccess(res, created, 201);
   } catch (error) {
     devLog(error);
     return defaultError(res);
@@ -761,11 +761,16 @@ export const finalizeVerdict = async (req: Request, res: Response) => {
         undefined;
     try {
       if (!matchedWikiMoldId && moldName && moldName.trim()) {
-        const moldipediaResponse = await retrieveAllMoldipedia(10, undefined, moldName.trim());
-        const candidates = moldipediaResponse?.snapshot || [];
-        if (Array.isArray(candidates) && candidates.length > 0) {
-          matchedWikiMold = candidates[0];
-          matchedWikiMoldId = (matchedWikiMold as any)?.id;
+        matchedWikiMold = await retrieveMoldipediaByTitle(moldName.trim());
+        matchedWikiMoldId = (matchedWikiMold as any)?.id;
+
+        if (!matchedWikiMoldId) {
+          const moldipediaResponse = await retrieveAllMoldipedia(10, undefined, moldName.trim());
+          const candidates = moldipediaResponse?.snapshot || [];
+          if (Array.isArray(candidates) && candidates.length > 0) {
+            matchedWikiMold = candidates[0];
+            matchedWikiMoldId = (matchedWikiMold as any)?.id;
+          }
         }
       }
     } catch (matchErr) {
@@ -784,7 +789,8 @@ export const finalizeVerdict = async (req: Request, res: Response) => {
 
     const updatedCase = await updateMoldCaseInFirestore(caseId, {
       final_verdict: verdict,
-      is_archived: true,
+      // Keep the case active after resolution; explicit closure/archive is a separate action.
+      is_archived: false,
       end_date: moldCase.end_date || Timestamp.now(),
     });
 
@@ -799,7 +805,7 @@ export const finalizeVerdict = async (req: Request, res: Response) => {
         const linkedReport = await retrieveMoldReportById(moldCase.mold_report_id);
         if (!linkedReport) {
           reportSyncWarning = "Verdict saved, but linked report could not be found";
-        } else if (linkedReport.status !== "in progress") {
+        } else if (linkedReport.status === "rejected" || linkedReport.status === "closed") {
           reportSyncWarning = `Verdict saved, but report status '${linkedReport.status}' cannot transition to 'resolved'`;
         }
 

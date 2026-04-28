@@ -5,6 +5,7 @@
  * Each device/browser registers its own token.  On logout or token refresh the
  * old entry is removed.
  */
+import {createHash} from "crypto";
 import {Timestamp} from "firebase-admin/firestore";
 import {getDb} from "../lib/firestore";
 import {DeviceToken, WithMetadata} from "../types/types";
@@ -23,6 +24,9 @@ const subCol = FirestoreSubcollection.DEVICE_TOKENS;
 const tokensRef = (userId: string) =>
   getDb().collection(usersCol).doc(userId).collection(subCol);
 
+const tokenDocId = (token: string): string =>
+  createHash("sha256").update(token).digest("hex").slice(0, 20);
+
 // ── CRUD ─────────────────────────────────────────────────────────────────────
 
 /**
@@ -35,24 +39,37 @@ export const addDeviceToken = async (
   data: DeviceToken
 ): Promise<string> => {
   const col = tokensRef(userId);
-
-  // Upsert: check if this token string already exists
-  const existing = await col.where("token", "==", data.token).limit(1).get();
-  if (!existing.empty) {
-    const docId = existing.docs[0].id;
-    await col.doc(docId).update({
-      "platform": data.platform,
-      "metadata.updated_at": Timestamp.now(),
-    });
-    return docId;
-  }
+  const docId = tokenDocId(data.token);
+  const now = Timestamp.now();
 
   const payload: WithMetadata<DeviceToken> = {
     ...data,
-    metadata: {created_at: Timestamp.now()},
+    metadata: {
+      created_at: now,
+      updated_at: now,
+      deleted_at: null,
+    },
   };
-  const ref = await col.add(payload);
-  return ref.id;
+
+  const ref = col.doc(docId);
+  try {
+    await ref.create(payload);
+  } catch (error) {
+    const errorInfo = error as {message?: string; code?: number | string};
+    const message = String(errorInfo?.message || error);
+    const code = String(errorInfo?.code || "");
+    if (!message.includes("ALREADY_EXISTS") && !message.includes("already-exists") && code !== "6") {
+      throw error;
+    }
+
+    await ref.update({
+      "token": data.token,
+      "platform": data.platform,
+      "metadata.updated_at": now,
+      "metadata.deleted_at": null,
+    });
+  }
+  return docId;
 };
 
 /**
@@ -87,11 +104,16 @@ export const removeDeviceTokenByValue = async (
   userId: string,
   tokenValue: string
 ): Promise<void> => {
-  const snap = await tokensRef(userId)
-    .where("token", "==", tokenValue)
-    .limit(1)
-    .get();
-  if (!snap.empty) {
-    await snap.docs[0].ref.delete();
+  const col = tokensRef(userId);
+  const docRef = col.doc(tokenDocId(tokenValue));
+  const snap = await docRef.get();
+  if (snap.exists) {
+    await docRef.delete();
+    return;
+  }
+
+  const legacySnap = await col.where("token", "==", tokenValue).limit(1).get();
+  if (!legacySnap.empty) {
+    await legacySnap.docs[0].ref.delete();
   }
 };

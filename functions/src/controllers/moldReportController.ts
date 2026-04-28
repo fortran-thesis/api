@@ -21,6 +21,7 @@ import {
   searchAndFilterMoldReports,
   getMoldReportMonthlyTotals,
   getRawCaseCoverPhoto,
+  retrieveMoldReportPrintPayload,
 } from "../services/moldReportService";
 import {performMoldLookup} from "../services/lookupService";
 import {createLog} from "../utils/logging";
@@ -493,9 +494,14 @@ export const postCaseDetail = async (req: Request, res: Response) => {
       return sendError(res, "Forbidden", 403);
     }
 
-    // If the requester is the report owner, treat this as a user follow-up:
-    // append the case detail, reset status to 'pending', and unassign the mycologist.
+    // If the requester is the report owner, treat this as a user follow-up.
+    // Keep active assignment continuity when the report is already assigned,
+    // otherwise reopen the case as pending for triage.
     if (actor && actor.id === report.user_id) {
+      if (report.status === "rejected" || report.status === "closed") {
+        return sendError(res, `Cannot add follow-up while report is '${report.status}'`, 409);
+      }
+
       const created = await addCaseDetailToReport(
         id,
         details as MoldReportDetails
@@ -503,14 +509,24 @@ export const postCaseDetail = async (req: Request, res: Response) => {
       if (!created) {
         return sendError(res, "Failed to add case detail to report", 400);
       }
-      if (!canTransitionStatus(report.status, "pending")) {
-        return sendError(res, `Cannot add follow-up while report is '${report.status}'`, 409);
+
+      const hasActiveAssignee =
+        typeof report.assigned_mycologist_id === "string" &&
+        report.assigned_mycologist_id.trim().length > 0;
+      const nextStatus: MoldReport["status"] = hasActiveAssignee ? "in progress" : "pending";
+
+      const updatePayload: Partial<MoldReport> = {};
+      if (report.status !== nextStatus) {
+        updatePayload.status = nextStatus;
+      }
+      if (!hasActiveAssignee && report.assigned_mycologist_id !== null) {
+        updatePayload.assigned_mycologist_id = null;
       }
 
-      await updateMoldReportInFirestore(id, {
-        status: "pending",
-        assigned_mycologist_id: null,
-      });
+      if (Object.keys(updatePayload).length > 0) {
+        await updateMoldReportInFirestore(id, updatePayload);
+      }
+
       // Audit log
       if (actor) {
         const {
@@ -521,7 +537,7 @@ export const postCaseDetail = async (req: Request, res: Response) => {
           actorId,
           role,
           AuditAction.UPDATE_MOLD_REPORT,
-          `User follow-up on report ${id}`,
+          `User follow-up on report ${id} (status=${nextStatus}${hasActiveAssignee ? ", assignment-preserved" : ""})`,
           id
         );
       }
@@ -735,6 +751,22 @@ export const getMoldReportById = async (req: Request, res: Response) => {
     if (!report) return sendError(res, "Failed to retrieve mold report", 404);
     if (!canAccessReport(req.user, report)) return sendError(res, "Forbidden", 403);
     return sendSuccess(res, report);
+  } catch (error) {
+    devLog(error);
+    return defaultError(res);
+  }
+};
+
+export const getMoldReportPrintById = async (req: Request, res: Response) => {
+  try {
+    const id: string = req.params.id;
+    const report: MoldReport | null = await retrieveMoldReportById(id);
+    if (!report) return sendError(res, "Failed to retrieve mold report", 404);
+    if (!canAccessReport(req.user, report)) return sendError(res, "Forbidden", 403);
+
+    const payload = await retrieveMoldReportPrintPayload(id, report);
+    if (!payload) return sendError(res, "Failed to retrieve printable report payload", 404);
+    return sendSuccess(res, payload);
   } catch (error) {
     devLog(error);
     return defaultError(res);

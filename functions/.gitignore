@@ -12,3 +12,6 @@ node_modules/
 # Secret files
 src/configs/firebase-config.json
 lib/configs/firebase-config.json
+
+# Generated load-test outputs
+loadtests/
